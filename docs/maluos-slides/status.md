@@ -56,7 +56,7 @@ files no longer referenced).
 
 | Step | State | Notes |
 |---|---|---|
-| 2.1 baseline `cargo xtask ci` | next | |
+| 2.1 baseline `cargo xtask ci` | done 2026-10-24 | all 8 steps pass (fmt, pdf-deps, clippy, test, doctest, assets, layers, wasm); 1,792 tests pass, 6 ignored. Environment note: with the default test parallelism the `ui-egui` unit-test binary segfaults inside `libvulkan.so` (egui_kittest's wgpu renderer on the VM's software Vulkan, a loader race, not a code defect); `RUST_TEST_THREADS=4` is stable, single-threaded too. Run ci as `RUST_TEST_THREADS=4 cargo xtask ci` on this host. ~45 min cold under the memory cap, peak 4.7 GB |
 | 2.2 fork hygiene | README done 2026-10-24 | CLAUDE.md preamble, brand files, links.rs, About box pending |
 | 2.3 Linux-only trim | planned | |
 | 2.4 rename script, vendor branch | planned | mapping in plan.md |
