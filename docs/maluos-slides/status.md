@@ -47,8 +47,21 @@ the desktop entry, the package name and the ArtCraft brand assets under `docs/br
 and rebranding is Phase 2 work and should follow the malu123 approach (scripted rename of
 upstream through a vendor branch) so upstream can still be merged.
 
-## Next
+## Phase 2: MaluOS Slides identity
 
-Phase 2 planning: rename to maluos-slides (app id `org.maluos.slides`), remove the ArtCraft brand
-assets, decide the LLM assistant integration (the MCP server already exposes every command), and
-publish the .deb through the MaluOS apt repository.
+Planned 2026-10-24 in [plan.md](plan.md) (steps 2.1–2.9, ~19–31 h). Owner decision D1 recorded the
+same day: Linux and MaluOS only; non-Linux documentation, packaging and CI leave the tree. The
+README was rewritten accordingly (Linux build and package instructions, DeckCraft credited, brand
+files no longer referenced).
+
+| Step | State | Notes |
+|---|---|---|
+| 2.1 baseline `cargo xtask ci` | next | |
+| 2.2 fork hygiene | README done 2026-10-24 | CLAUDE.md preamble, brand files, links.rs, About box pending |
+| 2.3 Linux-only trim | planned | |
+| 2.4 rename script, vendor branch | planned | mapping in plan.md |
+| 2.5 app identity | planned | |
+| 2.6 MaluOS packaging | planned | D8: vendored deb |
+| 2.7 boot test and release | planned | |
+| 2.8 fonts decision applied | planned | D5 |
+| 2.9 upstream sync rehearsal | planned | D7 |
