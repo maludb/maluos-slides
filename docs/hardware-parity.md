@@ -2,13 +2,13 @@
 
 > **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-14 · **Change:** minor (community PR wave 2026-10-14: picture export DPI, Retina pixel grid (#184), twist to rotate, swipe to turn the page, pen pressure; duplicated rows and headers folded; previous: minor, IME input, #101) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365); PowerPoint for Windows where noted
 
-What hardware PowerPoint uses and what DeckCraft uses, per platform. Dimension score: **~40%
+What hardware PowerPoint uses and what MaluOS Slides uses, per platform. Dimension score: **~40%
 ready** (estimated), **25–45 h** to parity. Performance (unmeasured, ~55%) is tracked here too
 because it mostly follows from hardware use.
 
 ## Graphics and rendering
 
-| Feature | PowerPoint | DeckCraft macOS | DeckCraft Windows | DeckCraft Linux/BSD | DeckCraft web |
+| Feature | PowerPoint | MaluOS Slides macOS | MaluOS Slides Windows | MaluOS Slides Linux/BSD | MaluOS Slides web |
 |---|---|---|---|---|---|
 | Window compositing on the GPU | Metal / DirectX | wgpu (Metal) | wgpu, DX12 only by default (#16) | wgpu (Vulkan, GL) | WebGPU, WebGL2 fallback |
 | Slide rasterization | GPU | **CPU** (`vello_cpu`) | CPU | CPU | CPU (wasm) |
@@ -21,7 +21,7 @@ because it mostly follows from hardware use.
 
 ## Media
 
-| Feature | PowerPoint | DeckCraft |
+| Feature | PowerPoint | MaluOS Slides |
 |---|---|---|
 | Video decode | Hardware (AVFoundation/VideoToolbox, Media Foundation) | Software only: pure-Rust H.264, HEVC, VP9, AV1 (`crates/h264`, `hevc`, `vp9`, `av1`) |
 | 4K video in the show | smooth on hardware decode | unmeasured; likely CPU-bound |
@@ -32,7 +32,7 @@ because it mostly follows from hardware use.
 
 ## Displays
 
-| Feature | PowerPoint | DeckCraft |
+| Feature | PowerPoint | MaluOS Slides |
 |---|---|---|
 | Detect the projector, show on it, presenter view on the laptop | yes | **no**: the show goes full screen on the current display; presenter view opens as a normal window (egui viewport) |
 | Swap displays, choose the monitor in Set Up Show | yes | no |
@@ -40,7 +40,7 @@ because it mostly follows from hardware use.
 
 ## Input devices
 
-| Feature | PowerPoint | DeckCraft |
+| Feature | PowerPoint | MaluOS Slides |
 |---|---|---|
 | Keyboard and presentation clickers (Page Up/Down, B, Esc) | yes | yes |
 | Mouse and trackpad scroll | yes | yes |

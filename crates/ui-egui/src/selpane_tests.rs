@@ -1,10 +1,10 @@
 //! The Selection pane driven like a person would: clicks, Ctrl+click, drag and drop, the eye,
 //! the padlock, renaming and the keyboard.
 
-use deckcraft_engine::Session;
 use egui::{Modifiers, Pos2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
+use maluos_slides_engine::Session;
 use serde_json::json;
 
 use crate::{Services, SlideApp};
@@ -38,7 +38,7 @@ fn harness() -> (Harness<'static, SlideApp>, Vec<u32>) {
 }
 
 fn names(h: &Harness<'_, SlideApp>) -> String {
-    fn rec(v: &[deckcraft_model::Shape]) -> String {
+    fn rec(v: &[maluos_slides_model::Shape]) -> String {
         v.iter().map(|x| if x.is_group() { format!("{}[{}]", x.name, rec(x.children())) } else { x.name.clone() }).collect::<Vec<_>>().join(" ")
     }
     rec(h.state().session.active().unwrap().shapes())
@@ -53,10 +53,10 @@ fn row(h: &Harness<'_, SlideApp>, name: &str) -> egui::Rect {
     h.get_by_label(name).rect()
 }
 
-fn shape<'a>(h: &'a Harness<'_, SlideApp>, name: &str) -> &'a deckcraft_model::Shape {
+fn shape<'a>(h: &'a Harness<'_, SlideApp>, name: &str) -> &'a maluos_slides_model::Shape {
     let st = h.state().session.active().unwrap();
     let mut found = None;
-    deckcraft_model::walk(st.shapes(), &mut |s, _| {
+    maluos_slides_model::walk(st.shapes(), &mut |s, _| {
         if found.is_none() && s.name == name {
             found = Some(s);
         }

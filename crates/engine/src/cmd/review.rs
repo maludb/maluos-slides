@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use deckcraft_model::Comment;
+use maluos_slides_model::Comment;
 use serde_json::{Value, json};
 
 use super::*;
@@ -183,7 +183,7 @@ fn list(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 /// Flat `(slide, comment index)` list in deck order.
-fn comment_threads(doc: &deckcraft_model::Presentation) -> Vec<(usize, usize)> {
+fn comment_threads(doc: &maluos_slides_model::Presentation) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     for (si, sl) in doc.slides.iter().enumerate() {
         for ci in 0..sl.comments.len() {
@@ -234,34 +234,34 @@ fn accessibility(s: &mut Session, _p: &Value) -> Result<Value> {
         if sl.title().trim().is_empty() {
             out.push(json!({"slide": i, "issue": "Missing slide title"}));
         }
-        deckcraft_model::walk(&sl.shapes, &mut |sh, _| {
+        maluos_slides_model::walk(&sl.shapes, &mut |sh, _| {
             let needs_alt = matches!(
                 sh.kind,
-                deckcraft_model::ShapeKind::Picture { .. }
-                    | deckcraft_model::ShapeKind::Chart(_)
-                    | deckcraft_model::ShapeKind::Media(_)
-                    | deckcraft_model::ShapeKind::Group { .. }
+                maluos_slides_model::ShapeKind::Picture { .. }
+                    | maluos_slides_model::ShapeKind::Chart(_)
+                    | maluos_slides_model::ShapeKind::Media(_)
+                    | maluos_slides_model::ShapeKind::Group { .. }
             );
             if needs_alt && sh.descr.trim().is_empty() && !sh.decorative {
                 out.push(json!({"slide": i, "shape": sh.id, "name": sh.name, "issue": "Missing alternative text"}));
             }
         });
         // Low-contrast text against the slide background.
-        if let Some(ctx) = deckcraft_model::resolve::Ctx::for_slide(&st.doc, sl) {
-            let bg = match deckcraft_model::resolve::background(&ctx, Some(sl)) {
-                (deckcraft_model::Fill::Solid { color }, ph) => Some(ctx.color(&color, ph)),
+        if let Some(ctx) = maluos_slides_model::resolve::Ctx::for_slide(&st.doc, sl) {
+            let bg = match maluos_slides_model::resolve::background(&ctx, Some(sl)) {
+                (maluos_slides_model::Fill::Solid { color }, ph) => Some(ctx.color(&color, ph)),
                 _ => None,
             };
             if let Some(bg) = bg {
                 for sh in &sl.shapes {
                     let Some(t) = &sh.text else { continue };
                     let Some(para) = t.paragraphs.iter().find(|p| !p.is_empty()) else { continue };
-                    let rp = deckcraft_model::resolve::run(&ctx, sh, para, &para.runs.first().map(|r| r.props.clone()).unwrap_or_default());
-                    let (fill, _) = deckcraft_model::resolve::fill(&ctx, sh);
+                    let rp = maluos_slides_model::resolve::run(&ctx, sh, para, &para.runs.first().map(|r| r.props.clone()).unwrap_or_default());
+                    let (fill, _) = maluos_slides_model::resolve::fill(&ctx, sh);
                     if fill.as_ref().is_some_and(|f| !f.is_none()) {
                         continue;
                     }
-                    let fg = deckcraft_model::resolve::text_color(&ctx, &rp);
+                    let fg = maluos_slides_model::resolve::text_color(&ctx, &rp);
                     if fg.contrast(bg) < 3.0 {
                         out.push(json!({"slide": i, "shape": sh.id, "name": sh.name, "issue": format!("Hard-to-read text contrast ({:.1}:1)", fg.contrast(bg))}));
                     }
@@ -303,13 +303,13 @@ const COMMON: &[&str] = &[
 ];
 
 /// The language a check uses: the `lang` parameter, else the first run that says, else US English.
-fn check_lang(doc: &deckcraft_model::Presentation, p: &Value) -> String {
+fn check_lang(doc: &maluos_slides_model::Presentation, p: &Value) -> String {
     if let Some(l) = str_param(p, "lang") {
         return l.to_string();
     }
     let mut found = None;
     for sl in &doc.slides {
-        deckcraft_model::walk(&sl.shapes, &mut |sh, _| {
+        maluos_slides_model::walk(&sl.shapes, &mut |sh, _| {
             if found.is_none()
                 && let Some(t) = &sh.text
             {
@@ -328,7 +328,7 @@ fn spelling(s: &mut Session, p: &Value) -> Result<Value> {
     let mut dicts: std::collections::HashMap<String, Option<Arc<crate::spell::Dictionary>>> = Default::default();
     let mut out = vec![];
     // Each misspelt word of `para`, reported with `at` (where the paragraph is) merged in.
-    let mut check = |para: &deckcraft_model::Paragraph, at: Value, out: &mut Vec<Value>| {
+    let mut check = |para: &maluos_slides_model::Paragraph, at: Value, out: &mut Vec<Value>| {
         for w in crate::spell::repeated(para, &default) {
             let mut v = json!({"start": w.start, "end": w.end, "word": w.text, "lang": w.lang, "repeated": true, "deleteFrom": w.repeated, "suggestions": []});
             if let (Some(o), Some(a)) = (v.as_object_mut(), at.as_object()) {
@@ -357,13 +357,13 @@ fn spelling(s: &mut Session, p: &Value) -> Result<Value> {
         }
     };
     for (i, sl) in st.doc.slides.iter().enumerate() {
-        deckcraft_model::walk(&sl.shapes, &mut |sh, _| {
+        maluos_slides_model::walk(&sl.shapes, &mut |sh, _| {
             if let Some(t) = &sh.text {
                 for (pi, para) in t.paragraphs.iter().enumerate() {
                     check(para, json!({"slide": i, "shape": sh.id, "para": pi}), &mut out);
                 }
             }
-            if let deckcraft_model::ShapeKind::Table(tb) = &sh.kind {
+            if let maluos_slides_model::ShapeKind::Table(tb) = &sh.kind {
                 for (r, row) in tb.rows.iter().enumerate() {
                     for (c, cell) in row.cells.iter().enumerate().filter(|(_, c)| !c.is_covered()) {
                         for (pi, para) in cell.text.paragraphs.iter().enumerate() {
@@ -420,15 +420,15 @@ fn spelling_change(s: &mut Session, p: &Value) -> Result<Value> {
     }
     // One exact occurrence (a squiggled word): paragraph `para`, from character `start`.
     if let (Some(id), Some(para), Some(start)) = (shape, usize_param(p, "para"), usize_param(p, "start")) {
-        let id = deckcraft_model::ShapeId(u32::try_from(id).map_err(|_| bad("review.spellingChange", "bad `shape`"))?);
+        let id = maluos_slides_model::ShapeId(u32::try_from(id).map_err(|_| bad("review.spellingChange", "bad `shape`"))?);
         let end = start + word.chars().count();
         let cell = usize_param(p, "row").zip(usize_param(p, "col"));
         let slide = {
             let st = s.doc()?;
             let found = st.doc.slides.iter().position(|sl| {
-                deckcraft_model::find_shape(&sl.shapes, id)
+                maluos_slides_model::find_shape(&sl.shapes, id)
                     .and_then(|sh| match (cell, &sh.kind) {
-                        (Some((r, c)), deckcraft_model::ShapeKind::Table(tb)) => tb.cell(r, c)?.text.paragraphs.get(para),
+                        (Some((r, c)), maluos_slides_model::ShapeKind::Table(tb)) => tb.cell(r, c)?.text.paragraphs.get(para),
                         (Some(_), _) => None,
                         (None, _) => sh.text.as_ref()?.paragraphs.get(para),
                     })
@@ -438,9 +438,10 @@ fn spelling_change(s: &mut Session, p: &Value) -> Result<Value> {
         };
         s.edit(|doc, _| {
             let sl = doc.slides.get_mut(slide).ok_or_else(|| bad("review.spellingChange", "no slide"))?;
-            let sh = deckcraft_model::find_shape_mut(&mut Arc::make_mut(sl).shapes, id).ok_or_else(|| bad("review.spellingChange", "no shape"))?;
+            let sh =
+                maluos_slides_model::find_shape_mut(&mut Arc::make_mut(sl).shapes, id).ok_or_else(|| bad("review.spellingChange", "no shape"))?;
             let pp = match (cell, &mut sh.kind) {
-                (Some((r, c)), deckcraft_model::ShapeKind::Table(tb)) => tb.cell_mut(r, c).and_then(|cl| cl.text.paragraphs.get_mut(para)),
+                (Some((r, c)), maluos_slides_model::ShapeKind::Table(tb)) => tb.cell_mut(r, c).and_then(|cl| cl.text.paragraphs.get_mut(para)),
                 (Some(_), _) => None,
                 (None, _) => sh.text.as_mut().and_then(|t| t.paragraphs.get_mut(para)),
             };
@@ -455,7 +456,7 @@ fn spelling_change(s: &mut Session, p: &Value) -> Result<Value> {
     let mut any = false;
     let st = s.doc()?;
     for sl in &st.doc.slides {
-        deckcraft_model::walk(&sl.shapes, &mut |sh, _| {
+        maluos_slides_model::walk(&sl.shapes, &mut |sh, _| {
             if shape.is_none_or(|id| serde_json::to_value(sh.id).ok().and_then(|v| v.as_u64()) == Some(id))
                 && let Some(t) = &sh.text
             {
@@ -468,10 +469,10 @@ fn spelling_change(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let changed = s.edit(|doc, _| {
         let mut n = 0;
-        let id_of = |sh: &deckcraft_model::Shape| serde_json::to_value(sh.id).ok().and_then(|v| v.as_u64());
+        let id_of = |sh: &maluos_slides_model::Shape| serde_json::to_value(sh.id).ok().and_then(|v| v.as_u64());
         for sl in &mut doc.slides {
             let mut hit = false;
-            deckcraft_model::walk(&sl.shapes, &mut |sh, _| {
+            maluos_slides_model::walk(&sl.shapes, &mut |sh, _| {
                 hit |= shape.is_none_or(|id| id_of(sh) == Some(id)) && sh.text.as_ref().is_some_and(|t| t.text().contains(word.as_str()));
             });
             if !hit || (!all && n > 0) {
@@ -497,13 +498,13 @@ fn spelling_change(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// Replace characters `start..end` of `p` with `to`, in the run where they start (later runs lose
 /// the rest of the range).
-fn replace_chars(p: &mut deckcraft_model::Paragraph, start: usize, end: usize, to: &str) {
+fn replace_chars(p: &mut maluos_slides_model::Paragraph, start: usize, end: usize, to: &str) {
     let mut at = 0;
     let mut placed = false;
     for r in &mut p.runs {
         let n = r.char_len();
         let (a, b) = (start.max(at), end.min(at + n));
-        if a < b && r.kind == deckcraft_model::text::RunKind::Text {
+        if a < b && r.kind == maluos_slides_model::text::RunKind::Text {
             let byte = |c: usize| r.text.char_indices().nth(c).map_or(r.text.len(), |(i, _)| i);
             let (x, y) = (byte(a - at), byte(b - at));
             r.text.replace_range(x..y, if placed { "" } else { to });
@@ -511,16 +512,16 @@ fn replace_chars(p: &mut deckcraft_model::Paragraph, start: usize, end: usize, t
         }
         at += n;
     }
-    p.runs.retain(|r| !(r.kind == deckcraft_model::text::RunKind::Text && r.text.is_empty()));
+    p.runs.retain(|r| !(r.kind == maluos_slides_model::text::RunKind::Text && r.text.is_empty()));
 }
 
-fn walk_text_mut(shapes: &mut [deckcraft_model::Shape], depth: usize, f: &mut dyn FnMut(&mut deckcraft_model::Shape)) {
+fn walk_text_mut(shapes: &mut [maluos_slides_model::Shape], depth: usize, f: &mut dyn FnMut(&mut maluos_slides_model::Shape)) {
     if depth > 64 {
         return;
     }
     for sh in shapes.iter_mut() {
         f(sh);
-        if let deckcraft_model::ShapeKind::Group { children, .. } = &mut sh.kind {
+        if let maluos_slides_model::ShapeKind::Group { children, .. } = &mut sh.kind {
             walk_text_mut(children, depth + 1, f);
         }
     }
@@ -595,7 +596,7 @@ fn custom_show(s: &mut Session, p: &Value) -> Result<Value> {
         doc.custom_shows.retain(|c| c.name != name);
         if !delete {
             let slides = idx.iter().filter_map(|i| doc.slides.get(*i).map(|x| x.id)).collect();
-            doc.custom_shows.push(deckcraft_model::CustomShow { name: name.clone(), slides });
+            doc.custom_shows.push(maluos_slides_model::CustomShow { name: name.clone(), slides });
         }
         Ok(())
     })?;
@@ -607,7 +608,7 @@ fn word_under_caret(s: &Session) -> Option<String> {
     let st = s.doc().ok()?;
     let t = st.selection.text.clone()?;
     let body = super::text::body_of(st, &t)?;
-    let (a, b) = if t.anchor != t.caret { t.ordered() } else { deckcraft_model::edit::word_at(body, t.caret) };
+    let (a, b) = if t.anchor != t.caret { t.ordered() } else { maluos_slides_model::edit::word_at(body, t.caret) };
     if a.0 != b.0 {
         return None;
     }

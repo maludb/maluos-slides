@@ -3,8 +3,8 @@
 
 use std::sync::Arc;
 
-use deckcraft_model::text::Action;
-use deckcraft_model::{AnimClass, AnimStart, Animation, Presentation, Shape, ShapeId, Slide, SlideId, Transition, Xfrm};
+use maluos_slides_model::text::Action;
+use maluos_slides_model::{AnimClass, AnimStart, Animation, Presentation, Shape, ShapeId, Slide, SlideId, Transition, Xfrm};
 
 use crate::*;
 

@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use deckcraft_model::text::RunKind;
-use deckcraft_model::{Paragraph, Shape, ShapeKind, Slide, TextBody};
+use maluos_slides_model::text::RunKind;
+use maluos_slides_model::{Paragraph, Shape, ShapeKind, Slide, TextBody};
 use serde_json::{Value, json};
 
 use super::*;
@@ -208,7 +208,7 @@ fn replace(s: &mut Session, p: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use deckcraft_model::{Run, RunProps};
+    use maluos_slides_model::{Run, RunProps};
 
     fn opts(t: &str, case: bool, whole: bool) -> Opts {
         Opts { pat: t.chars().collect(), case, whole }

@@ -1,10 +1,10 @@
 //! Home ▸ Font and Paragraph, Format menu: character, paragraph and text box formatting, and
 //! the Format Painter.
 
-use deckcraft_model::edit as ed;
-use deckcraft_model::resolve;
-use deckcraft_model::text::{Align, Anchor, AutoFit, Bullet, Caps, ParaProps, RunProps, Spacing, Strike, TabStop, TextDir};
-use deckcraft_model::{ColorRef, ColorTransform, Effects, Fill, Line, SchemeSlot, Shape};
+use maluos_slides_model::edit as ed;
+use maluos_slides_model::resolve;
+use maluos_slides_model::text::{Align, Anchor, AutoFit, Bullet, Caps, ParaProps, RunProps, Spacing, Strike, TabStop, TextDir};
+use maluos_slides_model::{ColorRef, ColorTransform, Effects, Fill, Line, SchemeSlot, Shape};
 use serde_json::{Value, json};
 
 use super::text::{format_body, format_para, format_run};
@@ -419,7 +419,7 @@ struct FontEdits {
     bold: Option<bool>,
     italic: Option<bool>,
     underline: Option<String>,
-    color: Option<deckcraft_model::ColorRef>,
+    color: Option<maluos_slides_model::ColorRef>,
     strike: Option<Strike>,
     baseline: Option<f64>,
     caps: Option<Caps>,
@@ -558,8 +558,8 @@ fn font_edits(p: &Value) -> Result<FontEdits> {
 }
 
 /// A colour as a `format.fontDialog` / `format.color` parameter, including transforms.
-fn color_command_value(c: &deckcraft_model::ColorRef) -> Value {
-    use deckcraft_model::ColorBase;
+fn color_command_value(c: &maluos_slides_model::ColorRef) -> Value {
+    use maluos_slides_model::ColorBase;
     let mut o = serde_json::Map::new();
     for m in &c.mods {
         if let Some(v) = m.value() {
@@ -623,8 +623,8 @@ fn clear(s: &mut Session, _p: &Value) -> Result<Value> {
 }
 fn text_shadow(s: &mut Session, p: &Value) -> Result<Value> {
     let v = on_param(p, Some(current_run(s).shadow.is_some()));
-    let sh = deckcraft_model::style::Shadow {
-        color: deckcraft_model::ColorRef::rgb(deckcraft_color::Rgba::BLACK).with(deckcraft_color::ColorTransform::Alpha(43000)),
+    let sh = maluos_slides_model::style::Shadow {
+        color: maluos_slides_model::ColorRef::rgb(maluos_slides_color::Rgba::BLACK).with(maluos_slides_color::ColorTransform::Alpha(43000)),
         blur: 3.0,
         dist: 2.0,
         dir: 45.0,
@@ -647,7 +647,7 @@ fn text_outline(s: &mut Session, p: &Value) -> Result<Value> {
 fn text_warp(s: &mut Session, p: &Value) -> Result<Value> {
     let preset = str_param(p, "preset").ok_or_else(|| bad("format.textWarp", "missing `preset`"))?;
     let clear = preset == "none" || preset == "textNoShape";
-    if !clear && !deckcraft_geom::warp::is_supported(preset) {
+    if !clear && !maluos_slides_geom::warp::is_supported(preset) {
         return Err(bad("format.textWarp", format!("unknown text transform `{preset}`")));
     }
     let adj = match p.get("adj") {
@@ -715,7 +715,7 @@ fn case(s: &mut Session, p: &Value) -> Result<Value> {
                     .collect();
                 let changed = ed::change_case_parts(&mids.iter().map(String::as_str).collect::<Vec<_>>(), &m);
                 for (&(ri, rs, re), new) in pieces.iter().zip(changed) {
-                    let Some(r) = para.runs.get_mut(ri).filter(|r| r.kind == deckcraft_model::text::RunKind::Text) else { continue };
+                    let Some(r) = para.runs.get_mut(ri).filter(|r| r.kind == maluos_slides_model::text::RunKind::Text) else { continue };
                     let pre: String = r.text.chars().take(rs).collect();
                     let post: String = r.text.chars().skip(re).collect();
                     r.text = format!("{pre}{new}{post}");
@@ -745,7 +745,7 @@ fn case(s: &mut Session, p: &Value) -> Result<Value> {
                 let texts: Vec<&str> = para.runs.iter().map(|r| r.content()).collect();
                 let changed = ed::change_case_parts(&texts, &mode);
                 for (r, new) in para.runs.iter_mut().zip(changed) {
-                    if r.kind == deckcraft_model::text::RunKind::Text {
+                    if r.kind == maluos_slides_model::text::RunKind::Text {
                         r.text = new;
                     }
                 }
@@ -1135,7 +1135,7 @@ pub struct Painted {
     pub fill: Option<Fill>,
     pub line: Option<Line>,
     pub effects: Option<Effects>,
-    pub style: Option<deckcraft_model::ShapeStyle>,
+    pub style: Option<maluos_slides_model::ShapeStyle>,
 }
 
 fn painter_pick(s: &mut Session, p: &Value) -> Result<Value> {
@@ -1254,16 +1254,16 @@ fn font_add(_s: &mut Session, p: &Value) -> Result<Value> {
     if data.len() > 64 << 20 {
         return Err(bad("font.add", "font file larger than 64 MB"));
     }
-    let faces = deckcraft_fonts::FontDb::global().add_font(data);
+    let faces = maluos_slides_fonts::FontDb::global().add_font(data);
     if faces == 0 {
-        return Err(bad("font.add", "not a font DeckCraft can read (or already added)"));
+        return Err(bad("font.add", "not a font MaluOS Slides can read (or already added)"));
     }
     Ok(json!({"faces": faces}))
 }
 
-/// Catalog the installed fonts again, so fonts installed while DeckCraft runs appear.
+/// Catalog the installed fonts again, so fonts installed while MaluOS Slides runs appear.
 fn font_rescan(_s: &mut Session, _p: &Value) -> Result<Value> {
-    let db = deckcraft_fonts::FontDb::global();
+    let db = maluos_slides_fonts::FontDb::global();
     #[cfg(not(target_arch = "wasm32"))]
     let faces = db.load_system_fonts();
     #[cfg(target_arch = "wasm32")]
@@ -1391,8 +1391,8 @@ mod ruler_tests;
 
 #[cfg(test)]
 mod tests {
-    use deckcraft_model::text::{Align, Caps, ParaProps, Spacing, Strike};
-    use deckcraft_model::{ColorBase, Fill, SchemeSlot};
+    use maluos_slides_model::text::{Align, Caps, ParaProps, Spacing, Strike};
+    use maluos_slides_model::{ColorBase, Fill, SchemeSlot};
     use serde_json::json;
 
     use super::*;

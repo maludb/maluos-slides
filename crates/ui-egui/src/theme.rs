@@ -30,7 +30,7 @@ pub struct Tokens {
     pub hover: Color32,
     pub pressed: Color32,
     pub selected: Color32,
-    /// DeckCraft's accent (tabs underline, selected thumbnail, primary buttons).
+    /// MaluOS Slides' accent (tabs underline, selected thumbnail, primary buttons).
     pub accent: Color32,
     pub accent_text: Color32,
     pub contextual: Color32,
@@ -161,15 +161,15 @@ pub fn install_fonts(ctx: &egui::Context) {
 /// [`install_fonts`], with `extra` faces from the font database after every interface font: the
 /// installed or embedded faces that draw text the interface faces lack (Hangul, Simplified
 /// Chinese, Devanagari…, #101). See [`crate::uifonts`].
-pub fn install_fonts_with(ctx: &egui::Context, extra: &[std::sync::Arc<deckcraft_fonts::FontFace>]) {
+pub fn install_fonts_with(ctx: &egui::Context, extra: &[std::sync::Arc<maluos_slides_fonts::FontFace>]) {
     ctx.set_fonts(font_definitions(extra));
 }
 
 /// The interface font definitions; see [`install_fonts_with`].
-pub fn font_definitions(extra: &[std::sync::Arc<deckcraft_fonts::FontFace>]) -> FontDefinitions {
+pub fn font_definitions(extra: &[std::sync::Arc<maluos_slides_fonts::FontFace>]) -> FontDefinitions {
     let mut defs = FontDefinitions::default();
     let mut names = vec![];
-    for (i, f) in deckcraft_fonts::CRAFT_FONTS.iter().enumerate() {
+    for (i, f) in maluos_slides_fonts::CRAFT_FONTS.iter().enumerate() {
         let wanted = (f.family == "Inter" && (f.style == "Regular" || f.style == "SemiBold" || f.style == "Bold"))
             || (f.family == "BIZ UDPGothic" && f.style == "Regular")
             || (f.family == "Noto Sans Arabic");
@@ -205,7 +205,7 @@ pub fn font_definitions(extra: &[std::sync::Arc<deckcraft_fonts::FontFace>]) -> 
 }
 
 /// Add `faces` after every other font of each interface family (the last fallbacks).
-pub fn add_fallback_faces(defs: &mut FontDefinitions, faces: &[std::sync::Arc<deckcraft_fonts::FontFace>]) {
+pub fn add_fallback_faces(defs: &mut FontDefinitions, faces: &[std::sync::Arc<maluos_slides_fonts::FontFace>]) {
     for f in faces {
         let name = format!("fallback {} {} {}", f.family, f.style, f.id());
         if defs.font_data.contains_key(&name) {
@@ -228,7 +228,7 @@ pub fn font(size: f32) -> egui::FontId {
     egui::FontId::proportional(size)
 }
 
-pub fn to_color32(c: deckcraft_color::Rgba) -> Color32 {
+pub fn to_color32(c: maluos_slides_color::Rgba) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r, c.g, c.b, c.a)
 }
 

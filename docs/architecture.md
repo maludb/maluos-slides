@@ -1,8 +1,8 @@
-# DeckCraft architecture
+# MaluOS Slides architecture
 
 > **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-18 · **Change:** minor (native chart payloads stored in bounded ZIP members; previous: minor, community PR wave 2026-10-14: 320 engine commands, 41 dialogs, the `metafile` crate, 1,641 tests; duplicated L2/L5/L6 rows and headers folded; previous: minor, transition frames) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
 
-How DeckCraft is built today. The binding rules (layering, everything is a command, thin UI, never
+How MaluOS Slides is built today. The binding rules (layering, everything is a command, thin UI, never
 break wasm, never crash) are in [AGENTS.md](../AGENTS.md) §3–§5; this document describes what
 exists. 202k lines of Rust in 24 crates, 3 apps and `xtask`; 1,641 `#[test]` functions
 (`cargo xtask stats` counts them per crate).
@@ -22,7 +22,7 @@ nothing below L6 uses egui, eframe, winit or rfd.
 | L4 | `pdf` | App-owned export layout and rendering through the shared `craft-pdf` writer |
 | L5 | `engine` | Sessions, documents, selection, undo history on shared slide snapshots, the command registry (320 commands in `cmd/*`), pointer tools, keys, AutoRecover, the panic guard (`guard.rs`) |
 | L6 | `ui-egui`, `mcp` | The PowerPoint-style interface (ribbon with 10 tabs + contextual tabs, canvas, thumbnails, panes, 41 dialogs, show and presenter windows, the JSON control channel); the MCP server (JSON-RPC 2.0 over stdio), headless or connected to a running app |
-| apps | `deckcraft` (desktop: eframe/wgpu, cpal audio, logging), `deckcraft-cli` (run, render, convert, mcp, app), `deckcraft-web` (trunk; WebGPU with WebGL2 fallback), `xtask` | Exempt from layering |
+| apps | `maluos-slides` (desktop: eframe/wgpu, cpal audio, logging), `maluos-slides-cli` (run, render, convert, mcp, app), `maluos-slides-web` (trunk; WebGPU with WebGL2 fallback), `xtask` | Exempt from layering |
 
 The media codecs and containers are clean-room pure Rust, 59k lines, shared in spirit with
 FilmCraft.
@@ -32,7 +32,7 @@ FilmCraft.
 A `Presentation` holds a theme set, slide masters with their layouts, slides, sections, custom
 shows, comments, media and document properties. Shapes are a tree (`ShapeKind`: preset or custom
 geometry, picture, table, chart, group, connector, ink, media, SmartArt-as-group, and `Opaque` for
-anything read from PPTX that DeckCraft doesn't model: its XML is kept and written back). Text
+anything read from PPTX that MaluOS Slides doesn't model: its XML is kept and written back). Text
 bodies hold paragraphs of runs with DrawingML properties; formatting resolves slide → layout →
 master → theme at render time. Transitions live on slides; animations are the flat ordered list the
 Animation Pane shows, rebuilt into PowerPoint's timing tree on save.
@@ -40,8 +40,8 @@ Animation Pane shows, rebuilt into PowerPoint's timing tree on save.
 ## Commands and frontends
 
 Every user-visible action is a `CommandSpec` (id, label, ribbon/menu place, shortcut, params doc,
-`enabled`, `run`) in `crates/engine/src/cmd/*`. The UI, `deckcraft-cli run`, the JSON control
-channel (`deckcraft --control PORT`, [control-protocol.md](control-protocol.md)) and MCP
+`enabled`, `run`) in `crates/engine/src/cmd/*`. The UI, `maluos-slides-cli run`, the JSON control
+channel (`maluos-slides --control PORT`, [control-protocol.md](control-protocol.md)) and MCP
 ([mcp.md](mcp.md)) all dispatch through `Session::execute`, so they behave identically.
 Programmatic calls never open dialogs. Pointer gestures go through `Session::pointer`, keys through
 `Session::key`.
@@ -54,7 +54,7 @@ backgrounds and contents rendered apart (Dynamic Content), from `anim::transitio
 effects project cards through a perspective camera and `anim::layer_mesh` subdivides them so
 textures stay straight; soft edges are per-corner opacities. The show renders the slides once per
 transition and only composites cached textures each frame; `render::composite_transition` is the
-CPU twin used by `deckcraft-cli render-transition` and the tests. The show window and the presenter view are egui viewports; animation state per shape
+CPU twin used by `maluos-slides-cli render-transition` and the tests. The show window and the presenter view are egui viewports; animation state per shape
 comes from `anim::timeline` each frame. Animations ▸ Preview plays that same state on the editor
 canvas for the current slide, then draws the slide at rest. PDF export renders each slide at print resolution and
 overlays an invisible real-text layer with embedded font subsets.

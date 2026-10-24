@@ -1,12 +1,12 @@
-//! Slide Show: full-screen playback with transitions and animations (`deckcraft-anim`),
+//! Slide Show: full-screen playback with transitions and animations (`maluos-slides-anim`),
 //! keyboard/mouse navigation, pen, black/white screens, See All Slides, zoom, presenter view
 //! and rehearsed timings.
 
-use deckcraft_anim::{Click, HitShape, Layer, LinkJump, ShowAction, ShowState, Source, StepStamp, Timeline, TriggerPlay};
-use deckcraft_model::text::Hyperlink;
-use deckcraft_model::{Presentation, ShapeId};
-use deckcraft_render::{ParaState, PlacedLink, PlacedShape, RenderOpts, ShapeState};
 use egui::{Align2, Color32, CornerRadius, Mesh, Pos2, Rect, Sense, Stroke, TextureHandle, Ui, pos2, vec2};
+use maluos_slides_anim::{Click, HitShape, Layer, LinkJump, ShowAction, ShowState, Source, StepStamp, Timeline, TriggerPlay};
+use maluos_slides_model::text::Hyperlink;
+use maluos_slides_model::{Presentation, ShapeId};
+use maluos_slides_render::{ParaState, PlacedLink, PlacedShape, RenderOpts, ShapeState};
 use serde_json::json;
 
 use crate::SlideApp;
@@ -116,17 +116,17 @@ struct Backdrop {
     /// a later edit while the backdrop is kept.
     doc: std::sync::Arc<Presentation>,
     key: BackKey,
-    img: Option<std::sync::Arc<deckcraft_render::Image>>,
-    rx: Option<std::sync::mpsc::Receiver<deckcraft_render::Image>>,
+    img: Option<std::sync::Arc<maluos_slides_render::Image>>,
+    rx: Option<std::sync::mpsc::Receiver<maluos_slides_render::Image>>,
 }
 
-fn render_backdrop(doc: &Presentation, key: BackKey, threads: u16) -> deckcraft_render::Image {
+fn render_backdrop(doc: &Presentation, key: BackKey, threads: u16) -> maluos_slides_render::Image {
     let opts = RenderOpts { scale: key.size.0 as f64 / doc.slide_size.width.max(1.0), size: Some(key.size), threads, ..Default::default() };
-    deckcraft_render::render_slide_part(doc, key.slide, deckcraft_render::SlidePart::Backdrop, &opts)
+    maluos_slides_render::render_slide_part(doc, key.slide, maluos_slides_render::SlidePart::Backdrop, &opts)
 }
 
 /// `top` laid over `back` (both premultiplied RGBA of the same size; `top` alone otherwise).
-fn over(back: &deckcraft_render::Image, top: &deckcraft_render::Image) -> egui::ColorImage {
+fn over(back: &maluos_slides_render::Image, top: &maluos_slides_render::Image) -> egui::ColorImage {
     if back.width != top.width || back.height != top.height || back.pixels.len() != top.pixels.len() {
         return crate::textures::to_color_image(top, false);
     }
@@ -160,7 +160,7 @@ fn render_frame(
     threads: u16,
     plays: &[TriggerPlay],
     stamps: &[StepStamp],
-    backdrop: Option<&deckcraft_render::Image>,
+    backdrop: Option<&maluos_slides_render::Image>,
 ) -> egui::ColorImage {
     let f = move |id: ShapeId| {
         let mut st = state_for(&tl, id, step, t, plays, stamps);
@@ -178,8 +178,8 @@ fn render_frame(
         ..Default::default()
     };
     match backdrop {
-        Some(back) => over(back, &deckcraft_render::render_slide_part(doc, idx, deckcraft_render::SlidePart::Content, &opts)),
-        None => crate::textures::to_color_image(&deckcraft_render::render_slide(doc, idx, &opts), false),
+        Some(back) => over(back, &maluos_slides_render::render_slide_part(doc, idx, maluos_slides_render::SlidePart::Content, &opts)),
+        None => crate::textures::to_color_image(&maluos_slides_render::render_slide(doc, idx, &opts), false),
     }
 }
 
@@ -216,7 +216,7 @@ fn render_overlay(
         threads,
         ..Default::default()
     };
-    let img = deckcraft_render::render_slide_part(doc, idx, deckcraft_render::SlidePart::Content, &opts);
+    let img = maluos_slides_render::render_slide_part(doc, idx, maluos_slides_render::SlidePart::Content, &opts);
     crate::textures::to_color_image(&img, false)
 }
 
@@ -339,7 +339,7 @@ impl Show {
 
     /// The backdrop for `key`: kept from earlier, waited for if it is being rendered ahead of
     /// time, or rendered now.
-    fn backdrop(&mut self, doc: &std::sync::Arc<Presentation>, key: BackKey) -> std::sync::Arc<deckcraft_render::Image> {
+    fn backdrop(&mut self, doc: &std::sync::Arc<Presentation>, key: BackKey) -> std::sync::Arc<maluos_slides_render::Image> {
         if let Some(b) = self.backdrop.as_mut().filter(|b| b.key == key && std::sync::Arc::ptr_eq(&b.doc, doc)) {
             if b.img.is_none() {
                 b.img = b.rx.take().and_then(|rx| rx.recv().ok()).map(std::sync::Arc::new);
@@ -487,7 +487,7 @@ fn state_for(tl: &Timeline, id: ShapeId, step: usize, t: f64, plays: &[TriggerPl
     ShapeState {
         visible: a.visible,
         opacity: a.opacity,
-        offset: deckcraft_geom::Vec2::new(a.offset_x, a.offset_y),
+        offset: maluos_slides_geom::Vec2::new(a.offset_x, a.offset_y),
         scale: (a.scale_x, a.scale_y),
         rotate: a.rotate,
         clip: a.clip,
@@ -497,7 +497,7 @@ fn state_for(tl: &Timeline, id: ShapeId, step: usize, t: f64, plays: &[TriggerPl
             .into_iter()
             .map(|p| {
                 let a = tl.state(id, Some(p), step, t);
-                (p, ParaState { visible: a.visible, opacity: a.opacity, offset: deckcraft_geom::Vec2::new(a.offset_x, a.offset_y) })
+                (p, ParaState { visible: a.visible, opacity: a.opacity, offset: maluos_slides_geom::Vec2::new(a.offset_x, a.offset_y) })
             })
             .collect(),
     }
@@ -516,7 +516,7 @@ fn fit(avail: Rect, doc: &Presentation) -> Rect {
     Rect::from_center_size(avail.center(), vec2(sw * s, sh * s))
 }
 
-/// A transition layer as an egui mesh: [`deckcraft_anim::layer_mesh`]'s triangles (perspective
+/// A transition layer as an egui mesh: [`maluos_slides_anim::layer_mesh`]'s triangles (perspective
 /// cards subdivided so their pictures stay straight) with per-vertex opacity.
 /// Where presenter view's "Next" preview goes: the column's width below its label, kept inside
 /// the top 60% of the column. A portrait slide used to get the full width and a height many
@@ -531,7 +531,7 @@ fn quad_mesh(tex: Option<egui::TextureId>, rect: Rect, l: &Layer, color: Color32
         Some(id) => Mesh::with_texture(id),
         None => Mesh::default(),
     };
-    let (verts, tris) = deckcraft_anim::layer_mesh(l);
+    let (verts, tris) = maluos_slides_anim::layer_mesh(l);
     for v in &verts {
         let a = if v.a.is_finite() { v.a.clamp(0.0, 1.0) } else { 0.0 };
         let col = if tex.is_some() { Color32::from_white_alpha((a * 255.0).round() as u8) } else { color.gamma_multiply(a as f32) };
@@ -546,11 +546,11 @@ fn quad_mesh(tex: Option<egui::TextureId>, rect: Rect, l: &Layer, color: Color32
 
 /// Render the backgrounds and contents of a transition's two slides into textures, once.
 fn part_textures(ctx: &egui::Context, doc: &Presentation, from: Option<usize>, to: usize, size: (u32, u32)) -> [Option<TextureHandle>; 4] {
-    use deckcraft_render::SlidePart;
+    use maluos_slides_render::SlidePart;
     let threads = if cfg!(target_arch = "wasm32") { 0 } else { std::thread::available_parallelism().map(|n| n.get().min(8) as u16).unwrap_or(0) };
     let opts = RenderOpts { scale: size.0 as f64 / doc.slide_size.width.max(1.0), size: Some(size), threads, ..Default::default() };
     let tex = |i: usize, part: SlidePart, name: &str| {
-        let img = deckcraft_render::render_slide_part(doc, i, part, &opts);
+        let img = maluos_slides_render::render_slide_part(doc, i, part, &opts);
         crate::textures::upload(ctx, name, crate::textures::to_color_image(&img, false))
     };
     [
@@ -852,7 +852,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
         let hidden: Vec<ShapeId> = media
             .iter()
             .filter(|(id, _, clip)| {
-                clip.hide_while_not_playing && !app.media.status(*id).is_some_and(|s| s.state != deckcraft_media::PlayState::Ended)
+                clip.hide_while_not_playing && !app.media.status(*id).is_some_and(|s| s.state != maluos_slides_media::PlayState::Ended)
             })
             .map(|m| m.0)
             .collect();
@@ -918,7 +918,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
                 tr.from
                     .and_then(|i| doc.slides.get(i).map(|a| (i, a)))
                     .zip(doc.slides.get(idx))
-                    .map(|((i, a), b)| (i, deckcraft_anim::morph_frame(&doc, a, b, p, &hidden_b)))
+                    .map(|((i, a), b)| (i, maluos_slides_anim::morph_frame(&doc, a, b, p, &hidden_b)))
             }
             _ => None,
         };
@@ -928,17 +928,17 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
                 if cfg!(target_arch = "wasm32") { 0 } else { std::thread::available_parallelism().map(|n| n.get().min(8) as u16).unwrap_or(0) };
             let opts =
                 RenderOpts { scale: size.0 as f64 / doc.slide_size.width.max(1.0), size: Some(size), state: Some(&f), threads, ..Default::default() };
-            let text: Vec<deckcraft_render::TextMorph> = m
+            let text: Vec<maluos_slides_render::TextMorph> = m
                 .text
                 .iter()
-                .map(|x| deckcraft_render::TextMorph { old: x.old, new: x.new, from: x.from, to: x.to, chars: x.chars, t: m.mix })
+                .map(|x| maluos_slides_render::TextMorph { old: x.old, new: x.new, from: x.from, to: x.to, chars: x.chars, t: m.mix })
                 .collect();
-            let paths: Vec<deckcraft_render::PathMorph> = m
+            let paths: Vec<maluos_slides_render::PathMorph> = m
                 .paths
                 .iter()
-                .map(|x| deckcraft_render::PathMorph { id: x.id, from: x.from.clone(), from_box: x.from_box, to_box: x.to_box, t: m.mix })
+                .map(|x| maluos_slides_render::PathMorph { id: x.id, from: x.from.clone(), from_box: x.from_box, to_box: x.to_box, t: m.mix })
                 .collect();
-            let img = deckcraft_render::render_blend(&doc, from, idx, m.mix, &m.shapes, &text, &paths, &opts);
+            let img = maluos_slides_render::render_blend(&doc, from, idx, m.mix, &m.shapes, &text, &paths, &opts);
             let ci = crate::textures::to_color_image(&img, false);
             let frame = match tr.morph.take() {
                 Some(mut h) => {
@@ -956,13 +956,13 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
             if p < 1.0 {
                 // Slides split into background and content are rendered once per transition;
                 // every frame only composites cached textures.
-                if tr.parts.is_none() && deckcraft_anim::uses_slide_parts(&tr.kind, &tr.option) {
+                if tr.parts.is_none() && maluos_slides_anim::uses_slide_parts(&tr.kind, &tr.option) {
                     tr.parts = Some(part_textures(&ctx, &doc, tr.from, idx, size));
                 }
                 let aspect = doc.slide_size.width / doc.slide_size.height.max(1.0);
                 let part = |k: usize| tr.parts.as_ref().and_then(|p| p.get(k).cloned().flatten());
                 let parts = [part(0), part(1), part(2), part(3)];
-                for l in deckcraft_anim::transition_frame(&tr.kind, &tr.option, p, aspect) {
+                for l in maluos_slides_anim::transition_frame(&tr.kind, &tr.option, p, aspect) {
                     let old_or_black = |t: Option<&TextureHandle>| match t {
                         Some(o) => quad_mesh(Some(o.id()), srect, &l, Color32::WHITE),
                         None => quad_mesh(None, srect, &l, Color32::BLACK),
@@ -1277,7 +1277,7 @@ fn show_media(app: &mut SlideApp, show: &mut Show, doc_uid: u64, doc: &Presentat
     }
     if let Some(media) = sound {
         // Loop Until Next Sound: it repeats until another slide's sound or Stop Previous Sound.
-        let clip = deckcraft_model::MediaClip { media, volume: 1.0, loop_play: sound_loop, ..Default::default() };
+        let clip = maluos_slides_model::MediaClip { media, volume: 1.0, loop_play: sound_loop, ..Default::default() };
         app.media.play(doc_uid, doc, TRANSITION_SOUND, &clip, None, crate::media::Owner::Show);
     }
     if let Some(i) = cur {
@@ -1322,7 +1322,7 @@ fn media_bar_rect(shape: Rect) -> Rect {
     }
 }
 
-fn slide_media_bars(srect: Rect, doc: &Presentation, slide: usize) -> Vec<(ShapeId, deckcraft_model::MediaClip, Rect, Rect)> {
+fn slide_media_bars(srect: Rect, doc: &Presentation, slide: usize) -> Vec<(ShapeId, maluos_slides_model::MediaClip, Rect, Rect)> {
     let k = srect.width() / doc.slide_size.width.max(1.0) as f32;
     crate::media::slide_media(doc, slide)
         .into_iter()
@@ -1335,7 +1335,7 @@ fn slide_media_bars(srect: Rect, doc: &Presentation, slide: usize) -> Vec<(Shape
 }
 
 /// The clip whose bar or shape is under the pointer, when Show Media Controls is on.
-fn media_bar_target(ctx: &egui::Context, doc: &Presentation, show: &Show, srect: Rect) -> Option<(ShapeId, deckcraft_model::MediaClip, Rect)> {
+fn media_bar_target(ctx: &egui::Context, doc: &Presentation, show: &Show, srect: Rect) -> Option<(ShapeId, maluos_slides_model::MediaClip, Rect)> {
     if !doc.show.show_media_controls || show.pen || show.ended || show.blank.is_some() {
         return None;
     }
@@ -1359,7 +1359,7 @@ fn pointer_on_media_bar(ctx: &egui::Context, ui: &Ui, doc: &Presentation, show: 
 }
 
 /// The media shape under the pointer on the shown slide.
-fn media_hit(ctx: &egui::Context, ui: &Ui, show: &Show, doc: &Presentation) -> Option<(ShapeId, deckcraft_model::MediaClip)> {
+fn media_hit(ctx: &egui::Context, ui: &Ui, show: &Show, doc: &Presentation) -> Option<(ShapeId, maluos_slides_model::MediaClip)> {
     let p = ctx.input(|i| i.pointer.interact_pos())?;
     let full = ui.max_rect();
     let avail = if show.reading { Rect::from_min_max(full.min, pos2(full.max.x, full.max.y - 34.0)) } else { full };
@@ -1407,7 +1407,7 @@ fn shapes_under_pointer(ctx: &egui::Context, ui: &Ui, show: &mut Show, doc: &Pre
     let (x, y) = ((p.x - srect.min.x) as f64 / k, (p.y - srect.min.y) as f64 / k);
     let i = show.state.slide;
     if show.links.as_ref().is_none_or(|(s, ..)| *s != i) {
-        let placed = deckcraft_render::place_slide(doc, i);
+        let placed = maluos_slides_render::place_slide(doc, i);
         show.links = Some((i, placed.links, placed.shapes));
     }
     show.timeline(doc);
@@ -1475,7 +1475,7 @@ impl Show {
 }
 
 /// A slide-space box on screen, the slide being drawn in `srect` at `k` pixels per point.
-fn on_screen(srect: Rect, k: f32, x: &deckcraft_geom::Xfrm) -> Rect {
+fn on_screen(srect: Rect, k: f32, x: &maluos_slides_geom::Xfrm) -> Rect {
     Rect::from_min_size(pos2(srect.min.x + x.x as f32 * k, srect.min.y + x.y as f32 * k), vec2(x.w as f32 * k, x.h as f32 * k))
 }
 
@@ -1702,7 +1702,7 @@ fn format_elapsed(secs: f64) -> String {
 
 /// Local wall clock for presenter view. `--:--` where there is no clock (wasm).
 fn wall_clock() -> String {
-    match deckcraft_text::datetime::DateTime::now_local() {
+    match maluos_slides_text::datetime::DateTime::now_local() {
         Some(t) if t.hour < 24 && t.minute < 60 => format!("{:02}:{:02}", t.hour, t.minute),
         _ => "--:--".to_string(),
     }
@@ -1910,7 +1910,7 @@ fn render_thumb(ctx: &egui::Context, show: &mut Show, doc: &Presentation, i: usi
     }
     let w = 320.0_f64;
     let h = (w * doc.slide_size.height / doc.slide_size.width.max(1.0)).round().max(1.0);
-    let img = deckcraft_render::render_slide(
+    let img = maluos_slides_render::render_slide(
         doc,
         i,
         &RenderOpts { scale: w / doc.slide_size.width.max(1.0), size: Some((w as u32, h as u32)), ..Default::default() },
@@ -1932,7 +1932,7 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
             (480, (480.0 * doc.slide_size.height / doc.slide_size.width.max(1.0)).clamp(1.0, 1e9) as u32),
             crate::textures::max_side(ctx),
         );
-        let img = deckcraft_render::render_slide(
+        let img = maluos_slides_render::render_slide(
             doc,
             n,
             &RenderOpts { scale: next_size.0 as f64 / doc.slide_size.width.max(1.0), size: Some(next_size), ..Default::default() },
@@ -1940,7 +1940,7 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
         show.next_tex = Some((n, crate::textures::upload(ctx, "presenter-next", crate::textures::to_color_image(&img, false))));
     }
     let next_tex = show.next_tex.as_ref().filter(|(k, _)| Some(*k) == next).map(|(_, t)| t.clone());
-    let no_notes = deckcraft_model::text::TextBody::default();
+    let no_notes = maluos_slides_model::text::TextBody::default();
     let notes = doc.slides.get(cur).map_or(&no_notes, |s| &s.notes);
     let clock = wall_clock();
     // The presenter clock only moves when this window is drawn again.
@@ -1951,8 +1951,8 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
         ui.add(egui::Button::new(egui::RichText::new(s).size(15.0).color(Color32::WHITE)).fill(Color32::from_gray(60)).min_size(vec2(0.0, 30.0)))
     };
     ctx.show_viewport_immediate(
-        egui::ViewportId::from_hash_of("deckcraft_presenter"),
-        egui::ViewportBuilder::default().with_title("Presenter View — DeckCraft").with_inner_size([1100.0, 700.0]),
+        egui::ViewportId::from_hash_of("maluos_slides_presenter"),
+        egui::ViewportBuilder::default().with_title("Presenter View — MaluOS Slides").with_inner_size([1100.0, 700.0]),
         |ui, _| {
             if !keyboard(ui.ctx(), show, doc, now, true) {
                 *keep = false;
@@ -2091,7 +2091,7 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
 }
 
 /// The current slide's notes in the presenter's notes pane, `px` for 12 pt text.
-fn presenter_notes(ui: &mut Ui, notes: &deckcraft_model::text::TextBody, px: f32) -> egui::Response {
+fn presenter_notes(ui: &mut Ui, notes: &maluos_slides_model::text::TextBody, px: f32) -> egui::Response {
     let color = Color32::from_gray(230);
     if notes.text().is_empty() {
         ui.label(egui::RichText::new("No notes.").size(px).color(color))
@@ -2110,7 +2110,7 @@ mod tests {
     /// is below it and other videos stay out of that overlay.
     #[test]
     fn shapes_above_a_playing_video_are_the_overlay() {
-        let mut session = deckcraft_engine::Session::with_new();
+        let mut session = maluos_slides_engine::Session::with_new();
         for _ in 0..3 {
             session.execute("shape.insert", &json!({"preset": "rect", "rect": [0.0, 0.0, 100.0, 100.0]})).unwrap();
         }
@@ -2120,7 +2120,7 @@ mod tests {
         let keep = slide.shapes.len() - 3;
         slide.shapes.drain(..keep);
         let ids: Vec<ShapeId> = slide.shapes.iter().map(|s| s.id).collect();
-        slide.shapes[1].kind = deckcraft_model::ShapeKind::Media(deckcraft_model::MediaClip { video: true, ..Default::default() });
+        slide.shapes[1].kind = maluos_slides_model::ShapeKind::Media(maluos_slides_model::MediaClip { video: true, ..Default::default() });
         // Video in the middle: the shape above it is drawn over it.
         assert_eq!(below_playing_video(&doc, 0, &[ids[1]]), vec![ids[0], ids[1]]);
         // Video on top: nothing above it, the frame is painted last as before.
@@ -2134,7 +2134,7 @@ mod tests {
     /// never gave way to the idle hide, so a still pointer stayed on the playing video.
     #[test]
     fn a_still_cursor_hides_over_a_clickable_shape() {
-        let mut session = deckcraft_engine::Session::with_new();
+        let mut session = maluos_slides_engine::Session::with_new();
         let size = session.active().unwrap().doc.slide_size;
         let r = session.execute("shape.insert", &json!({"preset": "rect", "rect": [0.0, 0.0, size.width, size.height]})).unwrap();
         session.execute("insert.hyperlink", &json!({"url": "https://example.org", "ids": [r["id"]]})).unwrap();
@@ -2161,7 +2161,7 @@ mod tests {
     fn presenter_all_slides_does_not_cover_the_audience_screen() {
         use egui_kittest::kittest::Queryable;
 
-        let mut session = deckcraft_engine::Session::with_new();
+        let mut session = maluos_slides_engine::Session::with_new();
         session.execute("slide.new", &json!({})).unwrap();
         let doc = session.active().unwrap().doc.clone();
         let show = Show::new(&doc, 0, false, true);
@@ -2195,7 +2195,7 @@ mod tests {
     fn presenter_navigation_uses_its_own_keyboard_events() {
         use egui_kittest::kittest::Queryable;
 
-        let mut session = deckcraft_engine::Session::with_new();
+        let mut session = maluos_slides_engine::Session::with_new();
         session.execute("slide.new", &json!({})).unwrap();
         session.execute("slide.new", &json!({})).unwrap();
         let doc = session.active().unwrap().doc.clone();
@@ -2252,7 +2252,7 @@ mod tests {
     fn slideshow_navigation_advances_once_with_presenter_view() {
         use egui_kittest::kittest::Queryable;
 
-        let mut session = deckcraft_engine::Session::with_new();
+        let mut session = maluos_slides_engine::Session::with_new();
         session.execute("slide.new", &json!({})).unwrap();
         session.execute("slide.new", &json!({})).unwrap();
         let mut app = SlideApp::new(session, crate::Services::default());
@@ -2283,7 +2283,7 @@ mod tests {
 
     #[test]
     fn the_prefetched_frame_is_the_frame_shown_on_entry() {
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({"title": "Second"})).unwrap();
         let doc = s.active().unwrap().doc.clone();
         let size = (96, 54);
@@ -2300,17 +2300,17 @@ mod tests {
     /// backdrop, and must look the same as a whole-slide render.
     #[test]
     fn an_animation_frame_over_the_kept_backdrop_matches_a_full_render() {
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         let r = s.execute("shape.insert", &json!({"preset": "star5", "rect": [100.0, 100.0, 300.0, 200.0]})).unwrap();
         s.execute("animation.set", &json!({"effect": "fade", "ids": [r["id"]]})).unwrap();
         let mut doc = (*s.active().unwrap().doc).clone();
         // A glowing master graphic under the animated star.
         let mut deco = doc.slides[0].shapes.last().unwrap().clone();
         deco.id = ShapeId(9000);
-        deco.xfrm = deco.xfrm.map(|x| deckcraft_geom::Xfrm { x: x.x - 60.0, y: x.y + 40.0, ..x });
-        deco.effects = Some(deckcraft_model::Effects {
-            glow: Some(deckcraft_model::style::Glow {
-                color: deckcraft_model::style::ColorRef::rgb(deckcraft_color::Rgba::rgb(0, 120, 255)),
+        deco.xfrm = deco.xfrm.map(|x| maluos_slides_geom::Xfrm { x: x.x - 60.0, y: x.y + 40.0, ..x });
+        deco.effects = Some(maluos_slides_model::Effects {
+            glow: Some(maluos_slides_model::style::Glow {
+                color: maluos_slides_model::style::ColorRef::rgb(maluos_slides_color::Rgba::rgb(0, 120, 255)),
                 radius: 12.0,
             }),
             ..Default::default()
@@ -2347,7 +2347,7 @@ mod tests {
     fn a_transition_keeps_the_old_slide_in_its_own_texture() {
         // #33: the old slide's handle was cloned, so the new slide was rendered into the same
         // texture and every transition blended the new slide with itself.
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({})).unwrap();
         s.execute("transition.set", &json!({"kind": "fade", "index": 1})).unwrap();
         let doc = s.active().unwrap().doc.clone();
@@ -2365,12 +2365,12 @@ mod tests {
     #[test]
     fn media_in_the_click_sequence_plays_with_its_step() {
         // #116: media set to play in the click sequence never started; only a click on it did.
-        let s = deckcraft_engine::Session::with_new();
+        let s = maluos_slides_engine::Session::with_new();
         let mut doc = s.active().unwrap().doc.clone();
         let id = doc.slides[0].shapes[0].id;
-        let play = |delay_ms| deckcraft_model::Animation {
+        let play = |delay_ms| maluos_slides_model::Animation {
             shape: id,
-            class: deckcraft_model::AnimClass::Media,
+            class: maluos_slides_model::AnimClass::Media,
             effect: "play".into(),
             duration_ms: 5000,
             delay_ms,
@@ -2409,7 +2409,7 @@ mod tests {
 
     #[test]
     fn the_laser_and_the_pen_are_not_on_together() {
-        let doc = deckcraft_model::Presentation::default();
+        let doc = maluos_slides_model::Presentation::default();
         let mut show = Show::new(&doc, 0, false, false);
         show.set_laser(true);
         assert!(show.laser && !show.pen);
@@ -2422,13 +2422,13 @@ mod tests {
         assert!(!show.laser);
     }
 
-    fn deck_with_first_animation(start: deckcraft_model::anim::AnimStart) -> Presentation {
-        let mut s = deckcraft_engine::Session::with_new();
+    fn deck_with_first_animation(start: maluos_slides_model::anim::AnimStart) -> Presentation {
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({})).unwrap();
         let mut doc = Presentation::clone(&s.active().unwrap().doc);
         let slide = std::sync::Arc::make_mut(&mut doc.slides[1]);
         let shape = slide.shapes[0].id;
-        slide.animations = vec![deckcraft_model::anim::Animation { shape, start, duration_ms: 3000, ..Default::default() }];
+        slide.animations = vec![maluos_slides_model::anim::Animation { shape, start, duration_ms: 3000, ..Default::default() }];
         doc
     }
 
@@ -2436,7 +2436,7 @@ mod tests {
     fn a_first_animation_after_or_with_previous_plays_when_the_slide_appears() {
         // #631: it was started twice and the second start finished it, so the slide appeared
         // fully built.
-        use deckcraft_model::anim::AnimStart;
+        use maluos_slides_model::anim::AnimStart;
         for start in [AnimStart::AfterPrevious, AnimStart::WithPrevious] {
             let doc = deck_with_first_animation(start);
             // Starting the show on the slide.
@@ -2489,7 +2489,7 @@ mod tests {
 
     #[test]
     fn escape_only_closes_the_grid_of_its_own_window() {
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({})).unwrap();
         let doc = s.active().unwrap().doc.clone();
         let mut show = Show::new(&doc, 0, false, true);
@@ -2507,7 +2507,7 @@ mod tests {
 
     #[test]
     fn escape_leaves_the_grid_then_the_zoom_and_blank_toggles() {
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({})).unwrap();
         let doc = s.active().unwrap().doc.clone();
         let mut show = Show::new(&doc, 0, false, true);
@@ -2538,7 +2538,7 @@ mod tests {
     /// although the notes pane shows them; the notes stay selectable.
     #[test]
     fn presenter_notes_keep_bullets_numbers_and_bold() {
-        use deckcraft_model::text::{Bullet, ParaProps, Paragraph, Run, RunProps, TextBody};
+        use maluos_slides_model::text::{Bullet, ParaProps, Paragraph, Run, RunProps, TextBody};
         let point = |text: &str, bullet: Bullet| Paragraph {
             level: 1,
             props: ParaProps { bullet: Some(bullet), ..Default::default() },
@@ -2607,7 +2607,7 @@ mod tests {
         let clock = wall_clock();
         assert!(clock == "--:--" || (clock.len() == 5 && clock.as_bytes().get(2) == Some(&b':')));
 
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({})).unwrap();
         let doc = s.active().unwrap().doc.clone();
         let mut show = Show::new(&doc, 0, false, true);
@@ -2627,7 +2627,7 @@ mod tests {
 
     #[test]
     fn a_typed_slide_number_jumps_and_then_expires() {
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         s.execute("slide.new", &json!({})).unwrap();
         let doc = s.active().unwrap().doc.clone();
         let mut show = Show::new(&doc, 0, false, false);
@@ -2665,7 +2665,7 @@ mod tests {
     #[test]
     fn the_next_preview_fits_its_column_whatever_the_slide_shape() {
         let right = Rect::from_min_size(pos2(700.0, 100.0), vec2(400.0, 600.0));
-        let mut s = deckcraft_engine::Session::with_new();
+        let mut s = maluos_slides_engine::Session::with_new();
         for (w, h) in [(72, 4032), (4032, 72), (960, 540)] {
             s.execute("design.slideSize", &json!({"w": w, "h": h})).unwrap();
             let doc = s.active().unwrap().doc.clone();
@@ -2683,7 +2683,7 @@ mod tests {
     fn back_leaves_a_slide_whose_first_animation_is_with_previous() {
         // #844: Back on such a slide undid its first step, and the next frame played that step
         // again by itself, so Back never reached the slide before.
-        let mut session = deckcraft_engine::Session::with_new();
+        let mut session = maluos_slides_engine::Session::with_new();
         session.execute("slide.new", &json!({})).unwrap();
         let id = session.active().unwrap().doc.slides[1].shapes[0].id;
         session

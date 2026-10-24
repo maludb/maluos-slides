@@ -2,11 +2,11 @@
 //! the button itself applies it again to the next selection, as in PowerPoint (#1080).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use deckcraft_engine::Session;
-use deckcraft_model::{ColorBase, ColorRef, Fill, SchemeSlot, ShapeId};
 use egui::{Event, Key, Modifiers, PointerButton};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
+use maluos_slides_engine::Session;
+use maluos_slides_model::{ColorBase, ColorRef, Fill, SchemeSlot, ShapeId};
 use serde_json::json;
 
 use crate::{Services, SlideApp};

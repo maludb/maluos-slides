@@ -1,9 +1,9 @@
 //! Colour glyphs (OpenType `COLR` v0 and v1, colours from `CPAL`), as colour emoji fonts draw
 //! them: layers of glyph outlines filled with solid colours or gradients.
 
-use deckcraft_color::Rgba;
-use deckcraft_fonts::FontFace;
 use kurbo::{Affine, BezPath, Point, Rect};
+use maluos_slides_color::Rgba;
+use maluos_slides_fonts::FontFace;
 use skrifa::color::{Brush, ColorPainter, ColorStop, CompositeMode, Extend, Transform};
 use skrifa::raw::types::BoundingBox;
 use skrifa::{GlyphId, MetadataProvider};
@@ -120,7 +120,7 @@ impl Painter<'_> {
 
     /// The glyph outline in font units, y up.
     fn outline(&self, gid: GlyphId) -> BezPath {
-        let p = deckcraft_fonts::FontDb::global().outline(self.face, gid.to_u32());
+        let p = maluos_slides_fonts::FontDb::global().outline(self.face, gid.to_u32());
         Affine::scale_non_uniform(1.0, -1.0) * (*p).clone()
     }
 

@@ -1,8 +1,8 @@
 //! Community and project links (shown in Help, About, the CLI and MCP).
 
-pub const DISCORD: &str = "https://discord.gg/artcraft";
-pub const WEBSITE: &str = "https://getartcraft.com/";
-pub const APPS: &str = "https://getartcraft.com/apps";
-pub const APP_PAGE: &str = "https://getartcraft.com/apps/deckcraft";
-pub const GITHUB: &str = "https://github.com/storytold/deckcraft";
-pub const ISSUES: &str = "https://github.com/storytold/deckcraft/issues";
+pub const DISCORD: &str = "https://github.com/maludb/maluos-slides/discussions";
+pub const WEBSITE: &str = "https://maluos.com/";
+pub const APPS: &str = "https://github.com/maludb";
+pub const APP_PAGE: &str = "https://github.com/maludb/maluos-slides";
+pub const GITHUB: &str = "https://github.com/maludb/maluos-slides";
+pub const ISSUES: &str = "https://github.com/maludb/maluos-slides/issues";

@@ -1,26 +1,26 @@
 [package]
-name = "deckcraft-pptx"
+name = "maluos-slides-pptx"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "DeckCraft PPTX: Office Open XML (PresentationML/DrawingML) import and export, written from the public ECMA-376 standard"
+description = "MaluOS Slides PPTX: Office Open XML (PresentationML/DrawingML) import and export, written from the public ECMA-376 standard"
 
 [lints]
 workspace = true
 
 [dependencies]
-deckcraft-model = { workspace = true }
-deckcraft-geom = { workspace = true }
-deckcraft-color = { workspace = true }
+maluos-slides-model = { workspace = true }
+maluos-slides-geom = { workspace = true }
+maluos-slides-color = { workspace = true }
 quick-xml = { workspace = true }
 zip = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
-deckcraft-engine = { workspace = true }
+maluos-slides-engine = { workspace = true }
 serde_json = { workspace = true }
-deckcraft-color = { workspace = true }
-deckcraft-geom = { workspace = true }
+maluos-slides-color = { workspace = true }
+maluos-slides-geom = { workspace = true }
 image = { workspace = true }
 zip = { workspace = true }

@@ -1,22 +1,22 @@
 [package]
-name = "deckcraft-media"
+name = "maluos-slides-media"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "DeckCraft media: probing, audio decoding (MP3, AAC/M4A, WAV, AIFF, FLAC, ALAC, Vorbis, Opus) to f32 PCM, H.264/HEVC/VP9/AV1 video decoding, poster frames, trim/fade/volume and the playback mixer and clock"
+description = "MaluOS Slides media: probing, audio decoding (MP3, AAC/M4A, WAV, AIFF, FLAC, ALAC, Vorbis, Opus) to f32 PCM, H.264/HEVC/VP9/AV1 video decoding, poster frames, trim/fade/volume and the playback mixer and clock"
 
 [lints]
 workspace = true
 
 [dependencies]
-deckcraft-isobmff = { workspace = true }
-deckcraft-matroska = { workspace = true }
-deckcraft-ogg = { workspace = true }
-deckcraft-opus = { workspace = true }
-deckcraft-h264 = { workspace = true }
-deckcraft-hevc = { workspace = true }
-deckcraft-vp9 = { workspace = true }
-deckcraft-av1 = { workspace = true }
+maluos-slides-isobmff = { workspace = true }
+maluos-slides-matroska = { workspace = true }
+maluos-slides-ogg = { workspace = true }
+maluos-slides-opus = { workspace = true }
+maluos-slides-h264 = { workspace = true }
+maluos-slides-hevc = { workspace = true }
+maluos-slides-vp9 = { workspace = true }
+maluos-slides-av1 = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
 image = { workspace = true }

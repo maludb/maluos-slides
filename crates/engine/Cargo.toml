@@ -1,24 +1,24 @@
 [package]
-name = "deckcraft-engine"
+name = "maluos-slides-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "DeckCraft engine: sessions, undo history, selection, the command registry every frontend dispatches through, and pointer tools"
+description = "MaluOS Slides engine: sessions, undo history, selection, the command registry every frontend dispatches through, and pointer tools"
 
 [lints]
 workspace = true
 
 [dependencies]
-deckcraft-geom = { workspace = true }
-deckcraft-color = { workspace = true }
-deckcraft-model = { workspace = true }
-deckcraft-fonts = { workspace = true }
-deckcraft-text = { workspace = true }
-deckcraft-render = { workspace = true }
-deckcraft-pdf = { workspace = true }
-deckcraft-format = { workspace = true }
-deckcraft-pptx = { workspace = true }
-deckcraft-media = { workspace = true }
+maluos-slides-geom = { workspace = true }
+maluos-slides-color = { workspace = true }
+maluos-slides-model = { workspace = true }
+maluos-slides-fonts = { workspace = true }
+maluos-slides-text = { workspace = true }
+maluos-slides-render = { workspace = true }
+maluos-slides-pdf = { workspace = true }
+maluos-slides-format = { workspace = true }
+maluos-slides-pptx = { workspace = true }
+maluos-slides-media = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 i_overlay = { workspace = true }
@@ -28,7 +28,7 @@ image = { workspace = true }
 chrono = { workspace = true }
 
 [dev-dependencies]
-deckcraft-anim = { workspace = true }
+maluos-slides-anim = { workspace = true }
 zip = { workspace = true }
 
 # The browser clock for comment timestamps (wasm has no std::time::SystemTime).

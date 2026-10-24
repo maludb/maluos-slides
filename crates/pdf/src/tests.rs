@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use super::*;
-use deckcraft_model::text::TextBody;
+use maluos_slides_model::text::TextBody;
 
 fn deck(n: usize) -> Presentation {
-    let mut p = deckcraft_model::defaults::new_presentation(None);
+    let mut p = maluos_slides_model::defaults::new_presentation(None);
     let layout = p.slides[0].layout;
     while p.slides.len() < n {
-        let s = deckcraft_model::defaults::new_slide(&mut p, layout).expect("slide");
+        let s = maluos_slides_model::defaults::new_slide(&mut p, layout).expect("slide");
         p.slides.push(Arc::new(s));
     }
     for (i, s) in p.slides.iter_mut().enumerate() {
@@ -93,8 +93,8 @@ fn metadata_retains_values_and_omits_blank_fields() {
     let pdf = hayro_syntax::Pdf::new(bytes.clone()).unwrap();
     assert_eq!(pdf.metadata().title.as_deref(), Some(b"  Deck title  ".as_slice()));
     assert_eq!(pdf.metadata().author.as_deref(), Some(b"  Author  ".as_slice()));
-    assert_eq!(pdf.metadata().creator.as_deref(), Some(b"DeckCraft".as_slice()));
-    assert_eq!(pdf.metadata().producer.as_deref(), Some(b"DeckCraft".as_slice()));
+    assert_eq!(pdf.metadata().creator.as_deref(), Some(b"MaluOS Slides".as_slice()));
+    assert_eq!(pdf.metadata().producer.as_deref(), Some(b"MaluOS Slides".as_slice()));
     assert!(pdf.metadata().creation_date.is_none());
     p.props.author = " ".into();
     let bytes = export(&p, &PdfOptions { title: Some(" ".into()), ..opts(PageLayout::Slides) }).unwrap();
@@ -106,8 +106,8 @@ fn metadata_retains_values_and_omits_blank_fields() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn text_layer_links_and_bookmarks_survive_serialization() {
-    use deckcraft_model::text::{Action, Hyperlink};
     use hayro_syntax::object::{Array, Dict};
+    use maluos_slides_model::text::{Action, Hyperlink};
     let mut p = deck(2);
     let last = p.slides[1].id;
     let slide = Arc::make_mut(&mut p.slides[0]);
@@ -159,7 +159,7 @@ fn font_without_head() -> Vec<u8> {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn unembeddable_font_returns_error_instead_of_a_pdf_missing_text() {
-    use deckcraft_model::{Shape, ShapeId, Xfrm};
+    use maluos_slides_model::{Shape, ShapeId, Xfrm};
     let db = FontDb::global();
     assert_eq!(db.add_font(font_without_head()), 1);
     assert_eq!(db.face("BadPDF", "Regular").family, "BadPDF");
@@ -178,11 +178,11 @@ fn unembeddable_font_returns_error_instead_of_a_pdf_missing_text() {
     assert!(error.to_string().contains("font could not be read for embedding"));
     // Master text remains visible even when the optional slide text layer is off.
     // It must propagate the same embedding error through notes and handout pages.
-    let mut header = ph(deckcraft_model::PhType::Header, 0.0, 0.0, 500.0, 40.0, "");
+    let mut header = ph(maluos_slides_model::PhType::Header, 0.0, 0.0, 500.0, 40.0, "");
     header.text = p.slides[0].shapes[0].text.clone();
     for layout in [PageLayout::Notes, PageLayout::Handouts { per_page: 3 }] {
         let mut p = deck(1);
-        let master = Some(Arc::new(deckcraft_model::Master { shapes: vec![header.clone()], ..Default::default() }));
+        let master = Some(Arc::new(maluos_slides_model::Master { shapes: vec![header.clone()], ..Default::default() }));
         if layout == PageLayout::Notes {
             p.notes_master = master;
         } else {
@@ -199,9 +199,9 @@ fn unembeddable_font_returns_error_instead_of_a_pdf_missing_text() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn supported_unicode_is_shaped_and_recovered_from_the_page_text_layer() {
-    use deckcraft_model::{Shape, ShapeId, Xfrm};
     use hayro_syntax::content::ops::TypedInstruction;
     use hayro_syntax::object::{Dict, Object, Stream};
+    use maluos_slides_model::{Shape, ShapeId, Xfrm};
 
     let text = "Café Ελληνικά Привет";
     let face = FontDb::global().face("Ubuntu", "Regular");
@@ -217,7 +217,7 @@ fn supported_unicode_is_shaped_and_recovered_from_the_page_text_layer() {
     let mut p = deck(1);
     Arc::make_mut(&mut p.slides[0]).shapes =
         vec![Shape { id: ShapeId(9001), xfrm: Some(Xfrm::new(20.0, 20.0, 920.0, 100.0)), text: Some(body), ..Default::default() }];
-    let placed = deckcraft_render::place_slide(&p, 0);
+    let placed = maluos_slides_render::place_slide(&p, 0);
     let runs: Vec<_> = placed.texts.iter().flat_map(|placed| &placed.layout.runs).collect();
     assert!(!runs.is_empty());
     assert!(runs.iter().all(|run| run.face.family == "Ubuntu" && !run.glyphs.is_empty() && run.glyphs.iter().all(|glyph| glyph.0 != 0)));
@@ -311,10 +311,10 @@ fn fmt(v: f64) -> String {
     s.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
-fn ph(kind: deckcraft_model::PhType, x: f64, y: f64, w: f64, h: f64, text: &str) -> deckcraft_model::Shape {
-    deckcraft_model::Shape {
-        xfrm: Some(deckcraft_model::Xfrm::new(x, y, w, h)),
-        ph: Some(deckcraft_model::Placeholder { kind, ..Default::default() }),
+fn ph(kind: maluos_slides_model::PhType, x: f64, y: f64, w: f64, h: f64, text: &str) -> maluos_slides_model::Shape {
+    maluos_slides_model::Shape {
+        xfrm: Some(maluos_slides_model::Xfrm::new(x, y, w, h)),
+        ph: Some(maluos_slides_model::Placeholder { kind, ..Default::default() }),
         text: Some(TextBody::from_text(text)),
         ..Default::default()
     }
@@ -322,7 +322,7 @@ fn ph(kind: deckcraft_model::PhType, x: f64, y: f64, w: f64, h: f64, text: &str)
 
 #[test]
 fn notes_pages_and_handouts_follow_their_masters() {
-    use deckcraft_model::PhType;
+    use maluos_slides_model::PhType;
     let mut p = deck(2);
     let paper = (612.0, 792.0);
     // No masters: the default layout (slide at the top, one-inch side margins).
@@ -330,8 +330,8 @@ fn notes_pages_and_handouts_follow_their_masters() {
     assert_eq!((slide.x0, slide.y0), (72.0, 54.0));
     assert!(notes.y0 > slide.y1);
     // A notes master moves the slide and the notes, scaled from the notes size to the paper.
-    p.notes_size = deckcraft_model::Size::new(612.0, 792.0);
-    p.notes_master = Some(Arc::new(deckcraft_model::Master {
+    p.notes_size = maluos_slides_model::Size::new(612.0, 792.0);
+    p.notes_master = Some(Arc::new(maluos_slides_model::Master {
         shapes: vec![
             ph(PhType::SlideImage, 100.0, 400.0, 412.0, 300.0, ""),
             ph(PhType::Body, 50.0, 50.0, 500.0, 300.0, ""),
@@ -351,7 +351,7 @@ fn notes_pages_and_handouts_follow_their_masters() {
     // Notes pages and handouts export with the masters.
     for layout in [PageLayout::Notes, PageLayout::Handouts { per_page: 3 }] {
         if layout != PageLayout::Notes {
-            p.handout_master = Some(Arc::new(deckcraft_model::Master {
+            p.handout_master = Some(Arc::new(maluos_slides_model::Master {
                 shapes: vec![ph(PhType::Footer, 0.0, 760.0, 300.0, 30.0, "Confidential")],
                 ..Default::default()
             }));
@@ -363,10 +363,10 @@ fn notes_pages_and_handouts_follow_their_masters() {
 
 #[test]
 fn master_text_keeps_its_own_formatting() {
-    use deckcraft_model::text::RunProps;
-    use deckcraft_model::{ColorRef, Fill, PhType, Rgba};
+    use maluos_slides_model::text::RunProps;
+    use maluos_slides_model::{ColorRef, Fill, PhType, Rgba};
     let mut p = deck(1);
-    p.notes_size = deckcraft_model::Size::new(612.0, 792.0);
+    p.notes_size = maluos_slides_model::Size::new(612.0, 792.0);
     let mut header = ph(PhType::Header, 0.0, 0.0, 300.0, 30.0, "Board pack");
     if let Some(run) = header.text.as_mut().and_then(|t| t.paragraphs.first_mut()).and_then(|p| p.runs.first_mut()) {
         run.props = RunProps {
@@ -377,7 +377,7 @@ fn master_text_keeps_its_own_formatting() {
             ..Default::default()
         };
     }
-    let m = deckcraft_model::Master { shapes: vec![header, ph(PhType::Footer, 0.0, 760.0, 300.0, 30.0, "plain")], ..Default::default() };
+    let m = maluos_slides_model::Master { shapes: vec![header, ph(PhType::Footer, 0.0, 760.0, 300.0, 30.0, "plain")], ..Default::default() };
     let texts = master_texts(&p, &m, (612.0, 792.0), 1);
     let st = &texts[0].3;
     assert_eq!((st.size, st.bold, st.italic, st.color), (20.0, true, false, Rgba::rgb(200, 0, 0)));
@@ -392,10 +392,10 @@ fn master_text_keeps_its_own_formatting() {
 
 #[test]
 fn master_text_wraps_and_keeps_mixed_formatting() {
-    use deckcraft_model::text::{Run, RunProps};
-    use deckcraft_model::{PhType, Rgba};
+    use maluos_slides_model::text::{Run, RunProps};
+    use maluos_slides_model::{PhType, Rgba};
     let mut p = deck(1);
-    p.notes_size = deckcraft_model::Size::new(612.0, 792.0);
+    p.notes_size = maluos_slides_model::Size::new(612.0, 792.0);
     let mut header = ph(PhType::Header, 0.0, 0.0, 200.0, 80.0, "");
     if let Some(para) = header.text.as_mut().and_then(|t| t.paragraphs.first_mut()) {
         para.runs = vec![
@@ -404,14 +404,14 @@ fn master_text_wraps_and_keeps_mixed_formatting() {
                 "for internal circulation only, please do not forward",
                 RunProps {
                     size: Some(9.0),
-                    fill: Some(deckcraft_model::Fill::solid(deckcraft_model::ColorRef::rgb(Rgba::rgb(200, 0, 0)))),
+                    fill: Some(maluos_slides_model::Fill::solid(maluos_slides_model::ColorRef::rgb(Rgba::rgb(200, 0, 0)))),
                     ..Default::default()
                 },
             ),
         ];
     }
-    let m = deckcraft_model::Master { shapes: vec![header, ph(PhType::SlideNum, 312.0, 760.0, 300.0, 30.0, "")], ..Default::default() };
-    let placed = deckcraft_render::place_master_texts(&p, &m, 4);
+    let m = maluos_slides_model::Master { shapes: vec![header, ph(PhType::SlideNum, 312.0, 760.0, 300.0, 30.0, "")], ..Default::default() };
+    let placed = maluos_slides_render::place_master_texts(&p, &m, 4);
     assert_eq!(placed.len(), 2, "header and page number");
     let h = &placed[0].layout;
     assert!(h.lines.len() >= 2, "wraps inside its 200 pt placeholder: {} lines", h.lines.len());
@@ -437,8 +437,8 @@ fn master_text_wraps_and_keeps_mixed_formatting() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn slides_share_one_backdrop_raster_and_keep_their_pixels() {
-    use deckcraft_model::{Shape, ShapeId, Xfrm};
     use hayro_syntax::object::{Dict, Number, Stream};
+    use maluos_slides_model::{Shape, ShapeId, Xfrm};
 
     /// The image XObjects the export stores, one entry per distinct object: the pages that draw
     /// it, its filters, color channel, alpha channel (the SMask) and pixel size.
@@ -484,7 +484,7 @@ fn slides_share_one_backdrop_raster_and_keep_their_pixels() {
     assert_eq!(pages, [0, 1, 2]);
     assert_eq!(filters, [hayro_syntax::Filter::FlateDecode], "backdrop artwork stays lossless");
     assert!(alpha.is_none(), "the backdrop is opaque and needs no alpha mask");
-    let expect = deckcraft_render::render_slide(&p, 0, &RenderOpts { scale: scale(&p), threads: 4, ..Default::default() });
+    let expect = maluos_slides_render::render_slide(&p, 0, &RenderOpts { scale: scale(&p), threads: 4, ..Default::default() });
     assert_eq!(size, (expect.width, expect.height));
     let want: Vec<u8> = expect.pixels.as_chunks::<4>().0.iter().flat_map(|px| px[..3].iter().copied()).collect();
     assert_eq!(rgb, want, "the shared raster is exactly what the renderer draws");
@@ -501,17 +501,17 @@ fn slides_share_one_backdrop_raster_and_keep_their_pixels() {
     Arc::make_mut(&mut p.slides[0]).shapes.push(Shape {
         id: ShapeId(9002),
         xfrm: Some(Xfrm::new(20.0, 20.0, 400.0, 300.0)),
-        fill: Some(deckcraft_model::Fill::solid(deckcraft_model::ColorRef::rgb(deckcraft_model::Rgba::rgb(200, 30, 30)))),
+        fill: Some(maluos_slides_model::Fill::solid(maluos_slides_model::ColorRef::rgb(maluos_slides_model::Rgba::rgb(200, 30, 30)))),
         ..Default::default()
     });
     let stored = images(&p);
     assert_eq!(stored.len(), 2, "shared backdrop plus the slide's content");
     let (_, filters, rgb, alpha, _) = stored.into_iter().find(|(_, _, _, alpha, _)| alpha.is_some()).expect("content raster");
     assert_eq!(filters, [hayro_syntax::Filter::FlateDecode]);
-    let expect = deckcraft_render::render_slide_part(
+    let expect = maluos_slides_render::render_slide_part(
         &p,
         0,
-        deckcraft_render::SlidePart::Content,
+        maluos_slides_render::SlidePart::Content,
         &RenderOpts { scale: scale(&p), threads: 4, ..Default::default() },
     );
     let straight = expect.to_straight();

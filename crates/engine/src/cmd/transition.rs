@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use deckcraft_model::Transition;
-use deckcraft_model::anim::TRANSITIONS;
+use maluos_slides_model::Transition;
+use maluos_slides_model::anim::TRANSITIONS;
 use serde_json::{Value, json};
 
 use super::*;
@@ -171,7 +171,7 @@ fn sound(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let ct = super::insert::content_type(&name, &bytes);
     let bytes = Arc::new(bytes);
-    let audible = deckcraft_media::probe(&bytes).is_ok_and(|i| i.audio.is_some());
+    let audible = maluos_slides_media::probe(&bytes).is_ok_and(|i| i.audio.is_some());
     let bytes = Arc::try_unwrap(bytes).unwrap_or_else(|a| (*a).clone());
     if !audible && !ct.starts_with("audio/") {
         return Err(bad("transition.sound", format!("{name} is not a sound file ({ct})")));

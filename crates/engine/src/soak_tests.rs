@@ -3,7 +3,7 @@
 //! redo restoring the exact document, and periodic save/reopen in both formats.
 //!
 //! Seeded and deterministic. A failure prints the seed and the last commands so it replays.
-//! `DECKCRAFT_SOAK_STEPS=50000 cargo test -p deckcraft-engine soak -- --ignored` runs a long soak.
+//! `MALUOS_SLIDES_SOAK_STEPS=50000 cargo test -p maluos-slides-engine soak -- --ignored` runs a long soak.
 
 use std::collections::VecDeque;
 
@@ -64,7 +64,7 @@ fn params(r: &mut Rng, s: &Session) -> Value {
     }
 }
 
-fn doc(s: &Session) -> Option<deckcraft_model::Presentation> {
+fn doc(s: &Session) -> Option<maluos_slides_model::Presentation> {
     s.active().map(|d| (*d.doc).clone())
 }
 
@@ -144,7 +144,7 @@ fn soak(seed: u64, steps: usize) {
 }
 
 fn steps(default: usize) -> usize {
-    std::env::var("DECKCRAFT_SOAK_STEPS").ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    std::env::var("MALUOS_SLIDES_SOAK_STEPS").ok().and_then(|v| v.parse().ok()).unwrap_or(default)
 }
 
 #[test]
@@ -155,9 +155,9 @@ fn soak_random_edits_keep_the_document_valid() {
 }
 
 #[test]
-#[ignore = "long soak; set DECKCRAFT_SOAK_STEPS"]
+#[ignore = "long soak; set MALUOS_SLIDES_SOAK_STEPS"]
 fn soak_long() {
-    let seed = std::env::var("DECKCRAFT_SOAK_SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(0x5EED);
+    let seed = std::env::var("MALUOS_SLIDES_SOAK_SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(0x5EED);
     soak(seed, steps(20_000));
 }
 

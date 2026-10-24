@@ -3,8 +3,8 @@
 //! resizes the slide's own shapes and crops pictures to their new box; it changes only that
 //! slide. Everything is computed here, offline.
 
-use deckcraft_geom::Xfrm;
-use deckcraft_model::{Fill, Presentation, Rgba, Shape, ShapeKind};
+use maluos_slides_geom::Xfrm;
+use maluos_slides_model::{Fill, Presentation, Rgba, Shape, ShapeKind};
 use serde_json::{Value, json};
 
 use super::*;
@@ -87,12 +87,12 @@ fn cover_crop(src: f64, dst: f64) -> [f64; 4] {
 /// The light fill behind the title in the full-bleed idea. Its opacity is an `alpha` transform
 /// (about 220/255), as PPTX stores it, so the fill compares equal after a save and reopen.
 fn band_fill() -> Fill {
-    Fill::solid(deckcraft_model::ColorRef::rgb(Rgba::rgb(255, 255, 255)).with(deckcraft_model::ColorTransform::Alpha(86274)))
+    Fill::solid(maluos_slides_model::ColorRef::rgb(Rgba::rgb(255, 255, 255)).with(maluos_slides_model::ColorTransform::Alpha(86274)))
 }
 
 /// The band as released versions up to 0.10 stored it (opacity in the colour's own alpha).
 fn legacy_band_fill() -> Fill {
-    Fill::solid(deckcraft_model::ColorRef::rgb(Rgba::rgba(255, 255, 255, 220)))
+    Fill::solid(maluos_slides_model::ColorRef::rgb(Rgba::rgba(255, 255, 255, 220)))
 }
 
 /// Whether `f` is a Full-bleed band, in the current or the legacy form.
@@ -229,8 +229,8 @@ mod tests {
 
     use std::sync::Arc;
 
-    use deckcraft_model::style::PictureFill;
-    use deckcraft_model::{PhType, Placeholder, ShapeId};
+    use maluos_slides_model::style::PictureFill;
+    use maluos_slides_model::{PhType, Placeholder, ShapeId};
 
     use super::*;
 
@@ -244,13 +244,13 @@ mod tests {
             id: ShapeId(500),
             ph: Some(Placeholder { kind: PhType::Title, ..Default::default() }),
             xfrm: Some(Xfrm::new(50.0, 30.0, 860.0, 90.0)),
-            text: Some(deckcraft_model::text::TextBody::from_text("Harbour at dawn")),
+            text: Some(maluos_slides_model::text::TextBody::from_text("Harbour at dawn")),
             ..Default::default()
         };
         let body = Shape {
             id: ShapeId(501),
             xfrm: Some(Xfrm::new(50.0, 140.0, 860.0, 350.0)),
-            text: Some(deckcraft_model::text::TextBody::from_text("one\ntwo")),
+            text: Some(maluos_slides_model::text::TextBody::from_text("one\ntwo")),
             ..Default::default()
         };
         slide.shapes.push(title);
@@ -354,7 +354,7 @@ mod tests {
             hidden: true,
             ph: Some(Placeholder { kind: PhType::Title, ..Default::default() }),
             xfrm: Some(Xfrm::new(50.0, 30.0, 860.0, 90.0)),
-            text: Some(deckcraft_model::text::TextBody::from_text("Old title")),
+            text: Some(maluos_slides_model::text::TextBody::from_text("Old title")),
             ..Default::default()
         };
         slide.shapes.insert(0, hidden);
@@ -370,8 +370,8 @@ mod tests {
     fn switching_ideas_removes_the_band_after_a_pptx_round_trip() {
         let mut s = deck(true);
         s.execute("design.applyIdea", &json!({"id": "fullBleed"})).unwrap();
-        let bytes = deckcraft_pptx::export(&s.doc().unwrap().doc).unwrap();
-        let back = deckcraft_pptx::import(&bytes).unwrap();
+        let bytes = maluos_slides_pptx::export(&s.doc().unwrap().doc).unwrap();
+        let back = maluos_slides_pptx::import(&bytes).unwrap();
         s.doc_mut().unwrap().doc = Arc::new(back);
         let title = s.doc().unwrap().doc.slides[0].shapes.iter().position(|x| x.ph.as_ref().is_some_and(|p| p.kind.is_title())).unwrap();
         let id = s.doc().unwrap().doc.slides[0].shapes[title].id.0;
@@ -383,7 +383,7 @@ mod tests {
     #[test]
     fn switching_ideas_removes_a_band_saved_by_earlier_versions() {
         let mut s = deck(true);
-        let legacy = Fill::solid(deckcraft_model::ColorRef::rgb(Rgba::rgba(255, 255, 255, 220)));
+        let legacy = Fill::solid(maluos_slides_model::ColorRef::rgb(Rgba::rgba(255, 255, 255, 220)));
         let st = s.doc_mut().unwrap();
         let slide = Arc::make_mut(&mut Arc::make_mut(&mut st.doc).slides[0]);
         slide.shapes.iter_mut().find(|x| x.id == ShapeId(500)).unwrap().fill = Some(legacy);

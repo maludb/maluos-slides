@@ -1,21 +1,21 @@
 [package]
-name = "deckcraft-render"
+name = "maluos-slides-render"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "DeckCraft renderer: slides, layouts and masters to pixels (vello_cpu): fills, outlines, effects, pictures, text, tables, charts"
+description = "MaluOS Slides renderer: slides, layouts and masters to pixels (vello_cpu): fills, outlines, effects, pictures, text, tables, charts"
 
 [lints]
 workspace = true
 
 [dependencies]
-deckcraft-geom = { workspace = true }
-deckcraft-color = { workspace = true }
-deckcraft-metafile = { workspace = true }
-deckcraft-model = { workspace = true }
-deckcraft-anim = { workspace = true }
-deckcraft-fonts = { workspace = true }
-deckcraft-text = { workspace = true }
+maluos-slides-geom = { workspace = true }
+maluos-slides-color = { workspace = true }
+maluos-slides-metafile = { workspace = true }
+maluos-slides-model = { workspace = true }
+maluos-slides-anim = { workspace = true }
+maluos-slides-fonts = { workspace = true }
+maluos-slides-text = { workspace = true }
 vello_cpu = { workspace = true }
 vello_common = { workspace = true }
 image = { workspace = true }

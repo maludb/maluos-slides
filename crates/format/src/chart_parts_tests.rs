@@ -1,6 +1,6 @@
 use super::*;
-use deckcraft_model::chart::{Chart, ChartPart, ChartRel, ChartType};
-use deckcraft_model::{Master, Shape, ShapeId};
+use maluos_slides_model::chart::{Chart, ChartPart, ChartRel, ChartType};
+use maluos_slides_model::{Master, Shape, ShapeId};
 use serde_json::{Value, json};
 
 const PART: &str = "ppt/embeddings/owned.xlsx";

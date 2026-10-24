@@ -1,9 +1,9 @@
 //! Picture Format ▸ Picture Styles: PowerPoint's quick styles for pictures, each a frame (shape,
 //! outline) and effects applied as one step, replacing the previous style.
 
-use deckcraft_color::{ColorTransform, Rgba};
-use deckcraft_model::style::{Effects, Reflection, Shadow};
-use deckcraft_model::{ColorRef, Geom, Line, Shape};
+use maluos_slides_color::{ColorTransform, Rgba};
+use maluos_slides_model::style::{Effects, Reflection, Shadow};
+use maluos_slides_model::{ColorRef, Geom, Line, Shape};
 use serde_json::{Value, json};
 
 use super::*;

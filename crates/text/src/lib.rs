@@ -25,13 +25,13 @@ pub mod datetime;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use deckcraft_color::Rgba;
-use deckcraft_fonts::script::{self, joins_following, joins_preceding};
-use deckcraft_fonts::{FontDb, FontFace, FontSlot, ScriptTag, ShapeParams};
-use deckcraft_geom::{Point, Rect};
-use deckcraft_model::resolve::{self, Ctx};
-use deckcraft_model::text::{Align, Anchor, AutoFit, BodyProps, Bullet, Caps, ParaProps, RunKind, RunProps, Spacing, Strike, TextBody, TextDir};
-use deckcraft_model::{Fill, Shape};
+use maluos_slides_color::Rgba;
+use maluos_slides_fonts::script::{self, joins_following, joins_preceding};
+use maluos_slides_fonts::{FontDb, FontFace, FontSlot, ScriptTag, ShapeParams};
+use maluos_slides_geom::{Point, Rect};
+use maluos_slides_model::resolve::{self, Ctx};
+use maluos_slides_model::text::{Align, Anchor, AutoFit, BodyProps, Bullet, Caps, ParaProps, RunKind, RunProps, Spacing, Strike, TextBody, TextDir};
+use maluos_slides_model::{Fill, Shape};
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A run of glyphs in one face, size and colour.
@@ -56,7 +56,7 @@ pub struct GlyphRun {
     pub link: bool,
     /// Opacity of the fill on top of `color`'s own alpha (0 for no fill).
     pub alpha: f64,
-    pub gradient: Option<deckcraft_model::style::Gradient>,
+    pub gradient: Option<maluos_slides_model::style::Gradient>,
     /// Shadow and glow behind the glyphs (`a:rPr/a:effectLst`).
     pub effects: Option<RunEffects>,
     /// East Asian vertical text (`eaVert`): each glyph stands upright, turned a quarter turn
@@ -359,7 +359,7 @@ struct Style {
     highlight: Option<Rgba>,
     outline: Option<(Rgba, f64)>,
     link: bool,
-    gradient: Option<deckcraft_model::style::Gradient>,
+    gradient: Option<maluos_slides_model::style::Gradient>,
     effects: Option<RunEffects>,
     /// "Regular", "Bold"… for the slot and fallback faces.
     style_name: &'static str,
@@ -447,7 +447,7 @@ fn make_style(ctx: &Ctx, r: &RunProps, scale: f64, prompt: Option<Rgba>) -> Styl
             // Colours resolved here (theme, colour map), so the renderer needs no colour scheme.
             let mut g = g.clone();
             for s in &mut g.stops {
-                s.color = deckcraft_model::ColorRef::rgb(ctx.color(&s.color, None));
+                s.color = maluos_slides_model::ColorRef::rgb(ctx.color(&s.color, None));
             }
             (g.stops.first().map(|s| ctx.color(&s.color, None)).unwrap_or(Rgba::BLACK), 1.0, Some(g))
         }
@@ -804,7 +804,7 @@ fn shape_para(ctx: &Ctx, shape: &Shape, body: &TextBody, pi: usize, scale: f64, 
 /// and other symbols missing from the text font), by the usual fallback.
 fn bullet_face(db: &FontDb, st: &mut Style, label: &str) {
     let chars: Vec<char> = label.chars().collect();
-    if !chars.is_empty() && !deckcraft_fonts::covers_cluster(&st.face, &chars) {
+    if !chars.is_empty() && !maluos_slides_fonts::covers_cluster(&st.face, &chars) {
         st.face = db.cascade(&chars, std::slice::from_ref(&st.face), st.style_name);
     }
 }
@@ -870,8 +870,9 @@ fn shape_cells(
         // Spaces, digits and punctuation stay in the face of the text before them when it can
         // draw them, so a phrase isn't cut into items at every space.
         // Emoji, and pictographs asked to look like text (U+FE0E), pick their own face.
-        let neutral =
-            cluster.iter().all(|c| script::script_of(*c).is_none()) && !deckcraft_fonts::is_emoji_cluster(cluster) && !cluster.contains(&'\u{FE0E}');
+        let neutral = cluster.iter().all(|c| script::script_of(*c).is_none())
+            && !maluos_slides_fonts::is_emoji_cluster(cluster)
+            && !cluster.contains(&'\u{FE0E}');
         // A symbol-font character (U+F0xx) with an `a:sym` font draws in that font when it's there.
         // Some installed Symbol faces (Apple's on macOS) have no private-use mapping: they map the
         // glyphs to real Unicode, so the PUA code is remapped to that character when shaping.
@@ -885,7 +886,7 @@ fn shape_cells(
         let face = match (sym_face, prev.as_ref()) {
             (Some(f), _) => f,
             (None, Some(p))
-                if neutral && !p.is_color() && deckcraft_fonts::covers_cluster(p, cluster) && char_style.get(a.wrapping_sub(1)) == Some(&si) =>
+                if neutral && !p.is_color() && maluos_slides_fonts::covers_cluster(p, cluster) && char_style.get(a.wrapping_sub(1)) == Some(&si) =>
             {
                 p.clone()
             }
@@ -1029,16 +1030,16 @@ const SUB_SUPER: f64 = 0.66;
 /// it: kerning only where the run asks for it (`kern`), and no standard or contextual ligatures in
 /// Latin, Greek and Cyrillic ("fi", "ffi" and Calibri's "ti" stay apart). Other scripts need
 /// their ligatures (Arabic lam-alef), and emoji sequences are joined by them.
-fn shaping_features(cells: &[Cell], styles: &[Style], script: Option<ScriptTag>) -> Vec<deckcraft_fonts::Feature> {
+fn shaping_features(cells: &[Cell], styles: &[Style], script: Option<ScriptTag>) -> Vec<maluos_slides_fonts::Feature> {
     let mut f = vec![];
     if !cells.first().and_then(|c| styles.get(c.style)).is_some_and(|st| st.kern) {
-        f.extend(deckcraft_fonts::feature("-kern"));
+        f.extend(maluos_slides_fonts::feature("-kern"));
     }
     let alphabetic = matches!(script.as_ref(), Some(b"Latn" | b"Grek" | b"Cyrl"));
     let emoji = cells.iter().any(|c| matches!(c.ch as u32, 0x200D | 0x20E3 | 0xFE0F | 0x2600..=0x27BF | 0x1F000..=0x1FAFF | 0xE0020..=0xE007F));
     if alphabetic && !emoji {
-        f.extend(deckcraft_fonts::feature("-liga"));
-        f.extend(deckcraft_fonts::feature("-clig"));
+        f.extend(maluos_slides_fonts::feature("-liga"));
+        f.extend(maluos_slides_fonts::feature("-clig"));
     }
     f
 }
@@ -1066,7 +1067,7 @@ fn shape_item(
     let features = shaping_features(cells.get(range.clone()).unwrap_or(&[]), styles, script);
     let params = ShapeParams { features: &features, rtl, script, language: lang };
     let sym = styles.get(first.style).and_then(|st| st.sym.as_deref());
-    let glyphs = deckcraft_fonts::shape_range(face, text, b0..b1, &params, |ch| {
+    let glyphs = maluos_slides_fonts::shape_range(face, text, b0..b1, &params, |ch| {
         let ch = if upper { caps_char(ch) } else { ch };
         symbol_map_char(face, ch, sym).unwrap_or(ch)
     });
@@ -1114,7 +1115,7 @@ fn shape_item(
             && let Some(&(gid, 1)) = lig.get(&h)
         {
             let s = cells.get(h).map(scale_of).unwrap_or(0.0);
-            let carets = deckcraft_fonts::ligature_carets(face, gid);
+            let carets = maluos_slides_fonts::ligature_carets(face, gid);
             if carets.len() + 1 >= m {
                 bounds.extend(carets.iter().take(m - 1).map(|c| (*c as f64 * s).clamp(0.0, w)));
             }
@@ -1466,7 +1467,7 @@ pub fn map_symbol_bullet(c: &str, font: Option<&str>) -> String {
 }
 
 fn measure_str(face: &FontFace, size: f64, s: &str) -> (f64, Vec<(u32, f64)>) {
-    let g = deckcraft_fonts::shape(face, s, &[], |c| c);
+    let g = maluos_slides_fonts::shape(face, s, &[], |c| c);
     let k = size / face.upem.max(1.0);
     let mut x = 0.0;
     let mut out = vec![];
@@ -1863,7 +1864,7 @@ fn layout_scaled(ctx: &Ctx, shape: &Shape, body: &TextBody, bp: &BodyProps, opts
         (r.y1 - bp.inset_b.unwrap_or(3.6)).max(r.y0 + bp.inset_t.unwrap_or(3.6)),
     );
     // Text that follows a WordArt arch or circle is set on one line per paragraph.
-    let follow = bp.warp.as_deref().is_some_and(deckcraft_geom::warp::is_follow);
+    let follow = bp.warp.as_deref().is_some_and(maluos_slides_geom::warp::is_follow);
     let wrap = bp.wrap.unwrap_or(true) && !follow && !matches!(bp.autofit, Some(AutoFit::Shape) if shape.text_box && !bp.wrap.unwrap_or(true));
     let ncols = bp.columns.unwrap_or(1).clamp(1, 16) as usize;
     let col_gap = bp.col_spacing.unwrap_or(0.0).max(0.0);

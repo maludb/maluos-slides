@@ -176,10 +176,10 @@ mod tests {
     #[test]
     fn a_password_protected_presentation_is_named_as_such() {
         let locked = build(&["EncryptionInfo", "EncryptedPackage"]);
-        let err = deckcraft_engine::cmd::file::open_presentation("Locked.pptx", &locked).unwrap_err().to_string();
+        let err = maluos_slides_engine::cmd::file::open_presentation("Locked.pptx", &locked).unwrap_err().to_string();
         assert!(err.contains("Locked.pptx is password-protected"), "{err}");
         let ppt = build(&["PowerPoint Document", "Current User"]);
-        let err = deckcraft_engine::cmd::file::open_presentation("Old.ppt", &ppt).unwrap_err().to_string();
+        let err = maluos_slides_engine::cmd::file::open_presentation("Old.ppt", &ppt).unwrap_err().to_string();
         assert!(!err.contains("password"), "{err}");
     }
 }

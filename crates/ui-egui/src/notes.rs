@@ -6,10 +6,10 @@
 
 use std::sync::Arc;
 
-use deckcraft_model::edit;
-use deckcraft_model::text::{Bullet, Paragraph, RunProps, Strike, TextBody};
 use egui::text::{CCursor, Galley, LayoutJob, TextFormat};
 use egui::{Align2, Color32, Stroke, Ui, vec2};
+use maluos_slides_model::edit;
+use maluos_slides_model::text::{Bullet, Paragraph, RunProps, Strike, TextBody};
 
 use crate::theme;
 
@@ -76,11 +76,11 @@ fn bullets(body: &TextBody) -> Vec<Option<String>> {
             }
             match p.props.bullet.as_ref()? {
                 Bullet::None => None,
-                Bullet::Char { char } => Some(deckcraft_text::map_symbol_bullet(char, p.props.bullet_font.as_deref())),
+                Bullet::Char { char } => Some(maluos_slides_text::map_symbol_bullet(char, p.props.bullet_font.as_deref())),
                 Bullet::AutoNum { scheme, start_at } => {
                     let n = numbering.get_mut(lvl)?;
                     *n = n.saturating_add(1);
-                    Some(deckcraft_text::autonum(scheme, start_at.saturating_sub(1).saturating_add(*n)))
+                    Some(maluos_slides_text::autonum(scheme, start_at.saturating_sub(1).saturating_add(*n)))
                 }
                 Bullet::Picture { .. } => Some("•".into()),
             }
@@ -240,7 +240,7 @@ pub fn view(ui: &mut Ui, body: &TextBody, look: &Look) -> egui::Response {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use deckcraft_model::text::{ParaProps, Run};
+    use maluos_slides_model::text::{ParaProps, Run};
 
     use super::*;
 

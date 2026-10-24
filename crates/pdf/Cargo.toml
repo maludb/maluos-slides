@@ -1,18 +1,18 @@
 [package]
-name = "deckcraft-pdf"
+name = "maluos-slides-pdf"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "DeckCraft PDF export (craft-pdf/Krilla): slides, notes pages and handouts with a selectable text layer, links and bookmarks"
+description = "MaluOS Slides PDF export (craft-pdf/Krilla): slides, notes pages and handouts with a selectable text layer, links and bookmarks"
 
 [lints]
 workspace = true
 
 [dependencies]
-deckcraft-model = { workspace = true }
-deckcraft-fonts = { workspace = true }
-deckcraft-text = { workspace = true }
-deckcraft-render = { workspace = true }
+maluos-slides-model = { workspace = true }
+maluos-slides-fonts = { workspace = true }
+maluos-slides-text = { workspace = true }
+maluos-slides-render = { workspace = true }
 craft-pdf = { workspace = true }
 kurbo = { workspace = true }
 serde = { workspace = true }

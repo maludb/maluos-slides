@@ -3,11 +3,11 @@
 
 use std::sync::Arc;
 
-use deckcraft_anim::{Click, HitShape, ShowAction, ShowState};
-use deckcraft_geom::Xfrm;
-use deckcraft_model::anim::{AnimClass, AnimStart, Animation, Transition};
-use deckcraft_model::text::{Action, Hyperlink, TextBody};
-use deckcraft_model::{LayoutType, Presentation, Shape, ShapeId, SlideId, defaults};
+use maluos_slides_anim::{Click, HitShape, ShowAction, ShowState};
+use maluos_slides_geom::Xfrm;
+use maluos_slides_model::anim::{AnimClass, AnimStart, Animation, Transition};
+use maluos_slides_model::text::{Action, Hyperlink, TextBody};
+use maluos_slides_model::{LayoutType, Presentation, Shape, ShapeId, SlideId, defaults};
 
 fn shape(p: &mut Presentation, name: &str, text: &str, x: f64, y: f64, w: f64, h: f64) -> Shape {
     Shape {
@@ -95,14 +95,14 @@ struct Show {
 
 impl Show {
     fn open(p: &Presentation) -> Show {
-        let bytes = deckcraft_pptx::export(p).expect("export");
-        let pres = deckcraft_pptx::import(&bytes).expect("import");
+        let bytes = maluos_slides_pptx::export(p).expect("export");
+        let pres = maluos_slides_pptx::import(&bytes).expect("import");
         let state = ShowState::new(&pres);
         Show { pres, state }
     }
 
     fn hits(&self, x: f64, y: f64) -> (Vec<HitShape>, Vec<bool>) {
-        let placed = deckcraft_render::place_slide(&self.pres, self.state.slide);
+        let placed = maluos_slides_render::place_slide(&self.pres, self.state.slide);
         let tl = ShowState::timeline(&self.pres, self.state.slide);
         let hits = placed
             .shapes

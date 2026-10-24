@@ -1,9 +1,9 @@
-//! DeckCraft fonts: the font database (craft-fonts families, user and system fonts, and open
+//! MaluOS Slides fonts: the font database (craft-fonts families, user and system fonts, and open
 //! substitutes for the Office fonts presentations ask for), vertical metrics, glyph outlines and
 //! OpenType shaping, script/slot classification and per-cluster fallback.
 //!
 //! Shaping here is style-agnostic: [`shape`] and [`shape_range`] turn text in one face into glyph
-//! ids, clusters and advances in font units. `deckcraft-text` applies sizes, tracking, scaling and
+//! ids, clusters and advances in font units. `maluos-slides-text` applies sizes, tracking, scaling and
 //! justification on top.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
@@ -260,7 +260,7 @@ mod tests {
         // Threads resolving an installed family nobody had loaded yet used to fall back to
         // another face when a different thread finished loading it first, so the same text was
         // laid out in different fonts depending on timing.
-        let dir = std::env::temp_dir().join(format!("deckcraft-fonts-concurrent-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("maluos-slides-fonts-concurrent-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("Hack-Regular.ttf"), epaint_default_fonts::HACK_REGULAR).unwrap();
         for _ in 0..20 {
@@ -337,7 +337,7 @@ mod tests {
         // under both of its names.
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let dir = std::env::temp_dir().join(format!("deckcraft-fonts-outlines-{}", std::process::id()));
+            let dir = std::env::temp_dir().join(format!("maluos-slides-fonts-outlines-{}", std::process::id()));
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join("legacy-semibold.ttf"), &semibold).unwrap();
             std::fs::write(dir.join("legacy-regular.ttf"), include_bytes!("../tests/fixtures/legacy-regular.ttf")).unwrap();
@@ -365,7 +365,7 @@ mod tests {
                 assert_eq!(db.document_face(missing, "Regular").family, db.face(twin, "Regular").family, "{missing}");
             }
         }
-        // Metric-compatible stand-ins and DeckCraft's default keep their own fallbacks.
+        // Metric-compatible stand-ins and MaluOS Slides' default keep their own fallbacks.
         // So do Office's cloud fonts, which PowerPoint downloads and draws as themselves.
         for kept in ["Arial", "Times New Roman", "Cambria", "Courier New", FALLBACK_FAMILY, "Aptos", "Aptos Display", "Grandview"] {
             assert_eq!(db.document_face(kept, "Regular").family, db.face(kept, "Regular").family, "{kept}");
@@ -455,7 +455,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn the_font_scan_skips_fifos_folders_and_link_loops() {
-        let dir = std::env::temp_dir().join(format!("deckcraft-fontscan-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("maluos-slides-fontscan-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("sub")).unwrap();
         std::fs::copy(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/legacy-semibold.ttf"), dir.join("sub/real.ttf")).unwrap();

@@ -13,11 +13,11 @@ mod chart_parts_tests;
 use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 
-use deckcraft_model::text::{Paragraph, TextBody};
-use deckcraft_model::{LayoutType, Presentation, ShapeKind, defaults};
+use maluos_slides_model::text::{Paragraph, TextBody};
+use maluos_slides_model::{LayoutType, Presentation, ShapeKind, defaults};
 
 pub const MIMETYPE: &str = "application/vnd.storyteller.deckcraft+zip";
-/// Files written before the SlideCraft → DeckCraft rename (`.slidecraft`) are still read.
+/// Files written before the SlideCraft → MaluOS Slides rename (`.slidecraft`) are still read.
 pub const LEGACY_MIMETYPE: &str = concat!("application/vnd.storyteller.", "slide", "craft+zip");
 pub const EXTENSION: &str = "deckcraft";
 /// Format version written into the manifest.
@@ -38,7 +38,7 @@ struct Budget {
 
 #[derive(Debug, thiserror::Error)]
 pub enum FormatError {
-    #[error("not a DeckCraft file: {0}")]
+    #[error("not a MaluOS Slides file: {0}")]
     NotOurs(String),
     #[error("damaged file: {0}")]
     Damaged(String),
@@ -68,8 +68,12 @@ pub fn save(p: &Presentation) -> Result<Vec<u8>> {
         z.write_all(MIMETYPE.as_bytes()).map_err(|e| FormatError::Write(e.to_string()))?;
         let mut presentation = p.clone();
         let parts = chart_parts::separate(&mut presentation)?;
-        let m =
-            Manifest { format: "deckcraft".into(), version: VERSION, generator: format!("DeckCraft {}", env!("CARGO_PKG_VERSION")), presentation };
+        let m = Manifest {
+            format: "deckcraft".into(),
+            version: VERSION,
+            generator: format!("MaluOS Slides {}", env!("CARGO_PKG_VERSION")),
+            presentation,
+        };
         let json = serde_json::to_vec(&finite::Finite(&m)).map_err(|e| FormatError::Write(e.to_string()))?;
         z.start_file("presentation.json", deflate).map_err(w)?;
         z.write_all(&json).map_err(|e| FormatError::Write(e.to_string()))?;
@@ -161,7 +165,7 @@ fn load_within(bytes: &[u8], budget: Budget) -> Result<(Presentation, Vec<String
         let name = format!("media/{}", item.id.0);
         let linked_only = item.link.is_some() && z.index_for_name(&name).is_none();
         if z.by_name(&name).is_ok_and(|f| f.size() > left) {
-            return Err(FormatError::Damaged("embedded media is larger than DeckCraft can open".into()));
+            return Err(FormatError::Damaged("embedded media is larger than MaluOS Slides can open".into()));
         }
         match read_entry_max(&mut z, &name, left.min(MAX_ENTRY)) {
             Ok(data) => {
@@ -195,7 +199,7 @@ pub fn repair(p: &mut Presentation) {
             // An exhausted id space leaves a duplicate slide as it is: the engine refuses to
             // grow such a deck (edits by id stay ambiguous for the duplicate), and the duplicate
             // stays visible rather than the file failing to open (#407).
-            let new_id = if dup { p.alloc_id().map(deckcraft_model::SlideId) } else { None };
+            let new_id = if dup { p.alloc_id().map(maluos_slides_model::SlideId) } else { None };
             if let Some(s) = p.slides.get_mut(i) {
                 let s = Arc::make_mut(s);
                 if needs_layout {
@@ -221,13 +225,18 @@ pub fn repair(p: &mut Presentation) {
 /// its id, and with it what animations and connectors point at. An exhausted id space leaves the
 /// rest as they are (#407).
 fn reid_duplicate_shapes(p: &mut Presentation) {
-    fn has_duplicates(shapes: &[deckcraft_model::Shape]) -> bool {
+    fn has_duplicates(shapes: &[maluos_slides_model::Shape]) -> bool {
         let mut seen = std::collections::HashSet::new();
         let mut dup = false;
-        deckcraft_model::walk(shapes, &mut |sh, _| dup |= !seen.insert(sh.id));
+        maluos_slides_model::walk(shapes, &mut |sh, _| dup |= !seen.insert(sh.id));
         dup
     }
-    fn reid(shapes: &mut [deckcraft_model::Shape], seen: &mut std::collections::HashSet<deckcraft_model::ShapeId>, next: &mut u32, depth: usize) {
+    fn reid(
+        shapes: &mut [maluos_slides_model::Shape],
+        seen: &mut std::collections::HashSet<maluos_slides_model::ShapeId>,
+        next: &mut u32,
+        depth: usize,
+    ) {
         if depth > 64 {
             return;
         }
@@ -236,16 +245,16 @@ fn reid_duplicate_shapes(p: &mut Presentation) {
                 && let Some(id) = (*next).max(1).checked_add(1)
             {
                 *next = id;
-                sh.id = deckcraft_model::ShapeId(id);
+                sh.id = maluos_slides_model::ShapeId(id);
                 seen.insert(sh.id);
             }
-            if let deckcraft_model::ShapeKind::Group { children, .. } = &mut sh.kind {
+            if let maluos_slides_model::ShapeKind::Group { children, .. } = &mut sh.kind {
                 reid(children, seen, next, depth + 1);
             }
         }
     }
     let mut next = p.next_id;
-    let mut fix = |shapes: &mut Vec<deckcraft_model::Shape>| {
+    let mut fix = |shapes: &mut Vec<maluos_slides_model::Shape>| {
         if has_duplicates(shapes) {
             reid(shapes, &mut std::collections::HashSet::new(), &mut next, 0);
         }
@@ -272,12 +281,12 @@ pub const SLIDE_SIDE: std::ops::RangeInclusive<f64> = 72.0..=4032.0;
 
 /// A slide size the views and renderer can always lay out: a missing, zero, negative or
 /// non-finite side gives the 16:9 default, and each side is brought into [`SLIDE_SIDE`].
-pub fn sane_slide_size(s: deckcraft_model::Size) -> deckcraft_model::Size {
+pub fn sane_slide_size(s: maluos_slides_model::Size) -> maluos_slides_model::Size {
     let ok = |v: f64| v.is_finite() && v > 0.0;
     if !(ok(s.width) && ok(s.height)) {
         return defaults::WIDE;
     }
-    deckcraft_model::Size::new(s.width.clamp(*SLIDE_SIDE.start(), *SLIDE_SIDE.end()), s.height.clamp(*SLIDE_SIDE.start(), *SLIDE_SIDE.end()))
+    maluos_slides_model::Size::new(s.width.clamp(*SLIDE_SIDE.start(), *SLIDE_SIDE.end()), s.height.clamp(*SLIDE_SIDE.start(), *SLIDE_SIDE.end()))
 }
 
 /// Slides read from an outline: each title with its body paragraphs (level 0–8, text).
@@ -321,7 +330,7 @@ fn failure(src: &[u8]) -> std::result::Result<Manifest, (String, (usize, usize))
 }
 
 /// Parse `presentation.json`. serde_json writes a NaN or infinite number as `null`, which then
-/// fails to read back as a number ("invalid type: null, expected f64"), so DeckCraft could save
+/// fails to read back as a number ("invalid type: null, expected f64"), so MaluOS Slides could save
 /// a file it couldn't open. Each such `null` is read as 0 instead ([`repair`] then brings the
 /// value into range); anything else that doesn't parse is damage.
 ///
@@ -398,7 +407,7 @@ const MAX_COORD: f64 = 1.0e6;
 /// Numbers no view can draw or no file should keep: non-finite positions, sizes and angles become
 /// 0, huge ones are clamped, angles are brought into 0–360, crops into a sane range, font sizes
 /// into 1–4000 pt and line widths into 0–1584 pt (PowerPoint's limits).
-fn sane_xfrm(x: &mut deckcraft_model::Xfrm) {
+fn sane_xfrm(x: &mut maluos_slides_model::Xfrm) {
     let fin = |v: f64| if v.is_finite() { v } else { 0.0 };
     x.x = fin(x.x).clamp(-MAX_COORD, MAX_COORD);
     x.y = fin(x.y).clamp(-MAX_COORD, MAX_COORD);
@@ -410,7 +419,7 @@ fn sane_xfrm(x: &mut deckcraft_model::Xfrm) {
     }
 }
 
-fn sane_run(p: &mut deckcraft_model::text::RunProps) {
+fn sane_run(p: &mut maluos_slides_model::text::RunProps) {
     p.size = p.size.filter(|v| v.is_finite() && *v > 0.0).map(|v| v.clamp(1.0, 4000.0));
     for s in p.shadow.iter_mut().chain(p.inner_shadow.iter_mut()) {
         sane_shadow(s);
@@ -436,7 +445,7 @@ fn effect_size(v: f64, max: f64) -> f64 {
     if v.is_finite() { v.clamp(0.0, max) } else { 0.0 }
 }
 
-fn sane_shadow(s: &mut deckcraft_model::style::Shadow) {
+fn sane_shadow(s: &mut maluos_slides_model::style::Shadow) {
     s.blur = effect_size(s.blur, MAX_SHADOW);
     s.dist = effect_size(s.dist, MAX_SHADOW);
     s.dir = if s.dir.is_finite() { s.dir.rem_euclid(360.0) } else { 0.0 };
@@ -449,19 +458,19 @@ fn sane_shadow(s: &mut deckcraft_model::style::Shadow) {
     }
 }
 
-fn sane_reflection(r: &mut deckcraft_model::style::Reflection) {
+fn sane_reflection(r: &mut maluos_slides_model::style::Reflection) {
     r.blur = effect_size(r.blur, MAX_REFLECTION);
     r.dist = effect_size(r.dist, MAX_REFLECTION);
 }
 
 /// Run properties a list style hands down to the text that inherits it.
-fn sane_list_style(ls: &mut deckcraft_model::text::ListStyle) {
+fn sane_list_style(ls: &mut maluos_slides_model::text::ListStyle) {
     for level in ls.levels.iter_mut().flatten() {
         sane_run(&mut level.run);
     }
 }
 
-fn sane_effects(e: &mut deckcraft_model::Effects) {
+fn sane_effects(e: &mut maluos_slides_model::Effects) {
     for s in e.outer_shadow.iter_mut().chain(e.inner_shadow.iter_mut()) {
         sane_shadow(s);
     }
@@ -474,7 +483,7 @@ fn sane_effects(e: &mut deckcraft_model::Effects) {
     }
 }
 
-fn sane_shapes(shapes: &mut [deckcraft_model::Shape], depth: usize) {
+fn sane_shapes(shapes: &mut [maluos_slides_model::Shape], depth: usize) {
     if depth > 64 {
         return;
     }
@@ -498,17 +507,17 @@ fn sane_shapes(shapes: &mut [deckcraft_model::Shape], depth: usize) {
             }
         }
         match &mut sh.kind {
-            deckcraft_model::ShapeKind::Picture { fill: deckcraft_model::style::PictureFill { crop, .. } }
-            | deckcraft_model::ShapeKind::Media(deckcraft_model::MediaClip { crop, .. }) => {
+            maluos_slides_model::ShapeKind::Picture { fill: maluos_slides_model::style::PictureFill { crop, .. } }
+            | maluos_slides_model::ShapeKind::Media(maluos_slides_model::MediaClip { crop, .. }) => {
                 for c in crop {
                     *c = if c.is_finite() { c.clamp(-10.0, 1.0) } else { 0.0 };
                 }
             }
-            deckcraft_model::ShapeKind::Group { children, child } => {
+            maluos_slides_model::ShapeKind::Group { children, child } => {
                 sane_xfrm(child);
                 sane_shapes(children, depth + 1);
             }
-            deckcraft_model::ShapeKind::Table(t) => {
+            maluos_slides_model::ShapeKind::Table(t) => {
                 for cell in t.rows.iter_mut().flat_map(|r| r.cells.iter_mut()) {
                     sane_list_style(&mut cell.text.list_style);
                 }
@@ -676,7 +685,7 @@ mod tests {
 
     #[test]
     fn chart_sidecars_are_optional_for_older_native_files() {
-        use deckcraft_model::chart::{Chart, ChartType};
+        use maluos_slides_model::chart::{Chart, ChartType};
         let chart = Chart::sample(ChartType::Pie);
         let mut json = serde_json::to_value(&chart).expect("chart JSON");
         assert!(json.get("kept").is_none(), "empty sidecars should not enlarge ordinary files");
@@ -687,8 +696,8 @@ mod tests {
 
     #[test]
     fn native_save_keeps_chart_relationships_and_payloads() {
-        use deckcraft_model::chart::{Chart, ChartKept, ChartPart, ChartRel, ChartType};
-        use deckcraft_model::{Shape, ShapeId, ShapeKind};
+        use maluos_slides_model::chart::{Chart, ChartKept, ChartPart, ChartRel, ChartType};
+        use maluos_slides_model::{Shape, ShapeId, ShapeKind};
         let kept = ChartKept {
             rels: vec![ChartRel {
                 id: "rWorkbook".into(),
@@ -831,7 +840,7 @@ mod tests {
     /// A video's crop is brought into the same range as a picture's (#972).
     #[test]
     fn a_video_crop_is_repaired_like_a_picture_crop() {
-        use deckcraft_model::{MediaClip, Shape};
+        use maluos_slides_model::{MediaClip, Shape};
         let mut p = Presentation::default();
         let clip = MediaClip { video: true, crop: [f64::NAN, 0.25, -1e9, 0.0], ..Default::default() };
         Arc::make_mut(&mut p.slides[0]).shapes.push(Shape { kind: ShapeKind::Media(clip), ..Default::default() });
@@ -844,17 +853,17 @@ mod tests {
     /// such number repaired (it failed as "invalid type: null, expected f64").
     #[test]
     fn a_file_saved_with_non_finite_numbers_reopens() {
-        use deckcraft_model::{Shape, ShapeKind, Xfrm};
+        use maluos_slides_model::{Shape, ShapeKind, Xfrm};
         let mut p = Presentation::default();
         let nan = f64::NAN;
         let inf = f64::INFINITY;
         let mut pic = Shape { xfrm: Some(Xfrm { x: nan, y: -inf, w: 1e300, h: -4.0, rot: 725.0, ..Default::default() }), ..Default::default() };
-        pic.kind = ShapeKind::Picture { fill: deckcraft_model::style::PictureFill { crop: [nan, inf, 0.25, -1e9], ..Default::default() } };
-        pic.line = Some(deckcraft_model::Line { width: Some(1e9), ..Default::default() });
+        pic.kind = ShapeKind::Picture { fill: maluos_slides_model::style::PictureFill { crop: [nan, inf, 0.25, -1e9], ..Default::default() } };
+        pic.line = Some(maluos_slides_model::Line { width: Some(1e9), ..Default::default() });
         let mut text = Shape { xfrm: Some(Xfrm { rot: inf, w: 100.0, h: 50.0, ..Default::default() }), ..Default::default() };
-        let mut body = deckcraft_model::text::TextBody::default();
-        let mut para = deckcraft_model::text::Paragraph::default();
-        para.runs.push(deckcraft_model::text::Run::with("x", deckcraft_model::text::RunProps { size: Some(-3.0), ..Default::default() }));
+        let mut body = maluos_slides_model::text::TextBody::default();
+        let mut para = maluos_slides_model::text::Paragraph::default();
+        para.runs.push(maluos_slides_model::text::Run::with("x", maluos_slides_model::text::RunProps { size: Some(-3.0), ..Default::default() }));
         para.end_props.size = Some(1e9);
         body.paragraphs.push(para);
         text.text = Some(body);
@@ -886,7 +895,7 @@ mod tests {
     /// including a `null` inside a tagged enum, where serde reports only the enclosing object.
     #[test]
     fn older_files_with_null_numbers_open() {
-        use deckcraft_model::{Shape, ShapeKind, Xfrm};
+        use maluos_slides_model::{Shape, ShapeKind, Xfrm};
         let nan = f64::NAN;
         for case in 0..3 {
             let mut p = Presentation::default();
@@ -897,7 +906,7 @@ mod tests {
                     ..Default::default()
                 },
                 _ => Shape {
-                    kind: ShapeKind::Picture { fill: deckcraft_model::style::PictureFill { crop: [0.1, nan, 0.0, 0.0], ..Default::default() } },
+                    kind: ShapeKind::Picture { fill: maluos_slides_model::style::PictureFill { crop: [0.1, nan, 0.0, 0.0], ..Default::default() } },
                     ..Default::default()
                 },
             };
@@ -914,11 +923,11 @@ mod tests {
     /// native format: it is drawn at 100 % and only fitted when its text changes (#724).
     #[test]
     fn a_bare_normautofit_body_round_trips() {
-        use deckcraft_model::text::{AutoFit, TextBody};
+        use maluos_slides_model::text::{AutoFit, TextBody};
         let mut p = Presentation::default();
         let mut body = TextBody::from_text("Overflowing");
         body.body.autofit = Some(AutoFit::Shrink { font_scale: None, line_reduction: 0.0 });
-        let sh = deckcraft_model::Shape { text: Some(body), ..Default::default() };
+        let sh = maluos_slides_model::Shape { text: Some(body), ..Default::default() };
         Arc::make_mut(&mut p.slides[0]).shapes.push(sh);
         let back = load(&save(&p).unwrap()).unwrap_or_else(|e| panic!("{e}"));
         let body = back.slides[0].shapes.last().unwrap().text.clone().unwrap();
@@ -926,7 +935,7 @@ mod tests {
         // A scale the file saved round-trips as itself.
         let mut body = TextBody::from_text("Overflowing");
         body.body.autofit = Some(AutoFit::Shrink { font_scale: Some(0.62), line_reduction: 0.2 });
-        let sh = deckcraft_model::Shape { text: Some(body), ..Default::default() };
+        let sh = maluos_slides_model::Shape { text: Some(body), ..Default::default() };
         Arc::make_mut(&mut p.slides[0]).shapes.push(sh);
         let back = load(&save(&p).unwrap()).unwrap_or_else(|e| panic!("{e}"));
         let body = back.slides[0].shapes.last().unwrap().text.clone().unwrap();
@@ -943,14 +952,14 @@ mod tests {
         let truncated = &ok[..ok.len() - 3];
         assert!(parse_manifest(truncated).is_err());
         // A null number on a later line (pretty-printed by another tool) is found too.
-        let pretty = b"{\n  \"format\": \"deckcraft\",\n  \"version\": 1,\n  \"generator\": \"t\",\n  \"presentation\": {\"slides\": [{\"shapes\": [{\"xfrm\": {\"x\": null, \"y\": 1, \"w\": 2, \"h\": 3}}]}]}\n}";
+        let pretty = b"{\n  \"format\": \"maluos-slides\",\n  \"version\": 1,\n  \"generator\": \"t\",\n  \"presentation\": {\"slides\": [{\"shapes\": [{\"xfrm\": {\"x\": null, \"y\": 1, \"w\": 2, \"h\": 3}}]}]}\n}";
         let m = parse_manifest(pretty).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(m.presentation.slides[0].shapes[0].xfrm.unwrap().x, 0.0);
     }
 
     #[test]
     fn degenerate_slide_sizes_are_repaired() {
-        use deckcraft_model::Size;
+        use maluos_slides_model::Size;
         let cases = [
             ((0.0, 0.0), (960.0, 540.0)),
             ((-5.0, 540.0), (960.0, 540.0)),
@@ -1004,7 +1013,7 @@ mod tests {
     #[test]
     fn repair_fixes_missing_layout_and_size() {
         let mut p = Presentation::default();
-        Arc::make_mut(&mut p.slides[0]).layout = deckcraft_model::LayoutId(99999);
+        Arc::make_mut(&mut p.slides[0]).layout = maluos_slides_model::LayoutId(99999);
         p.slide_size.width = f64::NAN;
         repair(&mut p);
         assert!(p.validate().is_empty());
@@ -1075,8 +1084,8 @@ mod tests {
 /// #814: slides_to_outline includes table cell text, which it used to skip.
 #[test]
 fn outline_includes_table_text() {
-    use deckcraft_model::table::{Cell, Row, Table};
-    use deckcraft_model::{Shape, ShapeKind, Xfrm};
+    use maluos_slides_model::table::{Cell, Row, Table};
+    use maluos_slides_model::{Shape, ShapeKind, Xfrm};
     let mut p = defaults::new_presentation(None);
     let layout = defaults::layout_of_kind(&p, LayoutType::TitleAndContent).unwrap();
     let mut s = defaults::new_slide(&mut p, layout).expect("slide");

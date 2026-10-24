@@ -9,8 +9,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use deckcraft_model::text::{Action, Hyperlink, RunProps, TextBody};
-use deckcraft_model::{LayoutId, MasterId, MediaId, Presentation, ShapeId, ShapeKind, Slide, SlideId};
+use maluos_slides_model::text::{Action, Hyperlink, RunProps, TextBody};
+use maluos_slides_model::{LayoutId, MasterId, MediaId, Presentation, ShapeId, ShapeKind, Slide, SlideId};
 use serde_json::{Value, json};
 
 use super::*;
@@ -37,14 +37,14 @@ fn remap(map: &HashMap<MediaId, MediaId>) -> impl FnMut(&mut MediaId) + '_ {
     }
 }
 
-fn shape_ids(shapes: &[deckcraft_model::Shape]) -> Vec<ShapeId> {
+fn shape_ids(shapes: &[maluos_slides_model::Shape]) -> Vec<ShapeId> {
     let mut v = vec![];
-    deckcraft_model::walk(shapes, &mut |sh, _| v.push(sh.id));
+    maluos_slides_model::walk(shapes, &mut |sh, _| v.push(sh.id));
     v
 }
 
 /// Point connector ends at the renumbered shapes.
-fn remap_connectors(shapes: &mut [deckcraft_model::Shape], map: &HashMap<ShapeId, ShapeId>, depth: usize) {
+fn remap_connectors(shapes: &mut [maluos_slides_model::Shape], map: &HashMap<ShapeId, ShapeId>, depth: usize) {
     if depth > 64 {
         return;
     }
@@ -92,7 +92,7 @@ fn relink_text(t: &mut TextBody, map: &HashMap<SlideId, SlideId>) {
 }
 
 /// Point the slide links under `shapes` (click and hover actions, text links) at the copies.
-fn relink_shapes(shapes: &mut [deckcraft_model::Shape], map: &HashMap<SlideId, SlideId>, depth: usize) {
+fn relink_shapes(shapes: &mut [maluos_slides_model::Shape], map: &HashMap<SlideId, SlideId>, depth: usize) {
     if depth > 64 {
         return;
     }
@@ -114,7 +114,7 @@ fn relink_shapes(shapes: &mut [deckcraft_model::Shape], map: &HashMap<SlideId, S
 }
 
 /// Fresh shape ids for `shapes`, and the old → new map.
-fn renumber(doc: &mut Presentation, shapes: &mut [deckcraft_model::Shape]) -> Result<HashMap<ShapeId, ShapeId>> {
+fn renumber(doc: &mut Presentation, shapes: &mut [maluos_slides_model::Shape]) -> Result<HashMap<ShapeId, ShapeId>> {
     let old = shape_ids(shapes);
     super::edit::reid("slide.reuse", doc, shapes)?;
     let map: HashMap<ShapeId, ShapeId> = old.into_iter().zip(shape_ids(shapes)).collect();
@@ -123,7 +123,7 @@ fn renumber(doc: &mut Presentation, shapes: &mut [deckcraft_model::Shape]) -> Re
 }
 
 /// The destination layout a reused slide moves to: same name, else same kind, else the first.
-fn matching_layout(doc: &Presentation, name: &str, kind: deckcraft_model::LayoutType) -> LayoutId {
+fn matching_layout(doc: &Presentation, name: &str, kind: maluos_slides_model::LayoutType) -> LayoutId {
     let all = || doc.masters.iter().flat_map(|m| m.layouts.iter());
     all()
         .find(|l| !name.is_empty() && l.name.eq_ignore_ascii_case(name))
@@ -251,9 +251,9 @@ fn copy_media(doc: &mut Presentation, src: &Presentation, used: &[MediaId], map:
 
 #[cfg(test)]
 mod tests {
-    use deckcraft_model::style::{Artistic, Fill, PictureFill};
-    use deckcraft_model::text::{Action, Bullet, Hyperlink, TextBody};
-    use deckcraft_model::{Background, MediaClip, Shape, ShapeKind, defaults};
+    use maluos_slides_model::style::{Artistic, Fill, PictureFill};
+    use maluos_slides_model::text::{Action, Bullet, Hyperlink, TextBody};
+    use maluos_slides_model::{Background, MediaClip, Shape, ShapeKind, defaults};
     use serde_json::json;
 
     use super::*;
@@ -307,8 +307,8 @@ mod tests {
             },
         ];
         slide.background = Some(Background::Fill { fill: Fill::Picture(PictureFill { media: id(4), ..Default::default() }) });
-        slide.transition = Some(deckcraft_model::anim::Transition { sound: Some(id(7)), ..Default::default() });
-        let bytes = deckcraft_format::save(&src).expect("save");
+        slide.transition = Some(maluos_slides_model::anim::Transition { sound: Some(id(7)), ..Default::default() });
+        let bytes = maluos_slides_format::save(&src).expect("save");
 
         let mut s = Session::with_new();
         let own = vec![1u8, 2, 3];
@@ -367,7 +367,7 @@ mod tests {
         if let Some(sl) = src.slides.get_mut(1).map(Arc::make_mut) {
             sl.shapes = vec![Shape { id: ShapeId(9004), click: Some(link_to(id(0))), ..Default::default() }];
         }
-        let bytes = deckcraft_format::save(&src).expect("save");
+        let bytes = maluos_slides_format::save(&src).expect("save");
         let reopened = crate::cmd::file::open_presentation("src.deckcraft", &bytes).expect("open");
         let left_behind = reopened.slides.get(2).map(|s| s.id).expect("third slide");
 
