@@ -1,0 +1,33 @@
+# Quick static checks for the Linux packaging (seconds, no Rust build): the shell scripts, the
+# desktop entry and the AppStream metainfo.
+name: Packaging lint
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/**", "packaging/**", "assets/app-icon/**"]
+  pull_request:
+    paths: [".github/workflows/**", "packaging/**", "assets/app-icon/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends shellcheck desktop-file-utils appstream
+      - name: shellcheck
+        run: shellcheck -x packaging/common.sh packaging/linux/*.sh packaging/web/*.sh
+      - name: desktop entry
+        run: desktop-file-validate packaging/linux/org.maluos.slides.desktop
+      - name: AppStream metainfo
+        run: |
+          sed -e "s/@VERSION@/0.0.0/g" -e "s/@DATE@/2026-01-01/g" packaging/linux/org.maluos.slides.metainfo.xml.in > /tmp/metainfo.xml
+          appstreamcli validate --no-net --explain /tmp/metainfo.xml

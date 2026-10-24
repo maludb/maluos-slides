@@ -12,3 +12,6 @@ packaging/env.sh
 /packaging/linux/flatpak/cargo-sources.json
 /build-flatpak/
 /.flatpak-builder/
+
+# Session transcripts the preserve-the-evidence plugin writes into the repo (ignored in the maluos repo too)
+/docs/claude-log/
