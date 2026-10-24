@@ -30,7 +30,7 @@ git rm -rq --ignore-unmatch \
   .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/packaging-lint.yml \
   .github/workflows/freebsd.yml .github/workflows/nix.yml .github/workflows/sonarcloud.yml \
   .github/workflows/windows-arm64.yml \
-  .coderabbit.yaml sonar-project.properties omastore.toml
+  .github/dependabot.yml .coderabbit.yaml sonar-project.properties omastore.toml
 # ATTRIBUTION rows of the removed assets, and the three places that call the brand files "the one exception"
 sed -i -e '/^| `docs\/brand\//d' -e '/^| `packaging\/macos\//d' -e '/^| `assets\/app-icon\/deckcraft\.icns`/d' ATTRIBUTION.md
 sed -i 's/fails if a file under `assets\/`, `docs\/images\/` or `docs\/brand\/` is missing from this table\./fails if a file under `assets\/` or `docs\/images\/` is missing from this table. The ArtCraft brand files of upstream DeckCraft (`docs\/brand\/`) are trademarks and are removed from this fork, as their licence requires./' ATTRIBUTION.md
