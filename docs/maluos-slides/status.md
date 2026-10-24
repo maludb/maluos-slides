@@ -1,6 +1,6 @@
 # MaluOS Slides status
 
-> **Updated:** 2026-10-24
+> **Updated:** 2026-10-24 (02:00 UTC)
 
 MaluOS Slides is the MaluOS presentation app, forked from
 [storytold/deckcraft](https://github.com/storytold/deckcraft) on 2026-10-24 at upstream
@@ -57,9 +57,9 @@ files no longer referenced).
 | Step | State | Notes |
 |---|---|---|
 | 2.1 baseline `cargo xtask ci` | done 2026-10-24 | all 8 steps pass (fmt, pdf-deps, clippy, test, doctest, assets, layers, wasm); 1,792 tests pass, 6 ignored. Environment note: with the default test parallelism the `ui-egui` unit-test binary segfaults inside `libvulkan.so` (egui_kittest's wgpu renderer on the VM's software Vulkan, a loader race, not a code defect); `RUST_TEST_THREADS=4` is stable, single-threaded too. Run ci as `RUST_TEST_THREADS=4 cargo xtask ci` on this host. ~45 min cold under the memory cap, peak 4.7 GB |
-| 2.2 fork hygiene | README done 2026-10-24 | CLAUDE.md preamble, brand files, links.rs, About box pending |
-| 2.3 Linux-only trim | planned | |
-| 2.4 rename script, vendor branch | planned | mapping in plan.md |
+| 2.2 fork hygiene | done 2026-10-24 | README rewritten (Linux only, DeckCraft credited); `CLAUDE.md` carries the MaluOS Slides preamble; the rename script removes `docs/brand/` and rewrites `ATTRIBUTION.md`, `AGENTS.md` and `NOTICE` to say so; `links.rs`, the About box and Backstage point at GitHub (`maludb/maluos-slides`, Discussions) and credit DeckCraft; `docs/claude-log/` ignored |
+| 2.3 Linux-only trim | done 2026-10-24 | the rename script drops `packaging/{macos,windows,freebsd}`, `icons.sh`, the `.icns`/`.ico` icons, upstream's seven workflows, `.coderabbit.yaml`, `sonar-project.properties`, `omastore.toml`; `packaging/macos/Info.plist.in` and `packaging/windows/maluos-slides.wxs` stay as fixtures of `every_desktop_offers_the_same_file_types`; the fork's own `maluos-ci.yml`, `maluos-release.yml`, `maluos-packaging-lint.yml` (Ubuntu only) |
+| 2.4 rename script, vendor branch | done 2026-10-24 | `scripts/rename-upstream.sh` + `.py` (see [rename.md](rename.md)) run on upstream `9aef21e` → branch `upstream-renamed`, merged into `main`: 39 paths moved, 348 files rewritten, 28 packages `maluos-slides-*`, app id `org.maluos.slides`, `Cargo.lock` re-sorted so `--locked` holds. Seven script rules came out of CI runs: struct-update paths (`..deckcraft_model::`), log targets (`maluos_slides`, underscore), the MCP server name, the plist's `<string>deckcraft</string>` extension, the spelling test's `hallo deckcraft` and `deckcraft\n`, the test fonts `DeckCraft Legacy` and `DeckCraft Colr Squares`. `cargo xtask ci` green on the renamed tree: 8 steps, 1,792 tests, 6 ignored. Release build 5m54s; `maluos-slides-0.10.0-linux-x86_64.deb` (79 MB) built, installed over the Phase 1 package and verified: `maluos-slides-cli --version`, MCP `serverInfo.name` = `maluos-slides`, GUI under Xvfb with `--control`, sample deck's note reads "made in MaluOS Slides", settings in `~/.config/maluos-slides/`, desktop entry `org.maluos.slides` registered |
 | 2.5 app identity | planned | |
 | 2.6 MaluOS packaging | planned | D8: vendored deb |
 | 2.7 boot test and release | planned | |
