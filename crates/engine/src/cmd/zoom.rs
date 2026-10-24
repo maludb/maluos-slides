@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use deckcraft_geom::Xfrm;
-use deckcraft_model::style::PictureFill;
-use deckcraft_model::text::{Action, Hyperlink, TextBody};
-use deckcraft_model::{LayoutType, Shape, ShapeId, ShapeKind, SlideId, defaults};
+use maluos_slides_geom::Xfrm;
+use maluos_slides_model::style::PictureFill;
+use maluos_slides_model::text::{Action, Hyperlink, TextBody};
+use maluos_slides_model::{LayoutType, Shape, ShapeId, ShapeKind, SlideId, defaults};
 use serde_json::{Value, json};
 
 use super::*;

@@ -1,12 +1,12 @@
-//! `deckcraft-cli mcp --automation-read-root <dir> --automation-write-root <dir>`: through the MCP
+//! `maluos-slides-cli mcp --automation-read-root <dir> --automation-write-root <dir>`: through the MCP
 //! protocol, files open and load only from inside the read root and are saved and exported only
 //! inside the write root. Paths that leave a root (`..`, another folder, a sibling with the same
 //! prefix, a link) are refused, and nothing is written outside.
 
 use std::path::{Path, PathBuf};
 
-use deckcraft_engine::file_access::AutomationRoots;
-use deckcraft_mcp::{Headless, Server};
+use maluos_slides_engine::file_access::AutomationRoots;
+use maluos_slides_mcp::{Headless, Server};
 use serde_json::{Value, json};
 
 /// A 1x1 PNG, so `insert_picture` has something real to read.

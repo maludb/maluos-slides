@@ -1,0 +1,22 @@
+[package]
+name = "maluos-slides-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "MaluOS Slides on the command line: render, convert, run commands, inspect, and serve MCP"
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "maluos-slides-cli"
+path = "src/main.rs"
+
+[dependencies]
+maluos-slides-engine = { workspace = true }
+maluos-slides-mcp = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+zip = { workspace = true }

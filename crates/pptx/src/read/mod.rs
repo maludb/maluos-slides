@@ -13,9 +13,9 @@ pub(crate) use chartex::{chartex_from, read_chartex_xml};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use deckcraft_geom::{Size, emu_to_pt};
-use deckcraft_model::text::TextBody;
-use deckcraft_model::{
+use maluos_slides_geom::{Size, emu_to_pt};
+use maluos_slides_model::text::TextBody;
+use maluos_slides_model::{
     Background, Comment, CustomShow, EmbeddedFont, Geom, HeaderFooter, Layout, LayoutId, LayoutType, Master, MasterId, MediaId, MediaItem, PhType,
     Presentation, Properties, Section, ShowSettings, Slide, SlideId, defaults,
 };
@@ -159,7 +159,7 @@ pub fn keep_xml(el: &El, ns: &[(String, String)]) -> String {
 /// Namespace prefixes whose `mc:Choice` content we understand.
 const SUPPORTED_MC: [&str; 10] = ["p14", "p15", "p159", "a14", "a16", "p1510", "a15", "c14", "p188", "cx1"];
 
-/// Office 2016 charts sit in a `cx1` choice; take it only for a layout DeckCraft reads (the
+/// Office 2016 charts sit in a `cx1` choice; take it only for a layout MaluOS Slides reads (the
 /// fallback is a picture or "this chart isn't available" text). The part is checked later, when
 /// the frame is read, so here only the namespace counts.
 fn chartex_readable(ch: &El) -> bool {
@@ -224,8 +224,8 @@ fn keepable(name: &str) -> bool {
 
 /// Custom XML data, sensitivity labels and custom properties, with the parts they relate to
 /// (`itemProps`) and their relationships parts, as written.
-fn kept_parts(pkg: &Package, pres_path: &str) -> Vec<deckcraft_model::KeptPart> {
-    use deckcraft_model::KeptPart;
+fn kept_parts(pkg: &Package, pres_path: &str) -> Vec<maluos_slides_model::KeptPart> {
+    use maluos_slides_model::KeptPart;
     let mut out: Vec<KeptPart> = Vec::new();
     let text = |name: &str| pkg.get(name).and_then(|b| std::str::from_utf8(b).ok()).map(str::to_string);
     for (holder, from_root) in [("", true), (pres_path, false)] {
@@ -347,7 +347,7 @@ fn max_cnvpr(el: &El, m: &mut u32) {
 
 /// The theme of a `.thmx` theme file (its `officeDocument` is a theme part), or of the first
 /// master of a `.pptx` / `.potx`, with the media its format scheme uses (ids from 1).
-pub fn import_theme(bytes: &[u8]) -> Result<(deckcraft_model::theme::Theme, Vec<MediaItem>), PptxError> {
+pub fn import_theme(bytes: &[u8]) -> Result<(maluos_slides_model::theme::Theme, Vec<MediaItem>), PptxError> {
     let pkg = Package::open(bytes)?;
     let target = pkg.rels("").first_of("officeDocument").map(|r| r.target.clone());
     let theme_path = match &target {
@@ -595,7 +595,7 @@ pub fn import_checked(bytes: &[u8]) -> Result<(Presentation, Vec<String>), PptxE
             .children_named("guide")
             .filter_map(|g| {
                 let pos = g.attr("pos").and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0) / 8.0;
-                pos.is_finite().then_some(deckcraft_model::DrawGuide { vertical: g.attr("orient") != Some("horz"), pos })
+                pos.is_finite().then_some(maluos_slides_model::DrawGuide { vertical: g.attr("orient") != Some("horz"), pos })
             })
             .take(1000)
             .collect();
@@ -788,16 +788,16 @@ pub fn color_map(cm: &El) -> Vec<(String, String)> {
 /// for shapes is the middle, so a top or bottom anchor is made explicit here and a middle one left
 /// unset (placeholders and text boxes keep inheriting).
 fn default_text_anchor(p: &mut Presentation) {
-    fn fix(shapes: &mut [deckcraft_model::Shape]) {
+    fn fix(shapes: &mut [maluos_slides_model::Shape]) {
         walk_shapes_mut(shapes, &mut |s| {
             if s.ph.is_none()
                 && !s.text_box
-                && !matches!(s.kind, deckcraft_model::ShapeKind::Table(_))
+                && !matches!(s.kind, maluos_slides_model::ShapeKind::Table(_))
                 && let Some(t) = &mut s.text
             {
                 // Middle is the model's own default for shapes, so it is kept as unset.
-                let got = t.body.anchor.unwrap_or(deckcraft_model::text::Anchor::Top);
-                t.body.anchor = (got != deckcraft_model::text::Anchor::Middle).then_some(got);
+                let got = t.body.anchor.unwrap_or(maluos_slides_model::text::Anchor::Top);
+                t.body.anchor = (got != maluos_slides_model::text::Anchor::Middle).then_some(got);
             }
         });
     }
@@ -831,10 +831,10 @@ fn inherit_placeholder_geometry(p: &mut Presentation) {
     let mut layout_geoms: Vec<(LayoutId, usize, Geom)> = vec![];
     for m in &p.masters {
         for l in &m.layouts {
-            let ctx = deckcraft_model::resolve::Ctx::for_layout(p, m, l);
+            let ctx = maluos_slides_model::resolve::Ctx::for_layout(p, m, l);
             for (i, s) in l.shapes.iter().enumerate() {
                 if unset(&s.geom) {
-                    let (_, mp) = deckcraft_model::resolve::parents(&ctx, s);
+                    let (_, mp) = maluos_slides_model::resolve::parents(&ctx, s);
                     layout_geoms.push((l.id, i, mp.map(|m| m.geom.clone()).filter(|g| !unset(g)).unwrap_or_default()));
                 }
             }
@@ -853,10 +853,10 @@ fn inherit_placeholder_geometry(p: &mut Presentation) {
     }
     let mut slide_geoms: Vec<(usize, usize, Geom)> = vec![];
     for (si, sl) in p.slides.iter().enumerate() {
-        let Some(ctx) = deckcraft_model::resolve::Ctx::for_slide(p, sl) else { continue };
+        let Some(ctx) = maluos_slides_model::resolve::Ctx::for_slide(p, sl) else { continue };
         for (i, s) in sl.shapes.iter().enumerate() {
             if unset(&s.geom) {
-                let (lp, mp) = deckcraft_model::resolve::parents(&ctx, s);
+                let (lp, mp) = maluos_slides_model::resolve::parents(&ctx, s);
                 let g = lp.map(|l| l.geom.clone()).filter(|g| !unset(g)).or_else(|| mp.map(|m| m.geom.clone()).filter(|g| !unset(g)));
                 slide_geoms.push((si, i, g.unwrap_or_default()));
             }
@@ -889,18 +889,18 @@ fn inherit_placeholder_geometry(p: &mut Presentation) {
 }
 
 /// Every shape, groups included.
-fn walk_shapes_mut(shapes: &mut [deckcraft_model::Shape], f: &mut dyn FnMut(&mut deckcraft_model::Shape)) {
+fn walk_shapes_mut(shapes: &mut [maluos_slides_model::Shape], f: &mut dyn FnMut(&mut maluos_slides_model::Shape)) {
     for s in shapes {
         f(s);
-        if let deckcraft_model::ShapeKind::Group { children, .. } = &mut s.kind {
+        if let maluos_slides_model::ShapeKind::Group { children, .. } = &mut s.kind {
             walk_shapes_mut(children, f);
         }
     }
 }
 
 /// `a:tblStyleLst`: the table styles the file defines.
-fn table_styles(imp: &mut Imp, part: &Part, root: &El) -> Vec<deckcraft_model::table::TableStyleDef> {
-    use deckcraft_model::table::{TableBorder, TablePart, TablePartStyle, TableStyleDef};
+fn table_styles(imp: &mut Imp, part: &Part, root: &El) -> Vec<maluos_slides_model::table::TableStyleDef> {
+    use maluos_slides_model::table::{TableBorder, TablePart, TablePartStyle, TableStyleDef};
     root.children_named("tblStyle")
         .take(256)
         .filter_map(|st| {
@@ -914,7 +914,7 @@ fn table_styles(imp: &mut Imp, part: &Part, root: &El) -> Vec<deckcraft_model::t
                 if let Some(fr) = bg.child("fillRef") {
                     ps.fill_ref = Some((
                         fr.u32("idx").unwrap_or(0),
-                        dml::color(fr).unwrap_or(deckcraft_model::ColorRef::scheme(deckcraft_color::SchemeSlot::Accent1)),
+                        dml::color(fr).unwrap_or(maluos_slides_model::ColorRef::scheme(maluos_slides_color::SchemeSlot::Accent1)),
                     ));
                 }
                 def.background = Some(ps);
@@ -934,7 +934,7 @@ fn table_styles(imp: &mut Imp, part: &Part, root: &El) -> Vec<deckcraft_model::t
                     if let Some(fr) = tc.child("fillRef") {
                         ps.fill_ref = Some((
                             fr.u32("idx").unwrap_or(0),
-                            dml::color(fr).unwrap_or(deckcraft_model::ColorRef::scheme(deckcraft_color::SchemeSlot::Accent1)),
+                            dml::color(fr).unwrap_or(maluos_slides_model::ColorRef::scheme(maluos_slides_color::SchemeSlot::Accent1)),
                         ));
                     }
                     if let Some(bd) = tc.child("tcBdr") {
@@ -945,7 +945,7 @@ fn table_styles(imp: &mut Imp, part: &Part, root: &El) -> Vec<deckcraft_model::t
                             } else {
                                 b.child("lnRef").map(|r| TableBorder::Ref {
                                     idx: r.u32("idx").unwrap_or(0),
-                                    color: dml::color(r).unwrap_or(deckcraft_model::ColorRef::scheme(deckcraft_color::SchemeSlot::Accent1)),
+                                    color: dml::color(r).unwrap_or(maluos_slides_model::ColorRef::scheme(maluos_slides_color::SchemeSlot::Accent1)),
                                 })
                             };
                             if let Some(slot) = ps.borders.get_mut(i) {
@@ -964,12 +964,12 @@ fn table_styles(imp: &mut Imp, part: &Part, root: &El) -> Vec<deckcraft_model::t
 fn background(imp: &mut Imp, part: &Part, csld: &El) -> Option<Background> {
     let bg = csld.child("bg")?;
     if let Some(pr) = bg.child("bgPr") {
-        return Some(Background::Fill { fill: dml::fill_of(imp, part, pr).unwrap_or(deckcraft_model::Fill::None) });
+        return Some(Background::Fill { fill: dml::fill_of(imp, part, pr).unwrap_or(maluos_slides_model::Fill::None) });
     }
     let r = bg.child("bgRef")?;
     Some(Background::Ref {
         idx: r.u32("idx").unwrap_or(1001),
-        color: dml::color(r).unwrap_or(deckcraft_model::ColorRef::scheme(deckcraft_color::SchemeSlot::Bg1)),
+        color: dml::color(r).unwrap_or(maluos_slides_model::ColorRef::scheme(maluos_slides_color::SchemeSlot::Bg1)),
     })
 }
 
@@ -1197,7 +1197,7 @@ fn read_show(sp: &El, shows: &HashMap<String, String>) -> ShowSettings {
         s.custom_show = Some(shows.get(id).cloned().unwrap_or_else(|| id.to_string()));
     }
     if let Some(c) = sp.child("penClr").and_then(dml::color)
-        && let deckcraft_model::ColorBase::Rgb { rgb } = c.base
+        && let maluos_slides_model::ColorBase::Rgb { rgb } = c.base
     {
         s.pen_color = rgb;
     }
@@ -1233,7 +1233,7 @@ fn header_footer(p: &Presentation) -> HeaderFooter {
                 Some(PhType::Date) => {
                     hf.date = true;
                     if let Some(t) = &sh.text
-                        && !t.paragraphs.iter().flat_map(|p| &p.runs).any(|r| matches!(r.kind, deckcraft_model::text::RunKind::Field { .. }))
+                        && !t.paragraphs.iter().flat_map(|p| &p.runs).any(|r| matches!(r.kind, maluos_slides_model::text::RunKind::Field { .. }))
                         && hf.date_text.is_empty()
                     {
                         hf.date_text = t.text();

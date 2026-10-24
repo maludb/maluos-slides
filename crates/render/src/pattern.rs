@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use deckcraft_color::Rgba;
 use kurbo::{Affine, BezPath};
+use maluos_slides_color::Rgba;
 use vello_cpu::{Pixmap, RenderContext, peniko};
 
 /// Side of one pattern cell, in points.

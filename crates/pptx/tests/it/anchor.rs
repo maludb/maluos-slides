@@ -3,13 +3,13 @@
 
 use std::io::{Cursor, Read, Write};
 
-use deckcraft_model::text::Anchor;
-use deckcraft_model::{Presentation, ShapeKind};
+use maluos_slides_model::text::Anchor;
+use maluos_slides_model::{Presentation, ShapeKind};
 use zip::write::SimpleFileOptions;
 
 fn sample() -> Presentation {
-    let mut s = deckcraft_engine::Session::new();
-    deckcraft_engine::sample::open_sample(&mut s).expect("sample");
+    let mut s = maluos_slides_engine::Session::new();
+    maluos_slides_engine::sample::open_sample(&mut s).expect("sample");
     s.doc().expect("doc").doc.as_ref().clone()
 }
 
@@ -45,16 +45,16 @@ fn anchors(p: &Presentation) -> Vec<Option<Anchor>> {
 fn shapes_keep_their_middle_anchor_and_files_without_one_anchor_at_the_top() {
     let p = sample();
     assert!(anchors(&p).contains(&None), "the sample has shapes with the model's default anchor");
-    let bytes = deckcraft_pptx::export(&p).expect("export");
+    let bytes = maluos_slides_pptx::export(&p).expect("export");
 
     // Written explicitly, so PowerPoint (which reads a missing anchor as top) centres them too.
-    let back = deckcraft_pptx::import(&bytes).expect("import");
+    let back = maluos_slides_pptx::import(&bytes).expect("import");
     let a = anchors(&back);
     assert_eq!(a, anchors(&p), "the middle anchor survives (as the model's default)");
 
     // The same file without the anchors: their text sits at the top.
     let bare = rewrite(&bytes, |n, x| if n.starts_with("ppt/slides/slide") { x.replace(r#" anchor="ctr""#, "") } else { x });
-    let a = anchors(&deckcraft_pptx::import(&bare).expect("import"));
+    let a = anchors(&maluos_slides_pptx::import(&bare).expect("import"));
     assert!(a.iter().all(|x| *x == Some(Anchor::Top)), "{a:?}");
 
     // Also when the theme's shape defaults centre new shapes, as Office's themes do: PowerPoint
@@ -69,6 +69,6 @@ fn shapes_keep_their_middle_anchor_and_files_without_one_anchor_at_the_top() {
             x
         }
     });
-    let a = anchors(&deckcraft_pptx::import(&themed).expect("import"));
+    let a = anchors(&maluos_slides_pptx::import(&themed).expect("import"));
     assert!(a.iter().all(|x| *x == Some(Anchor::Top)), "{a:?}");
 }

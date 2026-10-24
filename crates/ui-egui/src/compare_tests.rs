@@ -1,8 +1,8 @@
 //! Review › Compare: the Revisions pane lists a revised copy's changes and accepts them.
 
-use deckcraft_engine::Session;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
+use maluos_slides_engine::Session;
 use serde_json::json;
 
 use crate::{Services, SlideApp};
@@ -10,7 +10,7 @@ use crate::{Services, SlideApp};
 /// The sample deck compared with a copy whose slide 2 is gone and that has a new last slide.
 fn harness() -> (Harness<'static, SlideApp>, usize) {
     let mut s = Session::new();
-    deckcraft_engine::sample::open_sample(&mut s).unwrap();
+    maluos_slides_engine::sample::open_sample(&mut s).unwrap();
     let n = s.doc().unwrap().doc.slides.len();
     let data = s.execute("file.saveBytes", &json!({})).unwrap()["data"].as_str().unwrap().to_string();
     s.execute("file.openBytes", &json!({"name": "rev.deckcraft", "data": data})).unwrap();

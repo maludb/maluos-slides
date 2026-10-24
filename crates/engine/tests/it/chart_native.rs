@@ -3,11 +3,11 @@
 use std::io::{Cursor, Read};
 use std::sync::Arc;
 
-use deckcraft_engine::Session;
-use deckcraft_engine::cmd::{base64_decode, base64_encode};
-use deckcraft_geom::Xfrm;
-use deckcraft_model::chart::{Chart, ChartKept, ChartPart, ChartRel, ChartType};
-use deckcraft_model::{Presentation, Shape, ShapeId, ShapeKind, defaults};
+use maluos_slides_engine::Session;
+use maluos_slides_engine::cmd::{base64_decode, base64_encode};
+use maluos_slides_geom::Xfrm;
+use maluos_slides_model::chart::{Chart, ChartKept, ChartPart, ChartRel, ChartType};
+use maluos_slides_model::{Presentation, Shape, ShapeId, ShapeKind, defaults};
 use serde_json::json;
 
 const WORKBOOK: &[u8] = b"original-synthetic-workbook\0\xff\x80";
@@ -30,7 +30,7 @@ fn source() -> Vec<u8> {
         ..Default::default()
     }];
     // Start with our own chart XML, then give it two original, synthetic package parts.
-    let mut p = deckcraft_pptx::import(&deckcraft_pptx::export(&p).expect("export")).expect("import");
+    let mut p = maluos_slides_pptx::import(&maluos_slides_pptx::export(&p).expect("export")).expect("import");
     let ShapeKind::Chart(c) = &mut Arc::make_mut(&mut p.slides[0]).shapes[0].kind else { panic!("chart") };
     c.raw = c
         .raw
@@ -68,7 +68,7 @@ fn source() -> Vec<u8> {
             },
         ],
     };
-    deckcraft_pptx::export(&p).expect("PPTX fixture")
+    maluos_slides_pptx::export(&p).expect("PPTX fixture")
 }
 
 fn open(bytes: &[u8], name: &str) -> Session {
@@ -106,7 +106,7 @@ fn pptx_native_edit_save_reopen_keeps_chart_parts() {
     }
     assert!(payloads.iter().any(|(n, d)| n.starts_with("ppt/embeddings/") && d == WORKBOOK));
     assert!(payloads.iter().any(|(n, d)| n.starts_with("ppt/drawings/") && d == DRAWING));
-    let back = deckcraft_pptx::import(&bytes).expect("reopen PPTX");
+    let back = maluos_slides_pptx::import(&bytes).expect("reopen PPTX");
     assert_eq!(chart(&back).kept.rels.len(), 2);
     for part in &kept.parts {
         assert!(chart(&back).kept.parts.iter().any(|p| p.content_type == part.content_type && p.bytes == part.bytes));
@@ -123,7 +123,7 @@ fn editing_chart_after_native_reopen_does_not_export_a_stale_workbook() {
     assert_eq!(c.kept.rels.len(), 2);
     c.series[0].values[0] = Some(99.0);
     let bytes = save(&mut s, "pptx");
-    let back = deckcraft_pptx::import(&bytes).expect("PPTX");
+    let back = maluos_slides_pptx::import(&bytes).expect("PPTX");
     assert_eq!(chart(&back).series[0].values[0], Some(99.0));
     assert!(chart(&back).kept.parts.is_empty(), "stale source workbook must not be attached to edited chart data");
 }

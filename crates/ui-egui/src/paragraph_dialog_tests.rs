@@ -1,9 +1,9 @@
 //! The Paragraph dialog: Home › Paragraph › Paragraph… opens it, OK applies one undo step,
 //! and Tabs… edits stops then returns to Paragraph.
 
-use deckcraft_engine::Session;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
+use maluos_slides_engine::Session;
 use serde_json::json;
 
 use crate::{Services, SlideApp};

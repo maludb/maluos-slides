@@ -1,4 +1,4 @@
-//! `cargo xtask bench`: the performance baseline. Builds `deckcraft-cli` in release, runs its
+//! `cargo xtask bench`: the performance baseline. Builds `maluos-slides-cli` in release, runs its
 //! `bench` on the built-in sample (and any decks given), and compares each step with the saved
 //! baseline (`docs/benchmarks/baseline.json`) when there is one; `--save` writes a new baseline.
 
@@ -14,10 +14,10 @@ pub fn run(root: &Path, args: &[&str]) -> Result<(), String> {
     let save = args.contains(&"--save");
     let decks: Vec<&str> = args.iter().copied().filter(|a| !a.starts_with("--")).collect();
     let mut build = super::cargo();
-    build.args(["build", "--release", "-q", "-p", "deckcraft-cli"]);
-    super::run(build, "cargo build --release -p deckcraft-cli")?;
+    build.args(["build", "--release", "-q", "-p", "maluos-slides-cli"]);
+    super::run(build, "cargo build --release -p maluos-slides-cli")?;
     let target = std::env::var_os("CARGO_TARGET_DIR").map_or_else(|| root.join("target"), Into::into);
-    let cli = target.join("release").join(if cfg!(windows) { "deckcraft-cli.exe" } else { "deckcraft-cli" });
+    let cli = target.join("release").join(if cfg!(windows) { "maluos-slides-cli.exe" } else { "maluos-slides-cli" });
     let mut results = vec![];
     let inputs: Vec<Option<&str>> = std::iter::once(None).chain(decks.iter().map(|d| Some(*d))).collect();
     for input in inputs {

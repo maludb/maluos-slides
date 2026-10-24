@@ -1,8 +1,8 @@
 //! The slide thumbnail pane (Normal view): numbered thumbnails grouped by section, selection,
 //! drag-to-reorder, and the slide context menu.
 
-use deckcraft_engine::Target;
 use egui::{Align2, Color32, CornerRadius, Rect, Sense, Stroke, Ui, pos2, vec2};
+use maluos_slides_engine::Target;
 use serde_json::json;
 
 use crate::SlideApp;
@@ -287,11 +287,11 @@ fn master_list(app: &mut SlideApp, ui: &mut Ui) {
                     (wpx, (wpx as f64 * doc.slide_size.height / doc.slide_size.width.max(1.0)).clamp(1.0, 1e9) as u32),
                     crate::textures::max_side(ui.ctx()),
                 );
-                let pic = deckcraft_render::render_layout(
+                let pic = maluos_slides_render::render_layout(
                     &doc,
                     mi,
                     li,
-                    &deckcraft_render::RenderOpts {
+                    &maluos_slides_render::RenderOpts {
                         scale: px.0 as f64 / doc.slide_size.width.max(1.0),
                         edit: true,
                         size: Some(px),

@@ -2,7 +2,7 @@
 
 use crate::error::{Result, ensure, unsupported};
 use crate::tables::*;
-use deckcraft_bitstream::BitReader;
+use maluos_slides_bitstream::BitReader;
 
 /// Scaling matrices after applying fall-back rules, stored in raster order (weightScale).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -675,7 +675,7 @@ impl Pps {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use deckcraft_bitstream::BitWriter;
+    use maluos_slides_bitstream::BitWriter;
 
     #[test]
     fn scaling_list_default_signal() {

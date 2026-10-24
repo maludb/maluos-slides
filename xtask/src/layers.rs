@@ -30,7 +30,7 @@ impl Class {
     }
 }
 
-/// The layering table. Names are package names without the `deckcraft-`
+/// The layering table. Names are package names without the `maluos-slides-`
 /// prefix.
 pub const TABLE: &[(&str, Class)] = &[
     ("geom", Class::Layer(0)),
@@ -62,7 +62,7 @@ pub const TABLE: &[(&str, Class)] = &[
     ("mcp", Class::Layer(6)),
     ("testkit", Class::Testkit),
     // L7 apps and tooling
-    ("deckcraft", Class::Exempt),
+    ("maluos-slides", Class::Exempt),
     ("cli", Class::Exempt),
     ("web", Class::Exempt),
     ("xtask", Class::Exempt),
@@ -91,7 +91,7 @@ pub const UI_CRATES: &[&str] = &["egui", "eframe", "winit", "egui_kittest", "rfd
 pub const UI_MIN_LAYER: u8 = 6;
 
 pub fn short_name(pkg: &str) -> &str {
-    pkg.strip_prefix("deckcraft-").unwrap_or(pkg)
+    pkg.strip_prefix("maluos-slides-").unwrap_or(pkg)
 }
 
 pub fn classify(pkg: &str) -> Option<Class> {
@@ -149,7 +149,7 @@ impl std::fmt::Display for Violation {
                 write!(f, "{krate}: standalone crate must not depend on workspace crate {dep}")
             }
             Violation::TestkitAsNormalDep { krate } => {
-                write!(f, "{krate}: deckcraft-testkit may only be a dev-dependency")
+                write!(f, "{krate}: maluos-slides-testkit may only be a dev-dependency")
             }
             Violation::UiBelowL6 { krate, dep, layer } => {
                 write!(f, "{krate} (L{layer}) depends on UI crate `{dep}`; UI toolkits are only allowed in L6+")
@@ -258,75 +258,75 @@ mod tests {
     #[test]
     fn clean_downward_graph_passes() {
         let g = [
-            c("deckcraft-geom", &[("kurbo", Normal, false)]),
-            c("deckcraft-model", &[("deckcraft-geom", Normal, true)]),
-            c("deckcraft-engine", &[("deckcraft-model", Normal, true), ("deckcraft-testkit", Dev, true)]),
-            c("deckcraft-ui-egui", &[("deckcraft-engine", Normal, true), ("egui", Normal, false)]),
-            c("deckcraft-cli", &[("deckcraft-ui-egui", Normal, true)]),
+            c("maluos-slides-geom", &[("kurbo", Normal, false)]),
+            c("maluos-slides-model", &[("maluos-slides-geom", Normal, true)]),
+            c("maluos-slides-engine", &[("maluos-slides-model", Normal, true), ("maluos-slides-testkit", Dev, true)]),
+            c("maluos-slides-ui-egui", &[("maluos-slides-engine", Normal, true), ("egui", Normal, false)]),
+            c("maluos-slides-cli", &[("maluos-slides-ui-egui", Normal, true)]),
         ];
         assert!(check(&g).is_empty(), "{:?}", check(&g));
     }
 
     #[test]
     fn upward_dependency_flagged() {
-        let v = check(&[c("deckcraft-model", &[("deckcraft-engine", Normal, true)])]);
+        let v = check(&[c("maluos-slides-model", &[("maluos-slides-engine", Normal, true)])]);
         assert!(matches!(v[..], [Violation::Upward { from: 1, to: 5, .. }]));
     }
 
     #[test]
     fn sideways_dependency_flagged() {
-        let v = check(&[c("deckcraft-text", &[("deckcraft-anim", Normal, true)])]);
+        let v = check(&[c("maluos-slides-text", &[("maluos-slides-anim", Normal, true)])]);
         assert!(matches!(v[..], [Violation::Upward { from: 2, to: 2, .. }]));
     }
 
     #[test]
     fn l0_foundations_are_independent() {
-        let v = check(&[c("deckcraft-geom", &[("deckcraft-color", Normal, true)])]);
+        let v = check(&[c("maluos-slides-geom", &[("maluos-slides-color", Normal, true)])]);
         assert!(matches!(v[..], [Violation::Upward { from: 0, to: 0, .. }]));
     }
 
     #[test]
     fn self_dev_dependency_ignored() {
-        assert!(check(&[c("deckcraft-model", &[("deckcraft-model", Dev, true)])]).is_empty());
+        assert!(check(&[c("maluos-slides-model", &[("maluos-slides-model", Dev, true)])]).is_empty());
     }
 
     #[test]
     fn upward_dev_dependency_flagged() {
-        let v = check(&[c("deckcraft-geom", &[("deckcraft-model", Dev, true)])]);
+        let v = check(&[c("maluos-slides-geom", &[("maluos-slides-model", Dev, true)])]);
         assert!(matches!(v[..], [Violation::Upward { kind: Dev, .. }]));
     }
 
     #[test]
     fn ui_crates_below_l6_flagged() {
         for dep in ["egui", "eframe", "winit", "egui_kittest", "rfd", "bevy_ecs", "bevy"] {
-            let v = check(&[c("deckcraft-engine", &[(dep, Normal, false)])]);
+            let v = check(&[c("maluos-slides-engine", &[(dep, Normal, false)])]);
             assert!(matches!(v[..], [Violation::UiBelowL6 { layer: 5, .. }]), "{dep}");
         }
-        assert!(check(&[c("deckcraft-engine", &[("egui_extras_not", Normal, false)])]).is_empty());
-        assert!(check(&[c("deckcraft-mcp", &[("winit", Normal, false)])]).is_empty());
+        assert!(check(&[c("maluos-slides-engine", &[("egui_extras_not", Normal, false)])]).is_empty());
+        assert!(check(&[c("maluos-slides-mcp", &[("winit", Normal, false)])]).is_empty());
     }
 
     #[test]
     fn unregistered_crate_is_error() {
-        let v = check(&[c("deckcraft-mystery", &[])]);
-        assert!(matches!(&v[..], [Violation::Unregistered { krate }] if krate == "deckcraft-mystery"));
+        let v = check(&[c("maluos-slides-mystery", &[])]);
+        assert!(matches!(&v[..], [Violation::Unregistered { krate }] if krate == "maluos-slides-mystery"));
         assert!(v[0].to_string().contains("register"));
     }
 
     #[test]
     fn testkit_only_as_dev_dependency() {
-        let v = check(&[c("deckcraft-render", &[("deckcraft-testkit", Normal, true)])]);
+        let v = check(&[c("maluos-slides-render", &[("maluos-slides-testkit", Normal, true)])]);
         assert!(matches!(v[..], [Violation::TestkitAsNormalDep { .. }]));
-        assert!(check(&[c("deckcraft-render", &[("deckcraft-testkit", Dev, true)])]).is_empty());
+        assert!(check(&[c("maluos-slides-render", &[("maluos-slides-testkit", Dev, true)])]).is_empty());
         // testkit itself may use anything up to L5 but not L6 crates.
-        assert!(check(&[c("deckcraft-testkit", &[("deckcraft-engine", Normal, true)])]).is_empty());
-        assert!(!check(&[c("deckcraft-testkit", &[("deckcraft-ui-egui", Normal, true)])]).is_empty());
+        assert!(check(&[c("maluos-slides-testkit", &[("maluos-slides-engine", Normal, true)])]).is_empty());
+        assert!(!check(&[c("maluos-slides-testkit", &[("maluos-slides-ui-egui", Normal, true)])]).is_empty());
     }
 
     #[test]
     fn apps_and_xtask_exempt() {
-        for app in ["deckcraft", "deckcraft-cli", "deckcraft-web", "xtask"] {
-            assert!(check(&[c(app, &[("egui", Normal, false), ("deckcraft-ui-egui", Normal, true)])]).is_empty());
+        for app in ["maluos-slides", "maluos-slides-cli", "maluos-slides-web", "xtask"] {
+            assert!(check(&[c(app, &[("egui", Normal, false), ("maluos-slides-ui-egui", Normal, true)])]).is_empty());
         }
     }
 
@@ -334,17 +334,17 @@ mod tests {
     fn metadata_parsing() {
         let meta: Value = serde_json::from_str(
             r#"{"packages":[
-                {"name":"deckcraft-model","dependencies":[
-                    {"name":"deckcraft-geom","kind":null,"path":"/x/crates/geom"},
+                {"name":"maluos-slides-model","dependencies":[
+                    {"name":"maluos-slides-geom","kind":null,"path":"/x/crates/geom"},
                     {"name":"serde","kind":null},
                     {"name":"proptest","kind":"dev"}]},
-                {"name":"deckcraft-geom","dependencies":[]}
+                {"name":"maluos-slides-geom","dependencies":[]}
             ]}"#,
         )
         .unwrap();
         let g = from_metadata(&meta).unwrap();
         assert_eq!(g.len(), 2);
-        let doc = g.iter().find(|c| c.name == "deckcraft-model").unwrap();
+        let doc = g.iter().find(|c| c.name == "maluos-slides-model").unwrap();
         assert!(doc.deps[0].workspace && !doc.deps[1].workspace);
         assert_eq!(doc.deps[2].kind, Dev);
         assert!(check(&g).is_empty());

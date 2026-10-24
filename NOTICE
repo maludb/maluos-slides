@@ -1,11 +1,11 @@
-DeckCraft
+MaluOS Slides
 Copyright (c) 2026 ArtCraft Team and the DeckCraft contributors.
 Licensed under the MIT License or the Apache License, Version 2.0, at your option
 (LICENSE-MIT, LICENSE-APACHE).
 
-The ArtCraft name, wordmark and logos in docs/brand/ are trademarks of the ArtCraft Team. They are
-not open source and are not covered by the license above; their terms are in
-docs/brand/LICENSE-brand.txt.
+MaluOS Slides is a fork of DeckCraft. The ArtCraft name, wordmark and logos are trademarks of the
+ArtCraft Team; upstream's brand files (docs/brand/) are not included in this fork, as their
+licence requires. MaluOS additions are Copyright (c) 2026 MaluOS, under the same licenses.
 
 Third-party material
 

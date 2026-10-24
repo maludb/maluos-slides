@@ -44,12 +44,12 @@ build(sys.argv[1], {
     "typographicSubfamily": "Semibold",
     "uniqueFontIdentifier": "DeckCraft Legacy Semibold",
     "fullName": "DeckCraft Legacy Semibold",
-    "psName": "DeckCraftLegacy-Semibold",
+    "psName": "MaluOS SlidesLegacy-Semibold",
 }, 600)
 build(sys.argv[2], {
     "familyName": "DeckCraft Legacy",
     "styleName": "Regular",
     "uniqueFontIdentifier": "DeckCraft Legacy Regular",
     "fullName": "DeckCraft Legacy",
-    "psName": "DeckCraftLegacy-Regular",
+    "psName": "MaluOS SlidesLegacy-Regular",
 }, 400)

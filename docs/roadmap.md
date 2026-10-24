@@ -1,8 +1,8 @@
-# DeckCraft roadmap: milestones and what's next
+# MaluOS Slides roadmap: milestones and what's next
 
 > **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-22 · **Change:** trivial (beta item 9 drops Play From, now in; previous: minor, native chart payloads stored in bounded ZIP members; previous: major, community PR wave 2026-10-14: PPTX corpus, presenter and show controls, review navigation, starter decks, Grid Options and New Window, WordArt gallery and handles, pen pressure; beta items 9 and 10 narrowed; duplicated rows and headers folded; previous: minor, core-workflow alpha gate added) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
 
-Forward-looking: where DeckCraft is going and in what order. The one-page summary is
+Forward-looking: where MaluOS Slides is going and in what order. The one-page summary is
 [ROADMAP.md](../ROADMAP.md); every shortfall is in [gaps.md](gaps.md); numbers are in
 [target-app-parity.md](target-app-parity.md). Hours are Opus 5.5 agent wall-clock hours.
 
@@ -10,7 +10,7 @@ Forward-looking: where DeckCraft is going and in what order. The one-page summar
 
 What a typical PowerPoint user does every day, checked end to end on macOS, the main platform
 (craftrules `standards/progress-docs.md`, "The core-workflow gate"). Every workflow passes, so
-DeckCraft stays **alpha**. The "partial" rows don't block the workflow, but they are its weakest
+MaluOS Slides stays **alpha**. The "partial" rows don't block the workflow, but they are its weakest
 points and lead the beta plan.
 
 | Core workflow | Works end to end? | Evidence | Hours to full pass |
@@ -94,7 +94,7 @@ From the local execution plan (`plan/execution-plan.md`, gitignored). Status as 
 
 ## History: the 2026-10-07 alpha checklist
 
-Before the craftrules stages existed, DeckCraft defined "alpha" as: install a signed build on
+Before the craftrules stages existed, MaluOS Slides defined "alpha" as: install a signed build on
 macOS, Windows or Linux, make a real deck from scratch or from a PowerPoint file, present it with
 transitions, animations and media, save back to `.pptx`/PDF without losing work, and hit no crashes
 on common paths. On 2026-10-07 it was ~80% there with these blockers:
@@ -108,7 +108,7 @@ on common paths. On 2026-10-07 it was ~80% there with these blockers:
 | UI fidelity pass on the most-used ribbon groups and dialogs; first run | Partly (start-screen fixes #20, #49); beta item 11 |
 | Mascot app icon, README screenshots, user docs | App icon (with a scalable SVG, #29) and README screenshots in place; user docs open |
 
-By the standard's definitions DeckCraft is **alpha** (~55% ready); these blockers now feed the beta
+By the standard's definitions MaluOS Slides is **alpha** (~55% ready); these blockers now feed the beta
 plan above.
 
 ## Revision history

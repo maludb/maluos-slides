@@ -1,4 +1,4 @@
-//! Bit-level reading and writing for DeckCraft's codec crates: a re-export of
+//! Bit-level reading and writing for MaluOS Slides' codec crates: a re-export of
 //! [`craft_media::bitstream`] from craft-libs, plus [`budget`].
 //!
 //! - [`BitReader`]: MSB-first reader with Exp-Golomb (`ue(v)`, `se(v)`), as used by H.264/HEVC/AV1 headers.

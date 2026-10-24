@@ -7,7 +7,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use deckcraft_model::{Fill, MediaId, Presentation, Shape, ShapeId, ShapeKind, Slide, SlideId};
+use maluos_slides_model::{Fill, MediaId, Presentation, Shape, ShapeId, ShapeKind, Slide, SlideId};
 use serde::Serialize;
 
 /// The revised presentation a document is being compared with.
@@ -93,7 +93,7 @@ fn slide_title(s: &Slide) -> String {
     let t = s
         .shapes
         .iter()
-        .find(|x| x.ph.as_ref().is_some_and(|p| matches!(p.kind, deckcraft_model::PhType::Title | deckcraft_model::PhType::CtrTitle)))
+        .find(|x| x.ph.as_ref().is_some_and(|p| matches!(p.kind, maluos_slides_model::PhType::Title | maluos_slides_model::PhType::CtrTitle)))
         .and_then(|x| x.text.as_ref())
         .map(|b| b.text())
         .unwrap_or_default();
@@ -223,7 +223,7 @@ fn slide_details(cp: &Presentation, a: &Slide, rp: &Presentation, b: &Slide) -> 
 }
 
 fn max_shape_id(shapes: &[Shape], m: &mut u32) {
-    deckcraft_model::walk(shapes, &mut |s, _| *m = (*m).max(s.id.0));
+    maluos_slides_model::walk(shapes, &mut |s, _| *m = (*m).max(s.id.0));
 }
 
 /// The revised slide made to live in `doc`: its media copied over (remapped on an id clash), shape
@@ -252,7 +252,7 @@ pub fn adopt(doc: &mut Presentation, rev: &Presentation, slide: &Slide, replacin
     // Shape ids used elsewhere in the open deck.
     let mut taken: HashSet<u32> = HashSet::new();
     for s in doc.slides.iter().filter(|s| Some(s.id) != replacing) {
-        deckcraft_model::walk(&s.shapes, &mut |x, _| {
+        maluos_slides_model::walk(&s.shapes, &mut |x, _| {
             taken.insert(x.id.0);
         });
     }

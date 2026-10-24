@@ -1,14 +1,14 @@
-//! Renders every DeckCraft icon into a labelled PNG grid, on a light and a dark background.
+//! Renders every MaluOS Slides icon into a labelled PNG grid, on a light and a dark background.
 //!
 //! ```sh
-//! cargo run -p deckcraft-ui-egui --example icon_gallery -- /tmp/gallery.png
+//! cargo run -p maluos-slides-ui-egui --example icon_gallery -- /tmp/gallery.png
 //! ```
 //!
 //! Each cell shows the icon at 32 pt, at 16 pt, and disabled at 16 pt, with its name underneath.
 //! An optional second argument filters icons by name substring.
 
-use deckcraft_ui_egui::icons::{self, Icon};
 use egui::{Align2, Color32, FontId, Rect, pos2, vec2};
+use maluos_slides_ui_egui::icons::{self, Icon};
 
 const COLS: usize = 12;
 const CELL_W: f32 = 110.0;

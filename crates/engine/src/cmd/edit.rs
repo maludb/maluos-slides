@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use deckcraft_model::text::TextBody;
-use deckcraft_model::{MediaId, Shape, ShapeId, Slide, SlideId};
+use maluos_slides_model::text::TextBody;
+use maluos_slides_model::{MediaId, Shape, ShapeId, Slide, SlideId};
 use serde_json::{Value, json};
 
 use super::*;
@@ -70,16 +70,16 @@ fn slides_scope(s: &Session, p: &Value) -> bool {
 }
 
 pub(crate) fn media_of_shapes(shapes: &[Shape], out: &mut Vec<MediaId>) {
-    deckcraft_model::walk(shapes, &mut |s, _| {
+    maluos_slides_model::walk(shapes, &mut |s, _| {
         match &s.kind {
-            deckcraft_model::ShapeKind::Picture { fill } => out.push(fill.media),
-            deckcraft_model::ShapeKind::Media(m) => {
+            maluos_slides_model::ShapeKind::Picture { fill } => out.push(fill.media),
+            maluos_slides_model::ShapeKind::Media(m) => {
                 out.push(m.media);
                 if let Some(p) = m.poster {
                     out.push(p);
                 }
             }
-            deckcraft_model::ShapeKind::Model3d { media, poster } => {
+            maluos_slides_model::ShapeKind::Model3d { media, poster } => {
                 out.push(*media);
                 if let Some(p) = poster {
                     out.push(*p);
@@ -87,7 +87,7 @@ pub(crate) fn media_of_shapes(shapes: &[Shape], out: &mut Vec<MediaId>) {
             }
             _ => {}
         }
-        if let Some(deckcraft_model::Fill::Picture(pf)) = &s.fill {
+        if let Some(maluos_slides_model::Fill::Picture(pf)) = &s.fill {
             out.push(pf.media);
         }
     });
@@ -100,8 +100,8 @@ fn copy_inner(s: &mut Session, p: &Value) -> Result<String> {
         if t.is_range() {
             let body = super::text::body_of(st, t).cloned().unwrap_or_default();
             let (a, b) = t.ordered();
-            let plain = deckcraft_model::edit::text_range(&body, a, b);
-            let sliced = deckcraft_model::edit::slice(&body, a, b);
+            let plain = maluos_slides_model::edit::text_range(&body, a, b);
+            let sliced = maluos_slides_model::edit::slice(&body, a, b);
             s.clipboard = crate::Clipboard { text: Some(sliced), plain: plain.clone(), ..Default::default() };
             return Ok(plain);
         }
@@ -114,7 +114,7 @@ fn copy_inner(s: &mut Session, p: &Value) -> Result<String> {
         let mut mids = vec![];
         for sl in &slides {
             media_of_shapes(&sl.shapes, &mut mids);
-            if let Some(deckcraft_model::Background::Fill { fill: deckcraft_model::Fill::Picture(pf) }) = &sl.background {
+            if let Some(maluos_slides_model::Background::Fill { fill: maluos_slides_model::Fill::Picture(pf) }) = &sl.background {
                 mids.push(pf.media);
             }
         }
@@ -190,10 +190,10 @@ fn cut(s: &mut Session, p: &Value) -> Result<Value> {
 /// attached to a shape that was copied too follow its copy; ends attached to a shape outside the
 /// copied set are detached (the connector keeps its geometry), so a copy never stays glued to
 /// the original or to an unrelated shape that happens to share an id in another deck.
-pub(crate) fn reid(cmd: &str, doc: &mut deckcraft_model::Presentation, shapes: &mut [Shape]) -> Result<HashMap<ShapeId, ShapeId>> {
+pub(crate) fn reid(cmd: &str, doc: &mut maluos_slides_model::Presentation, shapes: &mut [Shape]) -> Result<HashMap<ShapeId, ShapeId>> {
     fn rec(
         cmd: &str,
-        doc: &mut deckcraft_model::Presentation,
+        doc: &mut maluos_slides_model::Presentation,
         shapes: &mut [Shape],
         map: &mut HashMap<ShapeId, ShapeId>,
         depth: usize,
@@ -214,7 +214,7 @@ pub(crate) fn reid(cmd: &str, doc: &mut deckcraft_model::Presentation, shapes: &
     let mut map = HashMap::new();
     rec(cmd, doc, shapes, &mut map, 0)?;
     walk_mut(shapes, &mut |s| {
-        if let deckcraft_model::ShapeKind::Connector { start, end } = &mut s.kind {
+        if let maluos_slides_model::ShapeKind::Connector { start, end } = &mut s.kind {
             for e in [start, end] {
                 *e = e.and_then(|(id, site)| map.get(&id).map(|n| (*n, site)));
             }
@@ -225,7 +225,7 @@ pub(crate) fn reid(cmd: &str, doc: &mut deckcraft_model::Presentation, shapes: &
 
 /// Point copied animations at the copies: targets and triggers in `map` follow it; an animation
 /// whose target wasn't copied is dropped, and a trigger that wasn't copied is cleared.
-pub(crate) fn remap_animations(anims: &mut Vec<deckcraft_model::Animation>, map: &HashMap<ShapeId, ShapeId>) {
+pub(crate) fn remap_animations(anims: &mut Vec<maluos_slides_model::Animation>, map: &HashMap<ShapeId, ShapeId>) {
     anims.retain_mut(|a| {
         let Some(n) = map.get(&a.shape) else { return false };
         a.shape = *n;
@@ -262,17 +262,17 @@ fn remap_media(shapes: &mut [Shape], map: &HashMap<MediaId, MediaId>) {
     };
     walk_mut(shapes, &mut |s| {
         match &mut s.kind {
-            deckcraft_model::ShapeKind::Picture { fill } => m(&mut fill.media),
-            deckcraft_model::ShapeKind::Media(c) => {
+            maluos_slides_model::ShapeKind::Picture { fill } => m(&mut fill.media),
+            maluos_slides_model::ShapeKind::Media(c) => {
                 m(&mut c.media);
                 if let Some(p) = c.poster.as_mut() {
                     m(p);
                 }
             }
-            deckcraft_model::ShapeKind::Opaque { preview: Some(p), .. } => m(p),
+            maluos_slides_model::ShapeKind::Opaque { preview: Some(p), .. } => m(p),
             _ => {}
         }
-        if let Some(deckcraft_model::Fill::Picture(pf)) = &mut s.fill {
+        if let Some(maluos_slides_model::Fill::Picture(pf)) = &mut s.fill {
             m(&mut pf.media);
         }
     });
@@ -280,7 +280,11 @@ fn remap_media(shapes: &mut [Shape], map: &HashMap<MediaId, MediaId>) {
 
 /// Add the clipboard's media to `doc` and return the ids that changed: an id already used in
 /// `doc` by other bytes (another deck) gets a fresh id, and the pasted shapes must use it.
-fn bring_media(cmd: &str, doc: &mut deckcraft_model::Presentation, media: &[deckcraft_model::MediaItem]) -> Result<HashMap<MediaId, MediaId>> {
+fn bring_media(
+    cmd: &str,
+    doc: &mut maluos_slides_model::Presentation,
+    media: &[maluos_slides_model::MediaItem],
+) -> Result<HashMap<MediaId, MediaId>> {
     let mut map = HashMap::new();
     for m in media {
         match doc.media(m.id) {
@@ -329,7 +333,7 @@ fn paste(s: &mut Session, p: &Value) -> Result<Value> {
                 let map = reid("edit.paste", doc, &mut sl.shapes)?;
                 remap_animations(&mut sl.animations, &map);
                 remap_media(&mut sl.shapes, &media);
-                if let Some(deckcraft_model::Background::Fill { fill: deckcraft_model::Fill::Picture(pf) }) = &mut sl.background
+                if let Some(maluos_slides_model::Background::Fill { fill: maluos_slides_model::Fill::Picture(pf) }) = &mut sl.background
                     && let Some(n) = media.get(&pf.media)
                 {
                     pf.media = *n;
@@ -397,7 +401,7 @@ fn paste_external_body(s: &mut Session, body: &TextBody) -> Result<Value> {
     let body = body.clone();
     s.edit(|doc, sel| {
         let list = crate::shapes_mut(doc, sel).ok_or_else(|| bad("edit.paste", "no slide"))?;
-        let sh = deckcraft_model::find_shape_mut(list, ShapeId(id)).ok_or_else(|| bad("edit.paste", "no text box"))?;
+        let sh = maluos_slides_model::find_shape_mut(list, ShapeId(id)).ok_or_else(|| bad("edit.paste", "no text box"))?;
         if let Some(t) = sh.text.as_mut() {
             let (wrap, autofit) = (t.body.wrap, t.body.autofit);
             *t = body.clone();
@@ -443,16 +447,16 @@ fn paste_special(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// Replace theme colours and theme fonts with the values they have in `scheme` / `fonts`, so the
 /// shapes keep their look under another theme.
-pub(crate) fn bake_theme(shapes: &mut [Shape], scheme: &deckcraft_color::ColorScheme, fonts: &deckcraft_model::theme::FontScheme) {
-    fn rec(v: &mut Value, scheme: &deckcraft_color::ColorScheme, fonts: &deckcraft_model::theme::FontScheme, depth: usize) {
+pub(crate) fn bake_theme(shapes: &mut [Shape], scheme: &maluos_slides_color::ColorScheme, fonts: &maluos_slides_model::theme::FontScheme) {
+    fn rec(v: &mut Value, scheme: &maluos_slides_color::ColorScheme, fonts: &maluos_slides_model::theme::FontScheme, depth: usize) {
         if depth > 256 {
             return;
         }
         match v {
             Value::Object(o) => {
                 if o.get("kind").and_then(Value::as_str) == Some("scheme")
-                    && let Some(slot) = o.get("slot").and_then(|x| serde_json::from_value::<deckcraft_color::SchemeSlot>(x.clone()).ok())
-                    && slot != deckcraft_color::SchemeSlot::PhClr
+                    && let Some(slot) = o.get("slot").and_then(|x| serde_json::from_value::<maluos_slides_color::SchemeSlot>(x.clone()).ok())
+                    && slot != maluos_slides_color::SchemeSlot::PhClr
                     && let Ok(rgb) = serde_json::to_value(scheme.get(slot))
                 {
                     o.clear();
@@ -506,20 +510,26 @@ fn paste_picture(s: &mut Session) -> Result<Value> {
     let mut doc = (*st.doc).clone();
     bring_media("edit.pasteSpecial", &mut doc, &clip.media)?;
     let mut slide = st.current_slide().cloned().ok_or_else(|| bad("edit.pasteSpecial", "no slide"))?;
-    let xs: Vec<deckcraft_geom::Xfrm> = clip.shapes.iter().filter_map(|x| x.xfrm).collect();
+    let xs: Vec<maluos_slides_geom::Xfrm> = clip.shapes.iter().filter_map(|x| x.xfrm).collect();
     let b = super::arrange::union_bounds(&xs).ok_or_else(|| bad("edit.pasteSpecial", "nothing to draw"))?;
-    let gx = deckcraft_geom::Xfrm::new(b.x0, b.y0, b.width(), b.height());
+    let gx = maluos_slides_geom::Xfrm::new(b.x0, b.y0, b.width(), b.height());
     let gid = ShapeId(u32::MAX - 1);
     let one = if clip.shapes.len() == 1 {
         let mut sh = clip.shapes[0].clone();
         sh.id = gid;
         sh
     } else {
-        Shape { id: gid, xfrm: Some(gx), kind: deckcraft_model::ShapeKind::Group { children: clip.shapes.clone(), child: gx }, ..Default::default() }
+        Shape {
+            id: gid,
+            xfrm: Some(gx),
+            kind: maluos_slides_model::ShapeKind::Group { children: clip.shapes.clone(), child: gx },
+            ..Default::default()
+        }
     };
     slide.shapes = vec![one];
     const SCALE: f64 = 2.0;
-    let img = deckcraft_render::render_shape(&doc, &slide, gid, SCALE).ok_or_else(|| bad("edit.pasteSpecial", "the shapes could not be drawn"))?;
+    let img =
+        maluos_slides_render::render_shape(&doc, &slide, gid, SCALE).ok_or_else(|| bad("edit.pasteSpecial", "the shapes could not be drawn"))?;
     // render_shape draws the bounds plus an 8 pt margin (room for shadows and outlines).
     let (w, h) = (img.width as f64 / SCALE, img.height as f64 / SCALE);
     let same_slide = clip.shapes.iter().any(|c| st.shape(c.id).is_some());
@@ -594,11 +604,11 @@ fn delete(s: &mut Session, p: &Value) -> Result<Value> {
     s.edit(|doc, sel| {
         let shapes = crate::shapes_mut(doc, sel).ok_or_else(|| bad("edit.delete", "no slide"))?;
         let mut before = Vec::new();
-        deckcraft_model::walk(shapes, &mut |s, _| before.push(s.id));
+        maluos_slides_model::walk(shapes, &mut |s, _| before.push(s.id));
         let n = remove_shapes(shapes, &ids);
         // Everything that is gone: the given ids plus group descendants and emptied groups.
         let mut left = Vec::new();
-        deckcraft_model::walk(shapes, &mut |s, _| left.push(s.id));
+        maluos_slides_model::walk(shapes, &mut |s, _| left.push(s.id));
         let mut gone = ids.clone();
         gone.extend(before.into_iter().filter(|i| !left.contains(i)));
         // Animations of deleted shapes go too.
@@ -639,7 +649,7 @@ pub(crate) fn remove_shapes(shapes: &mut Vec<Shape>, ids: &[ShapeId]) -> usize {
 
 fn count(v: &[Shape]) -> usize {
     let mut n = 0;
-    deckcraft_model::walk(v, &mut |_, _| n += 1);
+    maluos_slides_model::walk(v, &mut |_, _| n += 1);
     n
 }
 

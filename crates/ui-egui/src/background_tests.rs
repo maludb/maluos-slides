@@ -1,10 +1,10 @@
 //! Format Background pane: picture transparency, tiling, and Apply to All.
 
-use deckcraft_engine::Session;
-use deckcraft_model::style::PictureMode;
-use deckcraft_model::{Background, Fill};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
+use maluos_slides_engine::Session;
+use maluos_slides_model::style::PictureMode;
+use maluos_slides_model::{Background, Fill};
 use serde_json::json;
 
 use crate::{Services, SlideApp};

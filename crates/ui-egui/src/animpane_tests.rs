@@ -1,10 +1,10 @@
 //! The Animation Pane's advanced timeline driven with the mouse: dragging a bar changes the
 //! delay, dragging its right edge changes the duration, each one undoable command.
 
-use deckcraft_engine::Session;
 use egui::Pos2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
+use maluos_slides_engine::Session;
 use serde_json::json;
 
 use crate::{Services, SlideApp};
@@ -99,7 +99,7 @@ fn play_from_starts_at_the_selected_effect() {
     let (shape, tl) = {
         let st = h.state().session.active().unwrap();
         let slide = st.current_slide().unwrap();
-        (slide.animations[0].shape, deckcraft_anim::Timeline::new(slide, st.doc.slide_size.width, st.doc.slide_size.height))
+        (slide.animations[0].shape, maluos_slides_anim::Timeline::new(slide, st.doc.slide_size.width, st.doc.slide_size.height))
     };
     assert!(tl.state_at(shape, None, at).visible, "the faded-in shape is already on the slide");
 

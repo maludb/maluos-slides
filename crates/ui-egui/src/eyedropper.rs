@@ -15,10 +15,10 @@ use crate::SlideApp;
 use crate::canvas::Xf;
 use crate::theme::{self, Tokens};
 
-const REQUEST: &str = "deckcraft.eyedropper.request";
-const TRANSPARENT: &str = "deckcraft.eyedropper.transparent";
-const MENU: &str = "deckcraft.eyedropper.menu";
-const RESULT: &str = "deckcraft.eyedropper.result";
+const REQUEST: &str = "maluos-slides.eyedropper.request";
+const TRANSPARENT: &str = "maluos-slides.eyedropper.transparent";
+const MENU: &str = "maluos-slides.eyedropper.menu";
+const RESULT: &str = "maluos-slides.eyedropper.result";
 
 /// Pixels per slide unit of the picture the Eyedropper looks at.
 const SCALE: f64 = 2.0;
@@ -36,7 +36,7 @@ enum Pick {
 pub struct State {
     pick: Pick,
     slide: usize,
-    image: deckcraft_render::Image,
+    image: maluos_slides_render::Image,
 }
 
 fn key(name: &str) -> Id {
@@ -104,12 +104,12 @@ pub fn tick(app: &mut SlideApp, ctx: &Context) {
 
 fn begin(app: &mut SlideApp, pick: Pick) {
     let Some(d) = app.session.active() else { return };
-    if d.selection.target != deckcraft_engine::Target::Slides {
+    if d.selection.target != maluos_slides_engine::Target::Slides {
         app.set_status("The Eyedropper takes colours from a slide");
         return;
     }
     let slide = d.selection.slide;
-    let image = deckcraft_render::render_slide(&d.doc, slide, &deckcraft_render::RenderOpts { scale: SCALE, ..Default::default() });
+    let image = maluos_slides_render::render_slide(&d.doc, slide, &maluos_slides_render::RenderOpts { scale: SCALE, ..Default::default() });
     app.eyedropper = Some(State { pick, slide, image });
     app.set_status(match pick {
         Pick::Menu(_) => "Eyedropper: click the slide (Esc cancels)",
@@ -173,7 +173,7 @@ pub fn canvas(app: &mut SlideApp, ui: &Ui, resp: &egui::Response, xf: Xf) -> boo
 /// The colour under the pointer, drawn beside it with its hex.
 fn loupe(ui: &Ui, pos: Pos2, c: [u8; 4]) {
     let t = Tokens::get(ui.ctx());
-    let painter = ui.ctx().layer_painter(egui::LayerId::new(egui::Order::Tooltip, key("deckcraft.eyedropper.loupe")));
+    let painter = ui.ctx().layer_painter(egui::LayerId::new(egui::Order::Tooltip, key("maluos-slides.eyedropper.loupe")));
     let at = pos + vec2(18.0, 18.0);
     let swatch = Rect::from_min_size(at, vec2(64.0, 26.0));
     painter.rect(swatch, 3, Color32::from_rgb(c[0], c[1], c[2]), Stroke::new(2.0, Color32::WHITE), StrokeKind::Outside);

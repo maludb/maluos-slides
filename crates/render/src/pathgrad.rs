@@ -11,8 +11,8 @@
 
 use std::sync::Arc;
 
-use deckcraft_color::Rgba;
 use kurbo::{Affine, BezPath, PathEl, Point, Rect};
+use maluos_slides_color::Rgba;
 use vello_cpu::{Pixmap, RenderContext, peniko};
 
 /// Longest side of the rasterised gradient, in pixels (bilinear sampling smooths the rest).

@@ -2,7 +2,7 @@
 
 > **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-18 · **Change:** minor (native chart payloads stored in bounded ZIP members; previous: major, community PR wave 2026-10-14: seven owned PPTX corpus files, embedded fonts, EMF/WMF clip regions, threaded comments (#70), chart trendlines and workbooks (#335), SmartArt written as a diagram, tags and custom XML kept, picture export DPI; duplicated rows and headers folded; previous: trivial, lines in scaled groups, #233) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
 
-Every format PowerPoint reads or writes, DeckCraft's support, fidelity and how it is tested.
+Every format PowerPoint reads or writes, MaluOS Slides' support, fidelity and how it is tested.
 Gaps are itemized in [gaps.md](gaps.md#file-formats). Dimension score: **~58% ready**
 (estimated), **60–110 h** to parity.
 
@@ -14,7 +14,7 @@ Weights inside this dimension: PPTX 70%, PDF export 10%, image export 5%, legacy
 From `/Applications/Microsoft PowerPoint.app/Contents/Info.plist` `CFBundleDocumentTypes` (Editor =
 PowerPoint opens and saves; Viewer = opens only).
 
-| Format | PowerPoint | DeckCraft read | DeckCraft write | Fidelity / notes | Tested by |
+| Format | PowerPoint | MaluOS Slides read | MaluOS Slides write | Fidelity / notes | Tested by |
 |---|---|---|---|---|---|
 | `.pptx` presentation | Editor | yes | yes | Broad (see below); an owned corpus of decks we author round-trips tables, charts, animations, media, sections, masters and layouts, comments, links and actions, custom shows, rotated groups, inherited placeholders, text effects and body layout, theme effects, fills, bevels, connectors, 3-D models and animation bounce end. Not measured against PowerPoint renders or decks from outside this repo | `crates/pptx/tests/it/corpus.rs`, `corpus_kinds.rs`, `corpus_elements.rs`, `corpus_style.rs`, `corpus_themes.rs`, `corpus_charts.rs`, `corpus_media.rs`, `roundtrip.rs`, `sample.rs`, `malformed.rs`, `sniff.rs`; opened in PowerPoint by hand 2026-10-06 |
 | `.potx` template | Editor | yes (as a presentation) | no: written with the `.pptx` content type | `file.saveTemplate` is Save As under another name | none |
@@ -23,12 +23,12 @@ PowerPoint opens and saves; Viewer = opens only).
 | `.ppt` / `.pot` / `.pps` 97–2003 binary | Editor | no | no | Owner decision; import only would be enough | none |
 | `.odp` OpenDocument | Editor | no | no | | none |
 | `.thmx` Office theme | Viewer | no | no | Browse for themes is a P2 row | none |
-| `.deckcraft` native (zip + JSON) | n/a | yes (also `.slidecraft`) | yes | Lossless for the DeckCraft model, forward compatible | `crates/format` tests |
+| `.deckcraft` native (zip + JSON) | n/a | yes (also `.slidecraft`) | yes | Lossless for the MaluOS Slides model, forward compatible | `crates/format` tests |
 | PDF | export | no | yes | Slides, notes pages, handouts (1–9); real-text layer with embedded subsets, links, bookmarks. Slide artwork is a raster image at print resolution, not vector | `crates/pdf` tests |
 | Outline `.rtf` / `.txt` | export (RTF), import (outline) | `.txt` outline; `.md` as Markdown (headings are slides, list items bullets) (`slide.fromOutline`) | `.txt` outline | No RTF | engine tests |
-| PNG / JPEG slide images | export | n/a | yes (`file.export`, `deckcraft-cli render`) | Matches the editor's renderer. PNG `pHYs` and JPEG JFIF density are `scale` × 72 dpi (default scale 2 is 144 dpi), so Preview shows the slide's real size. PNG can leave the slide background out (`transparentBackground`, Export… “Transparent background”, `deckcraft-cli render --transparent`), so only the slide's content is opaque (#784) | render, engine, UI and CLI tests |
+| PNG / JPEG slide images | export | n/a | yes (`file.export`, `maluos-slides-cli render`) | Matches the editor's renderer. PNG `pHYs` and JPEG JFIF density are `scale` × 72 dpi (default scale 2 is 144 dpi), so Preview shows the slide's real size. PNG can leave the slide background out (`transparentBackground`, Export… “Transparent background”, `maluos-slides-cli render --transparent`), so only the slide's content is opaque (#784) | render, engine, UI and CLI tests |
 | TIFF / BMP / GIF slide images | export | n/a | no | Easy (the `image` crate writes them) | none |
-| Animated GIF of the deck | export | n/a | yes (`file.export` format `gif`, Export…, `deckcraft-cli`, MCP `export`) | One frame per slide from the slide renderer; size small/medium/large/extra large or 16–3840 px wide, 0.1–600 s per slide, loop forever or play once, slide range, hidden slides skipped; a 256-colour palette per frame (exact, or NeuQuant above 256 colours). Transitions and build animations are not animated | `crates/engine/src/gif_export.rs` tests (decoded frames, size, delay, loop, hidden slides, hostile params), MCP, CLI and export dialog tests |
+| Animated GIF of the deck | export | n/a | yes (`file.export` format `gif`, Export…, `maluos-slides-cli`, MCP `export`) | One frame per slide from the slide renderer; size small/medium/large/extra large or 16–3840 px wide, 0.1–600 s per slide, loop forever or play once, slide range, hidden slides skipped; a 256-colour palette per frame (exact, or NeuQuant above 256 colours). Transitions and build animations are not animated | `crates/engine/src/gif_export.rs` tests (decoded frames, size, delay, loop, hidden slides, hostile params), MCP, CLI and export dialog tests |
 | MP4 / MOV video of the deck | export | n/a | no | Needs timeline render + H.264 encode | none |
 | Print | yes | n/a | no | PR #66 (browser) open | none |
 
@@ -50,7 +50,7 @@ under the existing manifest-size limit, then charged to the shared budget; savin
 to ZIP members. Builds predating chart-sidecar support ignore it and lose it on resave. The
 intermediate build that required inline `bytes` cannot read the new referenced representation.
 
-| Kind | PowerPoint | DeckCraft | Notes |
+| Kind | PowerPoint | MaluOS Slides | Notes |
 |---|---|---|---|
 | PNG, JPEG, GIF (animated), BMP, TIFF, WebP | yes | yes | `image` 0.25; animated GIFs play since #39 |
 | SVG | yes (with PNG fallback) | **no** | The PNG fallback shows; SVG files can't be inserted |
@@ -69,7 +69,7 @@ intermediate build that required inline `bytes` cannot read the new referenced r
 ## PPTX coverage (PresentationML / DrawingML)
 
 What `crates/pptx` reads and writes, from ECMA-376. "Kept" means the XML is preserved untouched for
-the round trip even though DeckCraft doesn't model it.
+the round trip even though MaluOS Slides doesn't model it.
 
 | Part / feature | Read | Write | Notes |
 |---|---|---|---|
@@ -88,9 +88,9 @@ the round trip even though DeckCraft doesn't model it.
 | Text warp (`prstTxWarp`) | yes | yes | All 40 presets rendered (`crates/geom/src/warp.rs`); adjust values (`avLst`) round-trip |
 | Pictures with crop, recolour, duotone, alpha, luminance | yes | yes | |
 | Tables with styles | yes | yes | Merges and both diagonal borders round-trip |
-| Charts (`c:chartSpace`) | yes | yes | Original XML kept in `Chart.raw`. Trendlines (type, order or period, forecast, intercept, equation and R²) are read, written and drawn. A combo chart's secondary value axis is read and is not written back when the chart is rebuilt. An unchanged chart also keeps its embedded workbook and the other parts its relationships point at, under fresh `keptN` names so they never replace a part DeckCraft writes (#335); editing the chart drops that workbook instead of writing a stale one |
+| Charts (`c:chartSpace`) | yes | yes | Original XML kept in `Chart.raw`. Trendlines (type, order or period, forecast, intercept, equation and R²) are read, written and drawn. A combo chart's secondary value axis is read and is not written back when the chart is rebuilt. An unchanged chart also keeps its embedded workbook and the other parts its relationships point at, under fresh `keptN` names so they never replace a part MaluOS Slides writes (#335); editing the chart drops that workbook instead of writing a stale one |
 | Charts (`cx:` chartex: waterfall, funnel, treemap, sunburst, histogram, Pareto, box) | yes | yes | Unchanged parts kept, with their embedded workbook (#335); edited and new ones written from the model with a plain-chart fallback. Treemap and sunburst hierarchy levels kept; region maps kept, drawn as tiles (no map geometry) |
-| SmartArt (`dgm`) | the drawing part as a group (text laid out on its `dsp:txXfrm` rectangle), and the outline from the data model (Text Pane) | as a diagram: data model from the outline; layout, quick style and colour parts (the file's own kept until the layout is switched); the group as the cached drawing | DeckCraft's layout definitions are simple; a diagram without a cached drawing isn't drawn. SmartArt kept only as XML, without its relationship parts, still loses the drawing and data parts (#203) |
+| SmartArt (`dgm`) | the drawing part as a group (text laid out on its `dsp:txXfrm` rectangle), and the outline from the data model (Text Pane) | as a diagram: data model from the outline; layout, quick style and colour parts (the file's own kept until the layout is switched); the group as the cached drawing | MaluOS Slides' layout definitions are simple; a diagram without a cached drawing isn't drawn. SmartArt kept only as XML, without its relationship parts, still loses the drawing and data parts (#203) |
 | Equations (OMML, `a14:m`) | no | no | PR #55 open |
 | Audio / video (`p14:media`, trim, fades, bookmarks) | yes | partly | Playback options lost on save (#74) |
 | Ink (`contentPart`) | yes | as a group of freeform lines | PowerPoint sees shapes, not ink |
@@ -122,7 +122,7 @@ the round trip even though DeckCraft doesn't model it.
 | 2026-10-18 | minor | Native chart payloads use referenced ZIP members and share media byte/item limits; old inline sidecars remain readable. Synthetic tests cover multi-megabyte layout, all shape owners, shared budgets, missing/corrupt members and invalid references. Scores and milestone scope unchanged |
 | 2026-10-15 | trivial | Native `.deckcraft` files serialize a nonempty chart `kept` sidecar (relationships, part names, content types and bytes). Older files without it still load; empty sidecars are omitted. Headless PPTX → edit → native save/reopen → PPTX checks keep the workbook and drawing bytes; editing chart data still drops the stale workbook |
 | 2026-10-15 | trivial | PPTX interactive timing sequences keep later On Click steps and paragraph click builds (`trigger_steps.rs`); mixed starts and independent buttons survive import/edit/save/reopen |
-| 2026-10-15 | minor | A `.pptx` slide that can't be read is reported instead of dropped in silence: `file.open` and `file.openBytes` return `lostSlides`, the app shows a message and opens a repaired copy (Save asks for a new name), and `deckcraft-cli` warns on stderr (#203) |
+| 2026-10-15 | minor | A `.pptx` slide that can't be read is reported instead of dropped in silence: `file.open` and `file.openBytes` return `lostSlides`, the app shows a message and opens a repaired copy (Save asks for a new name), and `maluos-slides-cli` warns on stderr (#203) |
 | 2026-10-16 | minor | PNG slide export with a transparent background (#784) |
 | 2026-10-16 | trivial | A `.ppsx` opened from the command line or the file association starts the slide show (#862) |
 | 2026-10-14 | minor | Community PR wave folded: one row each for `.pptx` (seven owned corpus files), outline, 3-D models, embedded fonts, text, effects, 3-D (extrusion sides draw now), SmartArt (written as a diagram) and VBA (tags and custom XML are kept) |

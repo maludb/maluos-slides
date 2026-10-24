@@ -1,4 +1,4 @@
-# Where DeckCraft falls short of PowerPoint
+# Where MaluOS Slides falls short of PowerPoint
 
 > **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-22 · **Change:** minor (Animation Pane ▸ Play From; previous: minor, native chart payloads stored in bounded ZIP members; previous: major, community PR wave 2026-10-14: soak tests, PPTX corpus, comment threads (#70), embedded fonts, SmartArt Text Pane, Animation Pane timeline, Hunspell spelling, thesaurus, AutoCorrect, 14 new dialogs, pen pressure and trackpad gestures; duplicated entries and headers folded; previous: minor, 3-D bevel, camera and face lighting rendered) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
 > **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-20 · **Change:** trivial (empty chart number-format sections hide values; previous: minor, native chart payloads stored in bounded ZIP members; previous: major, community PR wave 2026-10-14: soak tests, PPTX corpus, comment threads (#70), embedded fonts, SmartArt Text Pane, Animation Pane timeline, Hunspell spelling, thesaurus, AutoCorrect, 14 new dialogs, pen pressure and trackpad gestures; duplicated entries and headers folded; previous: minor, 3-D bevel, camera and face lighting rendered) · **Target:** Microsoft PowerPoint for Mac 16.113 (Microsoft 365)
@@ -43,7 +43,7 @@ revision history.
 
 ### Startup crashes on some Windows GPUs (#40, #59)
 - **Evidence:** #59 (Intel UHD, access violation in `igvk64.dll` during Vulkan enumeration), #40
-  (WordCraft, GridCraft and DeckCraft all fail on one Windows 11 PC). The DX12 default (#16) fixed
+  (WordCraft, GridCraft and MaluOS Slides all fail on one Windows 11 PC). The DX12 default (#16) fixed
   AMD's `atio6axx.dll` crash only.
 - **Impact:** the app never opens for those users.
 - **Estimate:** 4–8 h (backend probing outside the process or a safe-mode fallback, a software
@@ -52,11 +52,11 @@ revision history.
 ### Soak testing has no memory or timing budgets
 - **Evidence:** `crates/engine/src/soak_tests.rs` runs seeded random command sequences over a
   ~100-slide deck (validity, selection, undo/redo exactness, bounded undo, save/reopen in both
-  formats every 100 steps); `DECKCRAFT_SOAK_STEPS` runs it long. It found a chart `clamp` panic
+  formats every 100 steps); `MALUOS_SLIDES_SOAK_STEPS` runs it long. It found a chart `clamp` panic
   that blanked whole slides. `crates/ui-egui/src/ui_soak_tests.rs` drives the whole window with
   seeded random clicks, drags, keys (plain, Ctrl, Shift), typing and scrolling over the sample
   deck, checking document validity, bounded undo/journal/thumbnail/texture caches, zero caught
-  command and render panics (`Session::panics_caught`, `deckcraft_render::panics_caught`) and a
+  command and render panics (`Session::panics_caught`, `maluos_slides_render::panics_caught`) and a
   mean frame under 250 ms; 4 × 3000-action runs are clean.
 - **Impact:** long-session crash rate is sampled in CI; RSS is not measured directly.
 - **Estimate:** 1–2 h (RSS sampling per platform).
@@ -101,7 +101,7 @@ Detail in [file-format-parity.md](file-format-parity.md).
 
 ### SVG pictures don't render
 - **Evidence:** `crates/render/src/images.rs` decodes through `image` 0.25 (PNG, JPEG, WebP, GIF,
-  TIFF, BMP), and EMF/WMF through `deckcraft-metafile` (ported from WordCraft: paths, fills, pens,
+  TIFF, BMP), and EMF/WMF through `maluos-slides-metafile` (ported from WordCraft: paths, fills, pens,
   pattern and hatch brushes, bitmaps and text; rectangle clip regions are applied, EMF+ only
   pictures play their EMF+ records).
   Nothing reads SVG; PowerPoint's Insert Icons stores SVG with a PNG fallback.
@@ -118,7 +118,7 @@ Detail in [file-format-parity.md](file-format-parity.md).
 
 ### No legacy `.ppt`/`.pot`/`.pps` import
 - **Evidence:** PowerPoint for Mac still opens and saves the 97–2003 binary formats
-  (`CFBundleDocumentTypes`); DeckCraft doesn't read them.
+  (`CFBundleDocumentTypes`); MaluOS Slides doesn't read them.
 - **Impact:** archives of older decks don't open.
 - **Estimate:** 20–35 h (import only, from the public [MS-PPT] spec). Owner decision whether it's
   worth it.
@@ -173,7 +173,7 @@ Detail in [file-format-parity.md](file-format-parity.md).
   have their own layouts, histograms and Paretos bin their data (count, width or Scott's rule),
   and box & whisker charts use exclusive or inclusive quartiles with 1.5 IQR whiskers. Region maps are kept
   (their cached geography too, also through edits) and drawn as value-coloured tiles with a
-  colour scale, since DeckCraft ships no map boundaries. Radar charts are drawn polar (filled
+  colour scale, since MaluOS Slides ships no map boundaries. Radar charts are drawn polar (filled
   or lines), stock charts as high-low lines with close dashes or up/down bars and saved as
   `c:stockChart`, and combo charts start as columns with a line. Trendlines round-trip
   (`corpus_charts.rs`) and are drawn: linear, exponential, logarithmic, polynomial, power and
@@ -194,11 +194,11 @@ Detail in [file-format-parity.md](file-format-parity.md).
   cached drawing; `crates/pptx/src/dgm.rs`), and PowerPoint diagrams read their outline from the
   data model, so they get the Text Pane too. 15 layouts (bullet and block lists, five process, two cycle and
   a radial, hierarchy, two pyramids, two matrices), four SmartArt Styles and Change Colors
-  (colourful or one accent). Still missing: DeckCraft's own layout definitions are simple (not yet
+  (colourful or one accent). Still missing: MaluOS Slides' own layout definitions are simple (not yet
   checked in PowerPoint itself); PowerPoint has ~200 layouts, picture layouts and 3-D styles; editing an
-  imported diagram's outline redraws it with DeckCraft's layout; a diagram with no cached drawing
+  imported diagram's outline redraws it with MaluOS Slides' layout; a diagram with no cached drawing
   isn't drawn.
-- **Impact:** a PowerPoint diagram edited in DeckCraft changes look.
+- **Impact:** a PowerPoint diagram edited in MaluOS Slides changes look.
 - **Estimate:** 6–10 h.
 
 ### Animation Pane, effect count and preview
@@ -257,7 +257,7 @@ and starts at that effect. The pane has an advanced timeline with draggable bars
   with a right-click menu; repeated words (`the the`) are flagged with Delete Repeated Word;
   Review › Language marks the selection's proofing language or Do Not Check Spelling
   (`lang`/`noProof` round-trip in PPTX). No grammar checking. The web build checks on the UI
-  thread a few milliseconds per frame. No dictionaries ship with DeckCraft, so without one
+  thread a few milliseconds per frame. No dictionaries ship with MaluOS Slides, so without one
   installed (always on Windows and the web) only a short list of common misspellings is found.
   `review.thesaurus` looks up the selected word (checklist row partial). AutoCorrect has
   PowerPoint's options (two initial capitals, sentence and day capitals, caps lock, fractions, an
@@ -333,7 +333,7 @@ Detail in [localization-parity.md](localization-parity.md).
 
 ## Performance
 
-- **Baseline measured, not compared.** `cargo xtask bench` (and `deckcraft-cli bench FILE`) times
+- **Baseline measured, not compared.** `cargo xtask bench` (and `maluos-slides-cli bench FILE`) times
   open, per-slide render, save, PPTX round trip and PDF export, and peak memory, against a saved
   baseline; show frame rate isn't measured and there are no PowerPoint numbers to set beside it.
   2–4 h.
@@ -374,7 +374,7 @@ Detail in [localization-parity.md](localization-parity.md).
 | 2026-10-13 | minor | Owned PPTX corpus round-trip (parts and text). Notes-master header and footer text is kept; the corpus gap is now a larger set and PowerPoint reference renders |
 | 2026-10-13 | minor | Owned PPTX corpus for comments, links and actions, custom shows, rotated groups and inherited placeholders. Paragraph `defRPr` and action sounds kept. Embedded fonts and #70/#74/#77 stay open |
 | 2026-10-13 | minor | Owned PPTX corpus for text effects, body layout, theme effects, fills, bevels and connectors. A run's inner shadow, reflection and soft edge, and a bevel preset with no kept 3-D XML, are kept. #70, #74, #77 and embedded fonts stay open |
-| 2026-10-13 | minor | Benchmark suite (`cargo xtask bench`, `deckcraft-cli bench`): the performance gap is now frame rate and a PowerPoint comparison |
+| 2026-10-13 | minor | Benchmark suite (`cargo xtask bench`, `maluos-slides-cli bench`): the performance gap is now frame rate and a PowerPoint comparison |
 | 2026-10-14 | minor | Owned corpus `corpus_media.rs`: 3-D model parts and animation bounce end now round-trip. The real-deck corpus and #70/#74/#77 stay open |
 | 2026-10-14 | trivial | Corpus slice: themes, masters, effects and links; text Mouse Over actions round-trip |
 | 2026-10-14 | trivial | A moving average trendline is drawn without an equation or an R² label |

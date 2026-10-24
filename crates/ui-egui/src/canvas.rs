@@ -6,10 +6,10 @@
 //! slide are drawn on the area around it (the pasteboard), where they can be selected and moved;
 //! the slide show, exports and thumbnails clip to the slide.
 
-use deckcraft_engine::tools::{Hit, box_handles};
-use deckcraft_engine::{Mods, PointerEvent, PointerKind, Target, ToolKind};
-use deckcraft_geom::{Point, Xfrm};
 use egui::{Align2, Color32, CornerRadius, Pos2, Rect, Sense, Stroke, Ui, pos2, vec2};
+use maluos_slides_engine::tools::{Hit, box_handles};
+use maluos_slides_engine::{Mods, PointerEvent, PointerKind, Target, ToolKind};
+use maluos_slides_geom::{Point, Xfrm};
 use serde_json::json;
 
 use crate::SlideApp;
@@ -65,7 +65,7 @@ pub(crate) fn trackpad_twist(app: &mut SlideApp, ctx: &egui::Context) {
 /// The slide's rect on screen for the current zoom.
 pub fn layout(app: &SlideApp, avail: Rect) -> (Rect, f32) {
     let Some(d) = app.session.active() else { return (avail, 1.0) };
-    let page = deckcraft_engine::page_size(d);
+    let page = maluos_slides_engine::page_size(d);
     // Loaded sizes are repaired; a zero or non-finite side would still make the fit infinite.
     let side = |v: f64| if v.is_finite() { (v as f32).max(1.0) } else { 1.0 };
     let (sw, sh) = (side(page.width), side(page.height));
@@ -292,7 +292,7 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
         Some((Target::Master { master }, d)) => master_tex(ui.ctx(), &d.doc, master, None, px, visible, typing_into),
         Some((Target::Layout { master, layout }, d)) => master_tex(ui.ctx(), &d.doc, master, Some(layout), px, visible, typing_into),
         Some((t @ (Target::Handout | Target::NotesMaster), d)) => {
-            deckcraft_engine::master_page(&d.doc, t).and_then(|p| master_tex(ui.ctx(), &p, 0, None, px, visible, typing_into))
+            maluos_slides_engine::master_page(&d.doc, t).and_then(|p| master_tex(ui.ctx(), &p, 0, None, px, visible, typing_into))
         }
         None => None,
     };
@@ -308,7 +308,7 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
     media_frames(app, &painter, xf);
     // Notes Master view: the current slide inside the slide-image placeholder, as in PowerPoint.
     let notes_preview = app.session.active().filter(|d| d.selection.target == Target::NotesMaster).and_then(|d| {
-        let frame = d.doc.notes_master.as_ref()?.shapes.iter().find(|s| s.ph_type() == Some(deckcraft_model::PhType::SlideImage))?.xfrm?;
+        let frame = d.doc.notes_master.as_ref()?.shapes.iter().find(|s| s.ph_type() == Some(maluos_slides_model::PhType::SlideImage))?.xfrm?;
         Some((d.doc.clone(), d.selection.slide.min(d.doc.slides.len().saturating_sub(1)), frame))
     });
     if let Some((doc, idx, f)) = notes_preview
@@ -331,7 +331,7 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
         // Where the slides go on a printed handout, as in PowerPoint's preview.
         let (n, s) = (d.doc.notes_size, d.doc.slide_size);
         let aspect = s.width / s.height.max(1.0);
-        for b in deckcraft_engine::pdf::handout_boxes(app.ui.handout_per_page, (n.width, n.height), aspect) {
+        for b in maluos_slides_engine::pdf::handout_boxes(app.ui.handout_per_page, (n.width, n.height), aspect) {
             let r = Rect::from_min_max(
                 pos2(slide_rect.min.x + b.x0 as f32 * scale, slide_rect.min.y + b.y0 as f32 * scale),
                 pos2(slide_rect.min.x + b.x1 as f32 * scale, slide_rect.min.y + b.y1 as f32 * scale),
@@ -412,13 +412,13 @@ fn scroll_bar(avail: Rect, inset: f32, overflow: egui::Vec2, offset: egui::Vec2,
 
 /// The canvas `avail` in texture pixels (`pixel`: one pixel's size in points) from the slide's
 /// top-left corner.
-fn visible_region(avail: Rect, slide: Rect, pixel: egui::Vec2) -> deckcraft_render::Region {
+fn visible_region(avail: Rect, slide: Rect, pixel: egui::Vec2) -> maluos_slides_render::Region {
     let px = |v: f32, k: f32| if v.is_finite() && k > 0.0 { (v / k) as f64 } else { 0.0 };
     let (x0, y0) = (px(avail.min.x - slide.min.x, pixel.x).floor(), px(avail.min.y - slide.min.y, pixel.y).floor());
     let (x1, y1) = (px(avail.max.x - slide.min.x, pixel.x).ceil(), px(avail.max.y - slide.min.y, pixel.y).ceil());
     let lim = i32::MAX as f64 / 4.0;
     let (x0, y0) = (x0.clamp(-lim, lim), y0.clamp(-lim, lim));
-    deckcraft_render::Region {
+    maluos_slides_render::Region {
         x: x0 as i32,
         y: y0 as i32,
         w: (x1 - x0).clamp(1.0, u32::MAX as f64) as u32,
@@ -435,11 +435,11 @@ pub fn ime_area(app: &SlideApp, xf: Xf) -> Option<Rect> {
         if ts.notes {
             return None;
         }
-        if let Some((top, bot)) = deckcraft_engine::cmd::text::caret_line(st, ts) {
+        if let Some((top, bot)) = maluos_slides_engine::cmd::text::caret_line(st, ts) {
             return Some(Rect::from_two_pos(xf.to_screen(top), xf.to_screen(bot)).expand2(vec2(1.0, 0.0)));
         }
         let sh = st.shape(ts.shape)?;
-        return Some(screen_rect(xf, &deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh)));
+        return Some(screen_rect(xf, &maluos_slides_engine::cmd::xfrm_of(&st.doc, &st.selection, sh)));
     }
     if st.selection.shapes.len() != 1 {
         return None;
@@ -448,7 +448,7 @@ pub fn ime_area(app: &SlideApp, xf: Xf) -> Option<Rect> {
     if sh.is_line() {
         return None;
     }
-    Some(screen_rect(xf, &deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh)))
+    Some(screen_rect(xf, &maluos_slides_engine::cmd::xfrm_of(&st.doc, &st.selection, sh)))
 }
 
 /// Turn the input method on for the slide while it takes typing, with its candidate window at
@@ -547,24 +547,31 @@ fn media_bar(app: &mut SlideApp, ui: &mut Ui, xf: Xf) {
 
 fn master_tex(
     ctx: &egui::Context,
-    doc: &deckcraft_model::Presentation,
+    doc: &maluos_slides_model::Presentation,
     master: usize,
     layout: Option<usize>,
     px: (u32, u32),
-    visible: deckcraft_render::Region,
-    editing_text: Option<deckcraft_model::ShapeId>,
-) -> Option<(egui::TextureHandle, deckcraft_render::Region)> {
+    visible: maluos_slides_render::Region,
+    editing_text: Option<maluos_slides_model::ShapeId>,
+) -> Option<(egui::TextureHandle, maluos_slides_render::Region)> {
     let scale = px.0 as f64 / doc.slide_size.width.max(1.0);
     let region = crate::textures::fit_texture(
-        deckcraft_render::pasteboard_region(px, scale, deckcraft_render::layout_extent(doc, master, layout), visible),
+        maluos_slides_render::pasteboard_region(px, scale, maluos_slides_render::layout_extent(doc, master, layout), visible),
         visible,
         crate::textures::max_side(ctx),
     );
-    let img = deckcraft_render::render_layout(
+    let img = maluos_slides_render::render_layout(
         doc,
         master,
         layout,
-        &deckcraft_render::RenderOpts { scale, edit: true, editing_text, offset: region.offset(), size: Some(region.size()), ..Default::default() },
+        &maluos_slides_render::RenderOpts {
+            scale,
+            edit: true,
+            editing_text,
+            offset: region.offset(),
+            size: Some(region.size()),
+            ..Default::default()
+        },
     );
     Some((crate::textures::upload_editor(ctx, "master-canvas", crate::textures::to_color_image(&img, false)), region))
 }
@@ -946,13 +953,13 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     let editing = st.selection.text.clone();
     for id in &st.selection.shapes {
         let Some(sh) = st.shape(*id) else { continue };
-        let x = deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
+        let x = maluos_slides_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
         let a = x.affine();
         let corners = [Point::new(0.0, 0.0), Point::new(x.w, 0.0), Point::new(x.w, x.h), Point::new(0.0, x.h)].map(|q| xf.to_screen(a * q));
         if sh.is_line() {
             let (p0, p1) = (xf.to_screen(a * Point::new(0.0, 0.0)), xf.to_screen(a * Point::new(x.w, x.h)));
             let glued = match sh.kind {
-                deckcraft_model::ShapeKind::Connector { start, end } => [start.is_some(), end.is_some()],
+                maluos_slides_model::ShapeKind::Connector { start, end } => [start.is_some(), end.is_some()],
                 _ => [false, false],
             };
             for (q, g) in [p0, p1].into_iter().zip(glued) {
@@ -967,7 +974,7 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
             // Edit Points: the outline's vertices are the handles.
             // No selection box: the outline and its vertices are what's edited.
             if let Some((path, index)) = app.session.tool.edit_vertex
-                && let Some((hin, hout, v)) = deckcraft_engine::cmd::points::slide_handles(&st.doc, &st.selection, sh, path, index)
+                && let Some((hin, hout, v)) = maluos_slides_engine::cmd::points::slide_handles(&st.doc, &st.selection, sh, path, index)
             {
                 for h in [hin, hout].into_iter().flatten() {
                     painter.line_segment([xf.to_screen(v), xf.to_screen(h)], sel_stroke);
@@ -980,7 +987,7 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
                     );
                 }
             }
-            for q in deckcraft_engine::cmd::points::slide_vertices(&st.doc, &st.selection, sh).into_iter().flatten() {
+            for q in maluos_slides_engine::cmd::points::slide_vertices(&st.doc, &st.selection, sh).into_iter().flatten() {
                 let c = xf.to_screen(q);
                 painter.rect(
                     egui::Rect::from_center_size(c, egui::vec2(7.0, 7.0)),
@@ -1019,12 +1026,12 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
             for h in hs {
                 painter.circle(xf.to_screen(h), 4.5, t.handle_fill, Stroke::new(1.0, t.handle_stroke));
             }
-            let geo = deckcraft_render::shape_geometry(sh, x.w, x.h);
+            let geo = maluos_slides_render::shape_geometry(sh, x.w, x.h);
             for hd in &geo.handles {
                 let q = xf.to_screen(a * hd.pos);
                 painter.circle(q, 4.5, Color32::from_rgb(0xFF, 0xD2, 0x3F), Stroke::new(1.0, Color32::from_rgb(0x8A, 0x6A, 0x00)));
             }
-            for hd in deckcraft_engine::tools::wordart_handles(&st.doc, &st.selection, sh, x.w, x.h) {
+            for hd in maluos_slides_engine::tools::wordart_handles(&st.doc, &st.selection, sh, x.w, x.h) {
                 let q = xf.to_screen(a * hd.pos);
                 painter.circle(q, 4.5, Color32::from_rgb(0xFF, 0xD2, 0x3F), Stroke::new(1.0, Color32::from_rgb(0x8A, 0x6A, 0x00)));
             }
@@ -1036,16 +1043,16 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
             painter.add(egui::Shape::convex_polygon(quad.iter().map(|q| xf.to_screen(*q)).collect(), t.text_selection, Stroke::NONE));
         }
         // An input method's composition: underlined in place, thicker under the part being converted.
-        for (a, b, thick) in deckcraft_engine::cmd::text::composition_underlines(st) {
+        for (a, b, thick) in maluos_slides_engine::cmd::text::composition_underlines(st) {
             painter.line_segment([xf.to_screen(a), xf.to_screen(b)], Stroke::new(if thick { 2.0 } else { 1.0 }, t.caret));
         }
         if !ts.is_range() {
             let blink = (ui.input(|i| i.time) * 1.6).fract() < 0.6;
             ui.ctx().request_repaint_after(std::time::Duration::from_millis(300));
             // An empty placeholder shows the caret where typing begins too.
-            if blink && let Some((top, bot)) = deckcraft_engine::cmd::text::caret_line(st, ts) {
+            if blink && let Some((top, bot)) = maluos_slides_engine::cmd::text::caret_line(st, ts) {
                 // In the colour of the text being typed: a black caret is lost on a dark slide.
-                let color = deckcraft_engine::cmd::text::caret_color(st, ts).map_or(t.caret, theme::to_color32);
+                let color = maluos_slides_engine::cmd::text::caret_color(st, ts).map_or(t.caret, theme::to_color32);
                 painter.line_segment([xf.to_screen(top), xf.to_screen(bot)], Stroke::new(1.5, color));
             }
         }
@@ -1053,7 +1060,7 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     // Table cell editing: outline the cell (merged cells as drawn).
     if let Some(ts) = &editing
         && let (Some((r, c)), Some(sh)) = (ts.cell, st.shape(ts.shape))
-        && let Some(f) = deckcraft_engine::cmd::table::table_frame(st, sh)
+        && let Some(f) = maluos_slides_engine::cmd::table::table_frame(st, sh)
         && let Some(cr) = f.cell_rect(r, c)
     {
         let pts = [Point::new(cr.x0, cr.y0), Point::new(cr.x1, cr.y0), Point::new(cr.x1, cr.y1), Point::new(cr.x0, cr.y1)]
@@ -1083,11 +1090,11 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     let path = &app.session.tool.path_preview;
     if path.len() > 1 {
         let pts: Vec<Point> = if app.session.tool.path_smooth && path.len() > 2 {
-            let d = deckcraft_engine::cmd::shape::freeform_path(path, false, true);
+            let d = maluos_slides_engine::cmd::shape::freeform_path(path, false, true);
             let mut v = vec![];
-            let bp = deckcraft_render::parse_path(&d);
-            deckcraft_geom::preset_flatten(&bp, &mut |el| match el {
-                deckcraft_geom::PathEl::MoveTo(q) | deckcraft_geom::PathEl::LineTo(q) => v.push(q),
+            let bp = maluos_slides_render::parse_path(&d);
+            maluos_slides_geom::preset_flatten(&bp, &mut |el| match el {
+                maluos_slides_geom::PathEl::MoveTo(q) | maluos_slides_geom::PathEl::LineTo(q) => v.push(q),
                 _ => {}
             });
             v
@@ -1113,7 +1120,7 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
         && let ToolKind::Ink { color, width, mode } = &app.session.tool.kind
     {
         let pts = &app.session.tool.ink_preview;
-        let legacy = deckcraft_engine::model::ink_pressure_is_legacy(pts);
+        let legacy = maluos_slides_engine::model::ink_pressure_is_legacy(pts);
         let c = theme::to_color32(*color);
         let c = if mode == "highlighter" { c.gamma_multiply(0.45) } else { c };
         if legacy || mode == "highlighter" {
@@ -1123,8 +1130,8 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
         } else {
             for pair in pts.windows(2) {
                 let [q0, q1] = pair else { continue };
-                let a = deckcraft_engine::model::ink_sample_width(*width, q0.2, legacy);
-                let b = deckcraft_engine::model::ink_sample_width(*width, q1.2, legacy);
+                let a = maluos_slides_engine::model::ink_sample_width(*width, q0.2, legacy);
+                let b = maluos_slides_engine::model::ink_sample_width(*width, q1.2, legacy);
                 let sw = ((a + b) * 0.5 * f64::from(xf.scale)).max(1.0) as f32;
                 let p0 = xf.to_screen(Point::new(q0.0, q0.1));
                 let p1 = xf.to_screen(Point::new(q1.0, q1.1));
@@ -1154,9 +1161,9 @@ pub(crate) struct TextMarks {
     pub selection: Vec<[Point; 4]>,
 }
 
-pub(crate) fn text_marks(st: &deckcraft_engine::DocState, ts: &deckcraft_engine::TextSel) -> Option<TextMarks> {
-    let (l, m) = deckcraft_engine::cmd::text::text_frame(st, ts)?;
-    let pos = |p: (usize, usize)| deckcraft_text::Pos { para: p.0, ch: p.1 };
+pub(crate) fn text_marks(st: &maluos_slides_engine::DocState, ts: &maluos_slides_engine::TextSel) -> Option<TextMarks> {
+    let (l, m) = maluos_slides_engine::cmd::text::text_frame(st, ts)?;
+    let pos = |p: (usize, usize)| maluos_slides_text::Pos { para: p.0, ch: p.1 };
     let (s0, s1) = ts.ordered();
     let selection = l
         .selection_rects(pos(s0), pos(s1))
@@ -1186,7 +1193,7 @@ fn draw_preview(app: &SlideApp, p: &egui::Painter, xf: Xf, x: Xfrm, t: &Tokens) 
         ToolKind::Shape { preset } => preset.clone(),
         _ => "rect".into(),
     };
-    if preset == deckcraft_engine::tools::DRAW_TABLE {
+    if preset == maluos_slides_engine::tools::DRAW_TABLE {
         // A border inside a table (flat), or the outline of a new table.
         let (a, b) = (xf.to_screen(Point::new(x.x, x.y)), xf.to_screen(Point::new(x.x + x.w, x.y + x.h)));
         if x.w < 0.5 || x.h < 0.5 {
@@ -1196,7 +1203,7 @@ fn draw_preview(app: &SlideApp, p: &egui::Painter, xf: Xf, x: Xfrm, t: &Tokens) 
         }
         return;
     }
-    if deckcraft_geom::preset::is_line_like(&preset) {
+    if maluos_slides_geom::preset::is_line_like(&preset) {
         let a = x.affine();
         p.line_segment([xf.to_screen(a * Point::new(0.0, 0.0)), xf.to_screen(a * Point::new(x.w, x.h))], Stroke::new(1.5, t.accent));
         return;
@@ -1219,7 +1226,7 @@ fn context_menu(app: &mut SlideApp, resp: &egui::Response) {
         let editing = app.session.active().and_then(|d| app.session.tool.editing_points(d).and_then(|id| d.shape(id).cloned()));
         if let Some(sh) = editing {
             if let Some((path, index)) = app.session.tool.edit_vertex {
-                let cur = deckcraft_engine::cmd::points::kind_of(&sh, path, index);
+                let cur = maluos_slides_engine::cmd::points::kind_of(&sh, path, index);
                 for (l, k) in [("Smooth Point", "smooth"), ("Straight Point", "straight"), ("Corner Point", "corner")] {
                     if ui.radio(cur == Some(k), l).clicked() {
                         let _ = app.run("shape.pointType", json!({"path": path, "index": index, "type": k}));
@@ -1251,7 +1258,7 @@ fn context_menu(app: &mut SlideApp, resp: &egui::Response) {
                         .and_then(|st| match w.tag {
                             crate::squiggles::Tag::Shape { id, para } => st.shape(id)?.text.as_ref()?.paragraphs.get(para).map(|p| p.text()),
                             crate::squiggles::Tag::Cell { id, row, col, para } => match &st.shape(id)?.kind {
-                                deckcraft_model::ShapeKind::Table(tb) => tb.cell(row, col)?.text.paragraphs.get(para).map(|p| p.text()),
+                                maluos_slides_model::ShapeKind::Table(tb) => tb.cell(row, col)?.text.paragraphs.get(para).map(|p| p.text()),
                                 _ => None,
                             },
                             crate::squiggles::Tag::Notes { .. } => None,
@@ -1379,7 +1386,7 @@ fn context_menu(app: &mut SlideApp, resp: &egui::Response) {
             let picture = app
                 .session
                 .active()
-                .is_some_and(|d| d.selected_shapes().iter().any(|s| matches!(s.kind, deckcraft_model::ShapeKind::Picture { .. })));
+                .is_some_and(|d| d.selected_shapes().iter().any(|s| matches!(s.kind, maluos_slides_model::ShapeKind::Picture { .. })));
             if picture && ui.button("Change Picture…").clicked() {
                 let _ = app.run("app.changePictureDialog", json!({}));
                 ui.close();
@@ -1487,9 +1494,9 @@ fn grid_fits(span: f32, step: f32) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use deckcraft_engine::Session;
     use egui::{Event, Modifiers, MouseWheelUnit, Pos2, TouchPhase, pos2, vec2};
     use egui_kittest::Harness;
+    use maluos_slides_engine::Session;
 
     use super::*;
     use crate::{Services, SlideApp};
@@ -1702,11 +1709,11 @@ mod tests {
         assert!(marquee, "the drag selects on the canvas");
     }
 
-    fn app_with_table() -> (egui_kittest::Harness<'static, SlideApp>, deckcraft_model::ShapeId) {
+    fn app_with_table() -> (egui_kittest::Harness<'static, SlideApp>, maluos_slides_model::ShapeId) {
         let mut s = Session::with_new();
         let data = json!([["Hello world", "b"], ["c", ""]]);
         let r = s.execute("insert.table", &json!({"rows": 2, "cols": 2, "rect": [100.0, 100.0, 400.0, 80.0], "data": data})).unwrap();
-        let id = deckcraft_model::ShapeId(r["id"].as_u64().unwrap() as u32);
+        let id = maluos_slides_model::ShapeId(r["id"].as_u64().unwrap() as u32);
         s.execute("edit.deselect", &json!({})).unwrap();
         let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_ui_state(
             |ui, app: &mut SlideApp| {
@@ -1745,10 +1752,10 @@ mod tests {
         let sh = st
             .shapes()
             .iter()
-            .find(|s| s.ph_type() == Some(deckcraft_model::PhType::Body) || s.ph_type() == Some(deckcraft_model::PhType::Obj))
+            .find(|s| s.ph_type() == Some(maluos_slides_model::PhType::Body) || s.ph_type() == Some(maluos_slides_model::PhType::Obj))
             .unwrap();
         let id = sh.id;
-        let x = deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
+        let x = maluos_slides_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
         let p = screen(h.state(), x.x + 40.0, x.y + 20.0);
         click(&mut h, p);
         h.run_steps(3);
@@ -1756,7 +1763,7 @@ mod tests {
             let st = h.state().session.active().unwrap();
             let ts = st.selection.text.as_ref().expect("click starts typing");
             assert_eq!(ts.shape, id);
-            deckcraft_engine::cmd::text::caret_line(st, ts).unwrap().0
+            maluos_slides_engine::cmd::text::caret_line(st, ts).unwrap().0
         };
         let first = caret(&h);
         h.event(Event::Text("First point".into()));
@@ -1767,7 +1774,7 @@ mod tests {
         assert!((first.x - second.x).abs() < 0.01, "empty lines retain the bullet indent");
         assert!(second.y > first.y);
         let st = h.state().session.active().unwrap();
-        let l = deckcraft_engine::cmd::text::layout_for(st, st.selection.text.as_ref().unwrap()).unwrap();
+        let l = maluos_slides_engine::cmd::text::layout_for(st, st.selection.text.as_ref().unwrap()).unwrap();
         assert_eq!(l.empty_bullets.len(), 1);
         assert_eq!(l.empty_bullets[0].para, 1);
         let renders = h.state().textures.canvas_renders;
@@ -1780,14 +1787,14 @@ mod tests {
         h.run_steps(3);
         let st = h.state().session.active().unwrap();
         let ts = st.selection.text.as_ref().unwrap();
-        assert_eq!(deckcraft_engine::cmd::text::body_of(st, ts).unwrap().text(), "First point\nSecond point");
-        assert!(deckcraft_engine::cmd::text::layout_for(st, ts).unwrap().empty_bullets.is_empty());
+        assert_eq!(maluos_slides_engine::cmd::text::body_of(st, ts).unwrap().text(), "First point\nSecond point");
+        assert!(maluos_slides_engine::cmd::text::layout_for(st, ts).unwrap().empty_bullets.is_empty());
         h.key_press(egui::Key::Enter);
         h.run_steps(3);
         h.state_mut().run("format.bullets", json!({})).unwrap();
         h.run_steps(3);
         let st = h.state().session.active().unwrap();
-        assert!(deckcraft_engine::cmd::text::layout_for(st, st.selection.text.as_ref().unwrap()).unwrap().empty_bullets.is_empty());
+        assert!(maluos_slides_engine::cmd::text::layout_for(st, st.selection.text.as_ref().unwrap()).unwrap().empty_bullets.is_empty());
     }
 
     /// Double-clicking a table cell edits it with the caret drawn in that cell, where clicked.
@@ -1805,7 +1812,7 @@ mod tests {
         let ts = st.selection.text.clone().expect("editing the cell");
         assert_eq!((ts.shape, ts.cell), (id, Some((1, 1))));
         assert!(text_marks(st, &ts).is_some_and(|m| m.selection.is_empty()), "no range");
-        let (top, bottom) = deckcraft_engine::cmd::text::caret_line(st, &ts).expect("the cell's text has a caret");
+        let (top, bottom) = maluos_slides_engine::cmd::text::caret_line(st, &ts).expect("the cell's text has a caret");
         for q in [top, bottom] {
             assert!(q.x > 300.0 && q.x < 500.0 && q.y >= 140.0 && q.y <= 180.0, "caret {q:?} outside cell (1, 1)");
         }
@@ -1816,7 +1823,7 @@ mod tests {
         let st = harness.state().session.active().unwrap();
         let ts = st.selection.text.clone().unwrap();
         assert_eq!((ts.cell, ts.caret), (Some((0, 0)), (0, 0)));
-        let (top, _) = deckcraft_engine::cmd::text::caret_line(st, &ts).unwrap();
+        let (top, _) = maluos_slides_engine::cmd::text::caret_line(st, &ts).unwrap();
         assert!(top.x > 100.0 && top.x < 120.0 && top.y >= 100.0 && top.y < 140.0, "caret {top:?} at the start of cell (0, 0)");
     }
 
@@ -1839,7 +1846,7 @@ mod tests {
         harness.drop_at(q);
         harness.run_steps(2);
         let st = harness.state().session.active().unwrap();
-        let deckcraft_model::ShapeKind::Table(t) = &st.shape(id).unwrap().kind else { panic!("not a table") };
+        let maluos_slides_model::ShapeKind::Table(t) = &st.shape(id).unwrap().kind else { panic!("not a table") };
         assert!((t.cols[0] - 240.0).abs() < 0.5 && (t.cols[1] - 160.0).abs() < 0.5, "{:?}", t.cols);
     }
 

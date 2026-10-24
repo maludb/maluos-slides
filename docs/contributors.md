@@ -1,6 +1,6 @@
 # Contributors in the About window
 
-**About ▸ Contributors** credits everyone who contributed to DeckCraft, and **About ▸ Models** credits
+**About ▸ Contributors** credits everyone who contributed to MaluOS Slides, and **About ▸ Models** credits
 the AI models named in `Co-Authored-By` trailers. This follows the shared craftrules standard
 [`standards/contributors.md`](https://github.com/storytold/craftrules/blob/main/standards/contributors.md);
 this page is the local copy of the decision.
@@ -21,7 +21,7 @@ this page is the local copy of the decision.
   first or last commit date. The name toggle cycles **Username → Display name → Real name**; a
   missing name falls back to `@username`. Alphabetical sorting is case-insensitive and ignores the `@`.
 
-## In DeckCraft
+## In MaluOS Slides
 
 - The About window is the `"about"` dialog in `crates/ui-egui/src/dialogs.rs`; its `tab` field (`about`, `contributors`, `models`) picks the tab.
 

@@ -1,12 +1,12 @@
-//! Drawing laid-out text through a WordArt warp ([`deckcraft_geom::warp`]).
+//! Drawing laid-out text through a WordArt warp ([`maluos_slides_geom::warp`]).
 //!
 //! Glyph outlines are placed in layout space, flattened, cut into short segments and every point
 //! is mapped through the warp, so straight glyph edges bend with the guides. Underlines and
 //! highlights are warped the same way.
 
-use deckcraft_geom::warp::{Warp, WarpLine};
-use deckcraft_text::{GlyphRun, TextLayout};
 use kurbo::{Affine, BezPath, PathEl, Point, Rect, Shape as _};
+use maluos_slides_geom::warp::{Warp, WarpLine};
+use maluos_slides_text::{GlyphRun, TextLayout};
 use vello_cpu::{RenderContext, peniko};
 
 use crate::{ParaState, color, glyph, scale_of, text_transform};
@@ -133,7 +133,7 @@ pub(crate) fn draw(ctx: &mut RenderContext, l: &TextLayout, tr: Rect, m: Affine,
     let px = scale_of(m).max(1e-6) * mapper.zoom();
     let tol = (0.1 / px).clamp(1e-4, 2.0);
     let seg = (2.0 / px).clamp(1e-3, 50.0);
-    let deco = |ctx: &mut RenderContext, d: &deckcraft_text::Deco| {
+    let deco = |ctx: &mut RenderContext, d: &maluos_slides_text::Deco| {
         let ps = para(d.para);
         if !ps.visible || ps.opacity <= 0.001 {
             return;

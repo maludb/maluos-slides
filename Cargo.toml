@@ -1,42 +1,42 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
-default-members = ["crates/*", "apps/deckcraft", "apps/deckcraft-cli"]
+default-members = ["crates/*", "apps/maluos-slides", "apps/maluos-slides-cli"]
 
 [workspace.package]
 version = "0.10.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
-repository = "https://github.com/storytold/deckcraft"
+repository = "https://github.com/maludb/maluos-slides"
 
 [workspace.dependencies]
 # internal
-deckcraft-geom = { path = "crates/geom" }
-deckcraft-color = { path = "crates/color" }
-deckcraft-metafile = { path = "crates/metafile" }
-deckcraft-model = { path = "crates/model" }
-deckcraft-fonts = { path = "crates/fonts" }
-deckcraft-text = { path = "crates/text" }
-deckcraft-render = { path = "crates/render" }
-deckcraft-pdf = { path = "crates/pdf" }
-deckcraft-pptx = { path = "crates/pptx" }
-deckcraft-format = { path = "crates/format" }
-deckcraft-anim = { path = "crates/anim" }
-deckcraft-engine = { path = "crates/engine" }
-deckcraft-mcp = { path = "crates/mcp" }
-deckcraft-ui-egui = { path = "crates/ui-egui" }
-deckcraft-media = { path = "crates/media" }
+maluos-slides-geom = { path = "crates/geom" }
+maluos-slides-color = { path = "crates/color" }
+maluos-slides-metafile = { path = "crates/metafile" }
+maluos-slides-model = { path = "crates/model" }
+maluos-slides-fonts = { path = "crates/fonts" }
+maluos-slides-text = { path = "crates/text" }
+maluos-slides-render = { path = "crates/render" }
+maluos-slides-pdf = { path = "crates/pdf" }
+maluos-slides-pptx = { path = "crates/pptx" }
+maluos-slides-format = { path = "crates/format" }
+maluos-slides-anim = { path = "crates/anim" }
+maluos-slides-engine = { path = "crates/engine" }
+maluos-slides-mcp = { path = "crates/mcp" }
+maluos-slides-ui-egui = { path = "crates/ui-egui" }
+maluos-slides-media = { path = "crates/media" }
 # codecs (ported from FilmCraft, same owner and licence)
-deckcraft-bitstream = { path = "crates/bitstream" }
-deckcraft-h264 = { path = "crates/h264" }
-deckcraft-hevc = { path = "crates/hevc" }
-deckcraft-vp9 = { path = "crates/vp9" }
-deckcraft-av1 = { path = "crates/av1" }
-deckcraft-isobmff = { path = "crates/isobmff" }
-deckcraft-matroska = { path = "crates/matroska" }
-deckcraft-ogg = { path = "crates/ogg" }
-deckcraft-opus = { path = "crates/opus" }
+maluos-slides-bitstream = { path = "crates/bitstream" }
+maluos-slides-h264 = { path = "crates/h264" }
+maluos-slides-hevc = { path = "crates/hevc" }
+maluos-slides-vp9 = { path = "crates/vp9" }
+maluos-slides-av1 = { path = "crates/av1" }
+maluos-slides-isobmff = { path = "crates/isobmff" }
+maluos-slides-matroska = { path = "crates/matroska" }
+maluos-slides-ogg = { path = "crates/ogg" }
+maluos-slides-opus = { path = "crates/opus" }
 
 # foundation
 kurbo = { version = "0.13", features = ["serde"] }
