@@ -276,3 +276,116 @@ fn images_and_long_results_are_shaped_for_the_model() {
     assert!(shaped.text.len() < MAX_RESULT_BYTES + 100);
     assert!(shaped.text.ends_with(&format!("{MAX_RESULT_BYTES} shown]")), "{}", &shaped.text[shaped.text.len() - 60..]);
 }
+
+// ---------- the context ----------
+
+use crate::{Budget, Context, ContextCache};
+use maluos_slides_engine::Session;
+
+fn run(s: &mut Session, id: &str, p: Value) -> Value {
+    s.execute(id, &p).unwrap_or_else(|e| panic!("{id}: {e}"))
+}
+
+#[test]
+fn sample_deck_context_snapshot() {
+    let mut s = Session::new();
+    maluos_slides_engine::sample::open_sample(&mut s).unwrap();
+    run(&mut s, "slide.go", json!({"index": 1}));
+    let ctx = Context::build(&s, &Budget::default());
+    assert!(ctx.cut_slides.is_empty(), "{:?}", ctx.cut_slides);
+    assert!(ctx.text.contains("# Northern Lights"), "{}", ctx.text);
+    assert!(ctx.text.contains("## Current slide\n2. "), "{}", ctx.text);
+    assert!(ctx.text.contains("notes: \"Welcome everyone."), "{}", ctx.text);
+    assert_snapshot("context-sample.md", &ctx.text);
+}
+
+#[test]
+fn context_without_a_document() {
+    let s = Session::new();
+    let ctx = Context::build(&s, &Budget::default());
+    assert!(ctx.text.starts_with("No presentation is open"));
+    assert_eq!((ctx.uid, ctx.revision), (0, 0));
+}
+
+#[test]
+fn context_shows_the_selection_and_edited_text() {
+    let mut s = Session::with_new();
+    let title = s.doc().unwrap().current_slide().unwrap().shapes[0].id;
+    run(&mut s, "text.set", json!({"id": title, "text": "Quarterly Review"}));
+    run(&mut s, "edit.select", json!({"ids": [title]}));
+    let ctx = Context::build(&s, &Budget::default());
+    assert!(ctx.text.contains("Selected shapes (1), the target of an edit:"), "{}", ctx.text);
+    assert!(ctx.text.contains(&format!("placeholder id {title} ")), "{}", ctx.text);
+    assert!(ctx.text.contains("text \"Quarterly Review\""), "{}", ctx.text);
+
+    run(&mut s, "text.edit", json!({"id": title}));
+    run(&mut s, "text.select", json!({"anchor": [0, 0], "caret": [0, 9]}));
+    let ctx = Context::build(&s, &Budget::default());
+    assert!(
+        ctx.text.contains(&format!("editing text in shape {title}, selected from paragraph 0 char 0 to paragraph 0 char 9: \"Quarterly\"")),
+        "{}",
+        ctx.text
+    );
+
+    run(&mut s, "text.exit", json!({}));
+    run(&mut s, "edit.deselect", json!({}));
+    let ctx = Context::build(&s, &Budget::default());
+    assert!(ctx.text.contains("Nothing selected on it."), "{}", ctx.text);
+}
+
+#[test]
+fn context_cuts_a_long_deck_but_keeps_the_current_slide_whole() {
+    let mut s = Session::with_new();
+    let body: String = (1..=12).map(|i| format!("Point {i} with some words to fill the line\n")).collect();
+    for i in 0..120 {
+        run(&mut s, "slide.new", json!({"layout": "titleAndContent", "title": format!("Slide {i}"), "body": body}));
+    }
+    run(&mut s, "section.add", json!({"name": "Part two", "at": 30}));
+    // Slide 3 gets ten shapes, more than its per-slide budget shows.
+    run(&mut s, "slide.go", json!({"index": 2}));
+    for k in 0..10 {
+        run(&mut s, "shape.insert", json!({"preset": "rect", "rect": [20 + k * 40, 400, 30, 30], "text": format!("box {k}")}));
+    }
+    run(&mut s, "slide.go", json!({"index": 45}));
+    let budget = Budget { total_bytes: 6000, slide_bytes: 300, text_chars: 60, current_text_chars: 2000, notes_chars: 50 };
+    let ctx = Context::build(&s, &budget);
+    let t = &ctx.text;
+    assert!(t.len() < budget.total_bytes + 6000, "{}", t.len());
+    // The current slide is whole: all twelve points, before the outline.
+    let cur = t.split("## Outline").next().unwrap();
+    assert!(cur.contains("## Current slide\n46. Slide 44"), "{cur}");
+    assert_eq!(cur.matches("- Point ").count(), 12, "{cur}");
+    assert!(t.contains("46. Slide 44 (current, above)"), "{t}");
+    // Other slides are cut per slide, then to titles, then counted.
+    assert!(t.contains("… more shapes [cut: inspect_slide 2]"), "{t}");
+    assert!(t.contains("box 0") && !t.contains("box 9"), "{t}");
+    assert!(t.contains("[body left out: inspect_slide"), "{t}");
+    assert!(t.contains("more slides (inspect_document lists them)"), "{t}");
+    assert!(t.contains("### Section: Part two\n31. Slide 29"), "{t}");
+    assert!(!ctx.cut_slides.is_empty() && !ctx.cut_slides.contains(&45));
+    assert!(t.contains("121 slides"), "{}", t.lines().nth(1).unwrap());
+}
+
+#[test]
+fn context_cache_rebuilds_only_on_change() {
+    let mut s = Session::with_new();
+    let mut cache = ContextCache::new();
+    let budget = Budget::default();
+    let a = cache.get(&s, &budget).revision;
+    let _ = cache.get(&s, &budget);
+    assert_eq!(cache.builds, 1);
+    run(&mut s, "slide.new", json!({"layout": "blank"}));
+    let b = cache.get(&s, &budget).revision;
+    assert!(b > a);
+    assert_eq!(cache.builds, 2);
+    let _ = cache.get(&s, &budget);
+    assert_eq!(cache.builds, 2);
+    // A selection change without an edit also rebuilds (the selection is in the text).
+    run(&mut s, "slide.go", json!({"index": 0}));
+    assert!(cache.get(&s, &budget).text.contains("Current slide: 1"));
+    assert_eq!(cache.builds, 3);
+    // A new document is a new uid.
+    run(&mut s, "file.new", json!({}));
+    let _ = cache.get(&s, &budget);
+    assert_eq!(cache.builds, 4);
+}

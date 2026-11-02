@@ -27,28 +27,55 @@ same way for both callers. What the assistant adds on top is the command-level c
 server passes `run_command` params straight to the engine, where an unknown key silently takes
 the default; the assistant refuses it with the documented keys in the message.
 
+## The context (step 3.2)
+
+`Context::build(&session, &Budget)` writes the open deck as Markdown-ish text for the system
+prompt, read straight from the engine state (reading is free; only edits go through commands):
+
+1. A header: title and path, slide count, slide size, the theme with its heading and body fonts
+   and the dark, light and six accent colours as hex, unsaved-changes flag, section count.
+2. The selection: current slide, selected slides, the text being edited (shape, cell, caret or
+   range with the selected text quoted), selected table cells, and every selected shape as one
+   line (`ctrTitle placeholder id 258 "Title 1" at [120,88,720,188] text "…"`), named as the
+   target of an edit.
+3. The current slide, whole: title line with layout, id, hidden flag, animation count and
+   transition; each text placeholder as `[obj id 263]` followed by its paragraphs as indented
+   bullets (outline levels kept, so the model can rewrite one line); every other shape as one
+   line from `shape_summary` (preset or kind, id, name, box, rotation, fill, table size and first
+   rows, chart type and series count, group size, text, alt text); notes.
+4. The outline: every slide the same way, with `### Section: name` headings where sections
+   start, and the current slide as a one-line pointer.
+
+`Budget` (default 24 KiB total, 1200 bytes per slide, 400 chars per shape text, 4000 on the
+current slide, 300 for notes) is enforced slide by slide with markers the model can act on:
+`… more shapes [cut: inspect_slide 7]`, `[body left out: inspect_slide 40]` once the total is
+reached, and `… N more slides (inspect_document lists them)` past a margin. `Context::cut_slides`
+lists what was cut. The current slide is written first and is never cut by the total.
+
+`ContextCache::get` returns the last outline unless the document uid, its revision or the
+selection changed, so a pane polling every frame builds nothing between edits.
+
 ## Snapshots
 
-`snapshots/tools.json` is the tool table (every tool, app-only included) and
-`snapshots/commands.json` the catalog with each command's generated schema. The tests compare
+`snapshots/tools.json` is the tool table (every tool, app-only included),
+`snapshots/commands.json` the catalog with each command's generated schema, and
+`snapshots/context-sample.md` the outline of the sample deck (`engine::sample`) on slide 2. The tests compare
 against them; `MALUOS_SLIDES_UPDATE_SNAPSHOTS=1 cargo nextest run -p maluos-slides-assist`
 rewrites them after a deliberate change (an upstream merge that adds or re-documents a command
 shows up here as a diff to read, not a failure to silence).
 
 ## Tests
 
-`cargo nextest run -p maluos-slides-assist`: 12 tests. The table mirrors the server definition
+`cargo nextest run -p maluos-slides-assist`: 17 tests. The table mirrors the server definition
 for definition; the headless table drops the app-only tools; every one of the engine's params
 docs parses into a schema (a guard against upstream drift in the grammar); schema rules on hand-
 written docs; validation of unknown commands, keys and non-object params; the prompt listing's
 filter and cut; and, on the headless engine, tool calls that add and inspect slides, a
 `run_command` that pushes one undo step, refusals that leave the revision untouched, image and
-long-result shaping. The MCP crate's 25 tests still pass.
+long-result shaping. For the context: the sample-deck snapshot, no document, the selection and an edited text range, a 121-slide deck cut at a small budget with the current slide whole and every marker present, and the cache rebuilding only on revision, selection or document change. The MCP crate's 25 tests still pass.
 
 ## Next
 
-- 3.2 context builder (deck outline, selection, theme) using `document.inspect` and the
-  selection, size-capped and cached on the revision.
 - 3.4 the loop over `LlmClient` with one undo group per turn: the engine pushes one history
   entry per undoable command (`History.undo` is public), so the loop folds the entries a turn
   added into one labelled "Assistant: …".
@@ -60,3 +87,4 @@ long-result shaping. The MCP crate's 25 tests still pass.
 | Date | Change | Summary |
 |---|---|---|
 | 2026-11-02 | major | Created with step 3.3: tool table, catalog, generated schemas, validation, `run_tool`, snapshots, 12 tests |
+| 2026-11-02 | major | Step 3.2: `Context`, `Budget`, `ContextCache`, the sample-deck snapshot, 5 more tests |
