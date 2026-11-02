@@ -239,7 +239,14 @@ fn delete(s: &mut Session, p: &Value) -> Result<Value> {
     let ids: Vec<SlideId> = {
         let st = s.doc()?;
         if let Some(a) = p.get("ids").and_then(Value::as_array) {
-            a.iter().filter_map(Value::as_u64).filter_map(|v| u32::try_from(v).ok()).map(SlideId).collect()
+            // Only slides the deck has: an id that is not there (a stale one, after an earlier
+            // delete) must fail, not "succeed" deleting nothing.
+            a.iter()
+                .filter_map(Value::as_u64)
+                .filter_map(|v| u32::try_from(v).ok())
+                .map(SlideId)
+                .filter(|id| st.doc.slide_index(*id).is_some())
+                .collect()
         } else if let Some(i) = opt_usize_param(p, "index", "slide.delete")? {
             st.doc.slides.get(i).map(|x| vec![x.id]).unwrap_or_default()
         } else if !st.selection.slides.is_empty() {
@@ -669,6 +676,26 @@ mod tests {
                 assert_eq!(s.doc().expect("doc").doc.slides.len(), 3, "{cmd} {p}");
             }
         }
+    }
+
+    #[test]
+    fn delete_by_ids_ignores_stale_ids_and_fails_when_none_exists() {
+        let mut s = Session::with_new();
+        while s.doc().expect("doc").doc.slides.len() < 3 {
+            s.execute("slide.new", &json!({})).expect("new slide");
+        }
+        let last = s.doc().expect("doc").doc.slides[2].id.0;
+        s.execute("slide.delete", &json!({"ids": [last]})).expect("delete");
+        assert_eq!(s.doc().expect("doc").doc.slides.len(), 2);
+        let undo = s.doc().expect("doc").history.undo.len();
+        // The same id again: nothing to delete is an error, not a silent no-op with an undo step.
+        assert!(s.execute("slide.delete", &json!({"ids": [last]})).is_err());
+        assert_eq!(s.doc().expect("doc").doc.slides.len(), 2);
+        assert_eq!(s.doc().expect("doc").history.undo.len(), undo);
+        // A stale id beside a real one deletes the real one only.
+        let second = s.doc().expect("doc").doc.slides[1].id.0;
+        s.execute("slide.delete", &json!({"ids": [last, second]})).expect("delete");
+        assert_eq!(s.doc().expect("doc").doc.slides.len(), 1);
     }
 
     #[test]
