@@ -55,6 +55,44 @@ lists what was cut. The current slide is written first and is never cut by the t
 `ContextCache::get` returns the last outline unless the document uid, its revision or the
 selection changed, so a pane polling every frame builds nothing between edits.
 
+## The loop (step 3.4)
+
+`Assistant::ask(&mut host, text, on_event) -> TurnReport` is one user message:
+
+1. The user message joins the conversation (`messages`, kept across turns; older turns are
+   trimmed at user messages past `Limits::max_messages`, so a tool call never loses its result).
+2. Each round builds a request: system text = `INSTRUCTIONS` + the command catalog listing
+   (`Limits::catalog_bytes`, 32 KiB by default, 0 leaves it out) + the deck outline from
+   [`Context`] rebuilt every round, so the model sees its own edits; tools = `ToolTable` for the
+   host; `max_tokens` = `Limits::max_output_tokens`; `effort` when set.
+3. The model streams; text and thinking reach `on_event` as `TurnEvent::Text` / `Thinking`.
+   A retryable error (rate limit, overload, transport) is retried `Limits::retries` times with
+   `retry_delay` doubling and `retry-after` honoured; any other error ends the turn with
+   `report.error` set and the user message kept, so the user can retry without retyping.
+4. Every tool call runs through [`run_tool`], so through `Session::execute` on the host, with
+   `ToolStart` / `ToolDone` events; `Flow::Stop` from the callback cancels before the next call.
+   Past `Limits::max_tool_calls` each call is answered with an error telling the model to answer
+   with what it has. The results go back as one user turn of `tool_result` blocks.
+5. The loop ends when the model answers in text, refuses, hits `max_tokens` without a call, or
+   `Limits::max_rounds` is reached (`report.stopped` says which). A cancelled or failed turn
+   answers any dangling tool call with an error so the conversation stays valid.
+6. The undo entries the turn's commands pushed are folded into one labelled
+   `Assistant: <request>` (found by the document pointer recorded before the turn; nothing
+   happens when the deck is unchanged or another document was opened). `report.commands` is the
+   command ids from the session journal, `report.usage` the summed tokens.
+
+[`Host`] is what the loop runs against: an MCP `Backend` plus `session()` / `session_mut()` for
+the outline and the history. `Headless` is one; the desktop app supplies its own (3.6).
+`Remote` (a running app over the control channel) is not a host: it has no session to read.
+
+`examples/ask.rs` runs one turn against a real model on a new or opened deck:
+`cargo run -p maluos-slides-assist --example ask -- ollama glm-5.3-flash:cloud "add a closing
+slide that thanks the audience" --save out.pptx` (also `anthropic`, `openai`, `--open deck.pptx`,
+`--sample`). Verified live with Ollama `glm-5.3-flash:cloud` on the sample deck: one `slide.new`, one
+`inspect_document`, a correct 9-slide `.pptx`, one undo step. The system text tells the model the
+outline already includes the turn's edits, because without that it mistook its new slide for an
+existing one.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -66,19 +104,16 @@ shows up here as a diff to read, not a failure to silence).
 
 ## Tests
 
-`cargo nextest run -p maluos-slides-assist`: 17 tests. The table mirrors the server definition
+`cargo nextest run -p maluos-slides-assist`: 25 tests. The table mirrors the server definition
 for definition; the headless table drops the app-only tools; every one of the engine's params
 docs parses into a schema (a guard against upstream drift in the grammar); schema rules on hand-
 written docs; validation of unknown commands, keys and non-object params; the prompt listing's
 filter and cut; and, on the headless engine, tool calls that add and inspect slides, a
 `run_command` that pushes one undo step, refusals that leave the revision untouched, image and
-long-result shaping. For the context: the sample-deck snapshot, no document, the selection and an edited text range, a 121-slide deck cut at a small budget with the current slide whole and every marker present, and the cache rebuilding only on revision, selection or document change. The MCP crate's 25 tests still pass.
+long-result shaping. For the context: the sample-deck snapshot, no document, the selection and an edited text range, a 121-slide deck cut at a small budget with the current slide whole and every marker present, and the cache rebuilding only on revision, selection or document change. For the loop, with `maluos_llm::mock::MockClient`: "add a closing slide that thanks the audience" scripted as `run_command slide.new` then `set_text` produces the slide, the text, the journal `[slide.new, text.set]` and exactly one undo entry `Assistant: add a closing slide…` that `edit.undo` reverts whole; the requests carry instructions, catalog, outline (rebuilt per round) and the tool table; the round limit; the tool-call limit; cancel at `ToolStart` leaving the conversation valid; retry on rate limit and overload, none on auth; an error after a tool call keeping the change as one undo step; trimming at user messages; the system text with and without the catalog. The MCP crate's 25 tests still pass.
 
 ## Next
 
-- 3.4 the loop over `LlmClient` with one undo group per turn: the engine pushes one history
-  entry per undoable command (`History.undo` is public), so the loop folds the entries a turn
-  added into one labelled "Assistant: …".
 - 3.5 safety rails use `ToolTable::is_read_only` and `CommandEntry::undoable`; the always-confirm
   list (`slide.delete`, `section.remove`, `file.new`, replace-all) lives there.
 
@@ -88,3 +123,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 |---|---|---|
 | 2026-11-02 | major | Created with step 3.3: tool table, catalog, generated schemas, validation, `run_tool`, snapshots, 12 tests |
 | 2026-11-02 | major | Step 3.2: `Context`, `Budget`, `ContextCache`, the sample-deck snapshot, 5 more tests |
+| 2026-11-02 | major | Step 3.4: `Assistant::ask`, `Host`, `Limits`, `TurnEvent`, `TurnReport`, one undo entry per turn, `examples/ask.rs`, 8 more tests |

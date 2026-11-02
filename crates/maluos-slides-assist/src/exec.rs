@@ -59,6 +59,11 @@ impl ToolOutcome {
         ToolOutcome { tool_use_id: tool_use_id.into(), name: name.into(), text, is_error: raw.is_error, images, raw }
     }
 
+    /// An error outcome made without a backend (a limit, a cancel).
+    pub fn error_for(tool_use_id: &str, name: &str, message: impl Into<String>) -> Self {
+        Self::error(tool_use_id, name, message)
+    }
+
     #[cfg(test)]
     pub(crate) fn from_result_for_test(tool_use_id: &str, name: &str, raw: ToolResult) -> Self {
         Self::from_result(tool_use_id, name, raw)

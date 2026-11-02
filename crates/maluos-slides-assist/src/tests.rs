@@ -389,3 +389,255 @@ fn context_cache_rebuilds_only_on_change() {
     let _ = cache.get(&s, &budget);
     assert_eq!(cache.builds, 4);
 }
+
+// ---------- the loop ----------
+
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use maluos_llm::mock::MockClient;
+use maluos_llm::{Completion, Flow, LlmError, Role, StopReason, Usage};
+
+use crate::{Assistant, Limits, Stop, TurnEvent};
+
+fn usage(input: u64, output: u64) -> Usage {
+    Usage { input_tokens: input, output_tokens: output, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+}
+
+fn tool_use(id: &str, name: &str, input: Value) -> ContentBlock {
+    ContentBlock::ToolUse { id: id.into(), name: name.into(), input }
+}
+
+fn calls(blocks: Vec<ContentBlock>) -> Completion {
+    Completion { model: "mock".into(), content: blocks, stop_reason: StopReason::ToolUse, usage: usage(100, 20) }
+}
+
+fn answer(text: &str) -> Completion {
+    Completion {
+        model: "mock".into(),
+        content: vec![ContentBlock::Text { text: text.into() }],
+        stop_reason: StopReason::EndTurn,
+        usage: usage(100, 10),
+    }
+}
+
+fn quick_limits() -> Limits {
+    Limits { retry_delay: Duration::ZERO, ..Limits::default() }
+}
+
+fn assistant(mock: &Arc<MockClient>) -> Assistant {
+    Assistant::new(mock.clone(), "mock-model").with_limits(quick_limits())
+}
+
+fn no_events() -> impl FnMut(TurnEvent) -> Flow {
+    |_| Flow::Continue
+}
+
+#[test]
+fn closing_slide_through_the_mock_backend() {
+    // The ids a fresh deck hands out are deterministic: a shadow session tells the script
+    // which shape the body placeholder of the new slide will be.
+    let body_id = {
+        let mut shadow = Session::with_new();
+        run(&mut shadow, "slide.new", json!({"layout": "titleAndContent", "title": "Thank you"}));
+        shadow.doc().unwrap().current_slide().unwrap().shapes.iter().find(|s| s.ph.as_ref().is_some_and(|p| !p.kind.is_title())).unwrap().id
+    };
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use(
+        "c1",
+        "run_command",
+        json!({"command": "slide.new", "params": {"layout": "titleAndContent", "title": "Thank you"}}),
+    )]));
+    mock.push(calls(vec![tool_use("c2", "set_text", json!({"id": body_id, "text": "Thanks for listening\nQuestions welcome"}))]));
+    mock.push(answer("Added a closing slide (slide 2) that thanks the audience."));
+
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let ev = events.clone();
+    let report = a.ask(&mut host, "add a closing slide that thanks the audience", &mut |e| {
+        ev.lock().unwrap().push(e);
+        Flow::Continue
+    });
+
+    assert_eq!(report.answer, "Added a closing slide (slide 2) that thanks the audience.");
+    assert_eq!(report.rounds, 3);
+    assert!(report.error.is_none() && report.stopped.is_none(), "{report:?}");
+    assert_eq!(report.commands, vec!["slide.new", "text.set"]);
+    assert_eq!(report.tool_calls.len(), 2);
+    assert!(report.tool_calls.iter().all(|c| c.ok), "{:?}", report.tool_calls);
+    assert_eq!(report.usage.input_tokens, 300);
+    assert_eq!(report.usage.output_tokens, 50);
+
+    // The deck: two slides, the text is there.
+    let st = host.session.active().unwrap();
+    assert_eq!(st.doc.slides.len(), 2);
+    assert_eq!(st.doc.slides[1].title(), "Thank you");
+    assert!(st.doc.slides[1].shapes.iter().any(|s| s.text.as_ref().is_some_and(|t| t.text().contains("Questions welcome"))));
+
+    // One undo step for the whole turn.
+    assert_eq!(st.history.undo.len(), 1, "{:?}", st.history.undo.iter().map(|e| &e.label).collect::<Vec<_>>());
+    assert_eq!(report.undo_label.as_deref(), Some("Assistant: add a closing slide that thanks the audience"));
+    assert_eq!(st.history.undo[0].label, "Assistant: add a closing slide that thanks the audience");
+    run(&mut host.session, "edit.undo", json!({}));
+    assert_eq!(host.session.active().unwrap().doc.slides.len(), 1);
+
+    // The requests: the prompt carried the instructions, the catalog, the outline and the tools.
+    let reqs = mock.requests();
+    assert_eq!(reqs.len(), 3);
+    let system = reqs[0].system.as_deref().unwrap();
+    assert!(system.starts_with("You are Malu"), "{}", &system[..40]);
+    assert!(system.contains("# Command catalog") && system.contains("slide.new — New Slide"), "no catalog");
+    assert!(system.contains("# The open presentation") && system.contains("1 slides"), "no outline");
+    assert_eq!(reqs[0].tools.len(), crate::ToolTable::for_backend(false).defs().len());
+    assert_eq!(reqs[0].messages.len(), 1);
+    // The second request carries the assistant's tool call and its result, and a fresh outline.
+    assert_eq!(reqs[1].messages.len(), 3);
+    assert!(matches!(&reqs[1].messages[2].content[0], ContentBlock::ToolResult { tool_use_id, is_error: false, .. } if tool_use_id == "c1"));
+    assert!(reqs[1].system.as_deref().unwrap().contains("2 slides"), "the outline is rebuilt each round");
+    assert_eq!(a.messages.len(), 6);
+
+    // Events, in order.
+    let ev = events.lock().unwrap();
+    assert!(matches!(ev[0], TurnEvent::Round(1)));
+    assert!(matches!(&ev[1], TurnEvent::ToolStart { name, .. } if name == "run_command"));
+    assert!(matches!(&ev[2], TurnEvent::ToolDone(o) if o.name == "run_command" && !o.is_error));
+    assert!(matches!(ev[3], TurnEvent::Round(2)));
+    assert!(matches!(ev.last(), Some(TurnEvent::Text(t)) if t.starts_with("Added")));
+}
+
+#[test]
+fn round_limit_ends_a_turn_that_never_answers() {
+    let mock = Arc::new(MockClient::new());
+    for i in 0..5 {
+        mock.push(calls(vec![tool_use(&format!("i{i}"), "inspect_document", json!({}))]));
+    }
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_limits(Limits { max_rounds: 2, retry_delay: Duration::ZERO, ..Limits::default() });
+    let report = a.ask(&mut host, "look around", &mut no_events());
+    assert_eq!(report.stopped, Some(Stop::RoundLimit));
+    assert_eq!(report.rounds, 2);
+    assert_eq!(report.tool_calls.len(), 2);
+    assert!(report.answer.is_empty());
+    assert!(report.commands.is_empty(), "inspect is a query: {:?}", report.commands);
+    assert!(host.session.active().unwrap().history.undo.is_empty());
+    assert!(report.undo_label.is_none());
+    // The conversation is left answerable: the last message is the tool results.
+    assert!(matches!(a.messages.last().unwrap().content[0], ContentBlock::ToolResult { .. }));
+}
+
+#[test]
+fn tool_call_limit_answers_the_extra_calls_with_an_error() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("a", "add_slide", json!({"layout": "blank"})), tool_use("b", "add_slide", json!({"layout": "blank"}))]));
+    mock.push(answer("Added one slide; the limit stopped the second."));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_limits(Limits { max_tool_calls: 1, retry_delay: Duration::ZERO, ..Limits::default() });
+    let report = a.ask(&mut host, "add two blank slides", &mut no_events());
+    assert_eq!(report.stopped, Some(Stop::ToolCallLimit));
+    assert_eq!(report.tool_calls.len(), 2);
+    assert!(report.tool_calls[0].ok && !report.tool_calls[1].ok);
+    assert!(report.tool_calls[1].summary.contains("limit"), "{}", report.tool_calls[1].summary);
+    assert_eq!(host.session.active().unwrap().doc.slides.len(), 2);
+    assert_eq!(report.answer, "Added one slide; the limit stopped the second.");
+    assert_eq!(report.commands, vec!["slide.new"]);
+    assert_eq!(host.session.active().unwrap().history.undo.len(), 1);
+}
+
+#[test]
+fn cancel_stops_before_the_tool_runs_and_keeps_the_conversation_valid() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("a", "add_slide", json!({"layout": "blank"}))]));
+    mock.push(answer("ok"));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "add a slide", &mut |e| if matches!(e, TurnEvent::ToolStart { .. }) { Flow::Stop } else { Flow::Continue });
+    assert_eq!(report.stopped, Some(Stop::Cancelled));
+    assert!(report.commands.is_empty());
+    assert_eq!(host.session.active().unwrap().doc.slides.len(), 1);
+    assert!(report.undo_label.is_none());
+    // The dangling tool call was answered, so the next turn sends a valid conversation.
+    assert!(
+        matches!(&a.messages.last().unwrap().content[0], ContentBlock::ToolResult { tool_use_id, is_error: true, content, .. } if tool_use_id == "a" && content.contains("cancel"))
+    );
+    let report = a.ask(&mut host, "never mind", &mut no_events());
+    assert_eq!(report.answer, "ok");
+    let reqs = mock.requests();
+    assert_eq!(reqs[1].messages.len(), 4);
+    assert_eq!(reqs[1].messages[0].role, Role::User);
+}
+
+#[test]
+fn retryable_errors_are_retried_and_others_are_not() {
+    let mock = Arc::new(MockClient::new());
+    mock.push_error(LlmError::RateLimited { message: "slow down".into(), retry_after: Some(Duration::ZERO) });
+    mock.push_error(LlmError::Overloaded("busy".into()));
+    mock.push(answer("fine now"));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "hello", &mut no_events());
+    assert_eq!(report.answer, "fine now");
+    assert!(report.error.is_none());
+    assert_eq!(mock.requests().len(), 3);
+
+    let mock = Arc::new(MockClient::new());
+    mock.push_error(LlmError::Auth("bad key".into()));
+    mock.push(answer("unreachable"));
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "hello", &mut no_events());
+    assert_eq!(report.error, Some(LlmError::Auth("bad key".into())));
+    assert!(report.answer.is_empty());
+    assert_eq!(mock.requests().len(), 1);
+    // The failed turn's user message stays, so the user can retry without retyping.
+    assert_eq!(a.messages.len(), 1);
+}
+
+#[test]
+fn an_error_after_a_tool_call_keeps_the_change_as_one_undo_step() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("a", "add_slide", json!({"layout": "blank", "title": "Half done"}))]));
+    mock.push_error(LlmError::Server { status: 500, message: "boom".into() });
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_limits(Limits { retries: 0, retry_delay: Duration::ZERO, ..Limits::default() });
+    let report = a.ask(&mut host, "add a slide and then explain it", &mut no_events());
+    assert!(matches!(report.error, Some(LlmError::Server { .. })));
+    assert_eq!(report.commands, vec!["slide.new"]);
+    let st = host.session.active().unwrap();
+    assert_eq!(st.doc.slides.len(), 2);
+    assert_eq!(st.history.undo.len(), 1);
+    assert_eq!(report.undo_label.as_deref(), Some("Assistant: add a slide and then explain it"));
+    // Conversation stays valid: the tool result is in, after it nothing dangles.
+    assert!(matches!(a.messages.last().unwrap().content[0], ContentBlock::ToolResult { .. }));
+}
+
+#[test]
+fn old_turns_are_trimmed_at_user_messages() {
+    let mock = Arc::new(MockClient::new());
+    for _ in 0..4 {
+        mock.push(calls(vec![tool_use("q", "inspect_document", json!({}))]));
+        mock.push(answer("done"));
+    }
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_limits(Limits { max_messages: 5, retry_delay: Duration::ZERO, ..Limits::default() });
+    for i in 0..4 {
+        a.ask(&mut host, &format!("turn {i}"), &mut no_events());
+    }
+    // Each turn is four messages (user, call, result, answer). Trimming happens when a turn
+    // starts, cutting at a user message, so the previous turn stays whole beside the new one.
+    assert_eq!(a.messages.len(), 8);
+    assert!(matches!(&a.messages[0].content[0], ContentBlock::Text { text } if text == "turn 2"), "{:?}", a.messages[0]);
+    assert!(matches!(&a.messages[4].content[0], ContentBlock::Text { text } if text == "turn 3"));
+}
+
+#[test]
+fn system_text_follows_the_limits() {
+    let mock = Arc::new(MockClient::new());
+    let host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let full = a.system_text(&host);
+    assert!(full.contains("# Command catalog") && full.contains("# The open presentation"));
+    let mut a = assistant(&mock).with_limits(Limits { catalog_bytes: 0, ..quick_limits() });
+    let bare = a.system_text(&host);
+    assert!(!bare.contains("# Command catalog") && bare.contains("# The open presentation"));
+    assert!(bare.len() < full.len() / 4, "{} vs {}", bare.len(), full.len());
+}

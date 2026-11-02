@@ -12,6 +12,8 @@
 //!   before they run and the model can be shown a compact listing.
 //! - [`Context`]: the open deck as an outline for the prompt (sections, titles, placeholder
 //!   text, notes, the selection, the theme), cut to a budget, cached on the revision.
+//! - [`Assistant::ask`]: the loop (step 3.4): prompt, model, tool calls, results, answer, one
+//!   undo entry per turn, limits on rounds, tool calls and tokens, retries on retryable errors.
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -20,11 +22,13 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
 
+pub mod agent;
 pub mod catalog;
 pub mod context;
 pub mod exec;
 pub mod tools;
 
+pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, Stop, ToolCall, TurnEvent, TurnReport};
 pub use catalog::{Catalog, CommandEntry, params_schema};
 pub use context::{Budget, Context, ContextCache};
 pub use exec::{MAX_RESULT_BYTES, ToolOutcome, run_tool};
