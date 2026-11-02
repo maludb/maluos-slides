@@ -67,7 +67,9 @@ Nothing touches the network.
 `anthropic [model]`, `openai [model]` with the key in the environment, `compatible <base_url> <model>`).
 It sends one prompt with one tool, streams the answer, answers the tool call and prints the stop
 reason and usage. Cloud models on Ollama need the daemon's key linked to an account (`ollama signin`
-prints the link); until then the daemon answers 401 and the example reports `LlmError::Auth`.
+prints the link); until then the daemon answers 401 and the example reports `LlmError::Auth`. Verified live on
+2026-11-02 with `glm-5.3-flash:cloud`: reasoning deltas, a tool call, the tool result and the final
+answer, usage on both turns.
 
 ## Not yet
 
