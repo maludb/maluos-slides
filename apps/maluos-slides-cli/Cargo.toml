@@ -16,6 +16,9 @@ path = "src/main.rs"
 [dependencies]
 maluos-slides-engine = { workspace = true }
 maluos-slides-mcp = { workspace = true }
+# MaluOS: the `ask` subcommand (docs/maluos-slides/plan.md step 3.7)
+maluos-slides-assist = { workspace = true }
+maluos-llm = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]

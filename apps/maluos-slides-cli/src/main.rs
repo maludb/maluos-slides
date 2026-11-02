@@ -2,6 +2,8 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
 
+// MaluOS: the `ask` subcommand (fork code, docs/maluos-slides/plan.md step 3.7).
+mod ask;
 mod automation_args;
 
 mod help;
@@ -72,6 +74,15 @@ fn main() -> ExitCode {
         Some("describe") => report(describe(rest.first().map(String::as_str))),
         Some("app") => report(app(rest)),
         Some("mcp") => report(mcp(rest)),
+        // MaluOS: one assistant turn, headless.
+        Some("ask") => report(match ask::parse(rest) {
+            Ok(Some(o)) => ask::run(&o),
+            Ok(None) => {
+                outln!("{}", help_page("ask"));
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }),
         Some("links") => {
             use maluos_slides_engine::links::*;
             outln!("Discord   {DISCORD}\nWebsite   {WEBSITE}\nApp page  {APP_PAGE}\nGitHub    {GITHUB}");

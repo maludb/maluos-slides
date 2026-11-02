@@ -2343,6 +2343,8 @@ dependencies = [
 name = "maluos-slides-cli"
 version = "0.10.0"
 dependencies = [
+ "maluos-llm",
+ "maluos-slides-assist",
  "maluos-slides-engine",
  "maluos-slides-mcp",
  "serde_json",

@@ -85,13 +85,10 @@ selection changed, so a pane polling every frame builds nothing between edits.
 the outline and the history. `Headless` is one; the desktop app supplies its own (3.6).
 `Remote` (a running app over the control channel) is not a host: it has no session to read.
 
-`examples/ask.rs` runs one turn against a real model on a new or opened deck:
-`cargo run -p maluos-slides-assist --example ask -- ollama glm-5.3-flash:cloud "add a closing
-slide that thanks the audience" --save out.pptx` (also `anthropic`, `openai`, `--open deck.pptx`,
-`--sample`). Verified live with Ollama `glm-5.3-flash:cloud` on the sample deck: one `slide.new`, one
-`inspect_document`, a correct 9-slide `.pptx`, one undo step. The system text tells the model the
-outline already includes the turn's edits, because without that it mistook its new slide for an
-existing one.
+`maluos-slides-cli ask` (step 3.7, [cli.md](cli.md)) runs one turn against a real model on a new or
+opened deck, headless, and saves the result. Verified live with Ollama `glm-5.3-flash:cloud` on the
+sample deck. The system text tells the model the outline already includes the turn's edits,
+because without that it mistook its new slide for an existing one.
 
 ## Safety rails (step 3.5)
 
@@ -195,3 +192,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Step 3.4: `Assistant::ask`, `Host`, `Limits`, `TurnEvent`, `TurnReport`, one undo entry per turn, `examples/ask.rs`, 8 more tests |
 | 2026-11-02 | major | Step 3.5: `Policy`, `Mode`, `Plan`, `Confirm`, destructive lists, touched slides, `--mode`/`--yes` on the example, 6 more tests |
 | 2026-11-02 | major | Step 3.6: the loop as a step machine (`Turn`, `Step`, `ModelCall`), the pane in `ui-egui`, `assist.ask` / `assist.plan`, screenshots, 5 pane tests |
+| 2026-11-02 | minor | Step 3.7: `providers` module shared by the pane and the CLI; the example program gave way to `maluos-slides-cli ask` |

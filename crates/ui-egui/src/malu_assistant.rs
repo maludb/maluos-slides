@@ -13,7 +13,6 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use egui::{Align, CornerRadius, Key, Layout, Modifiers, RichText, Ui};
 #[cfg(not(target_arch = "wasm32"))]
 use maluos_llm::Event;
-use maluos_llm::keys::Provider;
 use maluos_llm::{Completion, Flow, LlmClient, LlmError};
 use maluos_slides_assist::{Assistant, Backend, Host, Mode, Plan, Step, ToolCall, Turn, TurnEvent, TurnReport, Verdict};
 use serde::{Deserialize, Serialize};
@@ -25,49 +24,7 @@ use crate::theme::{self, Tokens};
 /// The pane's name in `view.pane`.
 pub const PANE: &str = "assistant";
 
-/// Which backend answers.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub enum ProviderChoice {
-    #[default]
-    Anthropic,
-    OpenAi,
-    Ollama,
-    /// A client the host supplied (tests).
-    Custom,
-}
-
-impl ProviderChoice {
-    pub const ALL: [ProviderChoice; 3] = [ProviderChoice::Anthropic, ProviderChoice::OpenAi, ProviderChoice::Ollama];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            ProviderChoice::Anthropic => "Anthropic",
-            ProviderChoice::OpenAi => "OpenAI",
-            ProviderChoice::Ollama => "Ollama",
-            ProviderChoice::Custom => "Custom",
-        }
-    }
-
-    pub fn default_model(self) -> &'static str {
-        match self {
-            ProviderChoice::Anthropic => maluos_llm::anthropic::DEFAULT_MODEL,
-            ProviderChoice::OpenAi => maluos_llm::openai::DEFAULT_MODEL,
-            ProviderChoice::Ollama => "glm-5.3-flash:cloud",
-            ProviderChoice::Custom => "custom",
-        }
-    }
-
-    /// Models offered in the picker besides what the user types.
-    pub fn suggestions(self) -> &'static [&'static str] {
-        match self {
-            ProviderChoice::Anthropic => &["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"],
-            ProviderChoice::OpenAi => &["gpt-5.1", "gpt-5.1-mini"],
-            ProviderChoice::Ollama => &["glm-5.3-flash:cloud", "llama3.3", "qwen3"],
-            ProviderChoice::Custom => &[],
-        }
-    }
-}
+pub use maluos_slides_assist::providers::Choice as ProviderChoice;
 
 /// What is saved between runs (`assistant.json` beside `ui.json`): never a key.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -225,43 +182,14 @@ impl State {
 
     /// Where the key comes from, or why there is none.
     pub fn provider_status(&self) -> (bool, String) {
-        match self.provider {
-            ProviderChoice::Anthropic | ProviderChoice::OpenAi => {
-                let p = if self.provider == ProviderChoice::Anthropic { Provider::Anthropic } else { Provider::OpenAi };
-                match p.env_vars().iter().find(|v| std::env::var(v).map(|k| !k.trim().is_empty()).unwrap_or(false)) {
-                    Some(v) => (true, format!("key from {v}")),
-                    None => (false, format!("no key: set {}", p.env_vars()[0])),
-                }
-            }
-            ProviderChoice::Ollama => (true, format!("{} (no key needed)", ollama_url())),
-            ProviderChoice::Custom => (true, "custom client".into()),
-        }
+        self.provider.status()
     }
 
     fn client(&self) -> Result<Arc<dyn LlmClient>, String> {
         if let Some(c) = &self.custom_client {
             return Ok(c.clone());
         }
-        #[cfg(target_arch = "wasm32")]
-        {
-            Err("the assistant needs the desktop app".into())
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            match self.provider {
-                ProviderChoice::Anthropic => {
-                    maluos_llm::AnthropicClient::from_env().map(|c| Arc::new(c) as Arc<dyn LlmClient>).map_err(|e| e.to_string())
-                }
-                ProviderChoice::OpenAi => {
-                    maluos_llm::OpenAiClient::openai_from_env().map(|c| Arc::new(c) as Arc<dyn LlmClient>).map_err(|e| e.to_string())
-                }
-                ProviderChoice::Ollama => {
-                    let t = Arc::new(maluos_llm::UreqTransport::default());
-                    Ok(Arc::new(maluos_llm::OpenAiClient::compatible(t, "ollama", ollama_url(), None)))
-                }
-                ProviderChoice::Custom => Err("no client".into()),
-            }
-        }
+        self.provider.client()
     }
 
     fn assistant(&mut self) -> Result<&mut Assistant, String> {
@@ -272,10 +200,6 @@ impl State {
         }
         self.assistant.as_mut().ok_or_else(|| "no assistant".to_string())
     }
-}
-
-fn ollama_url() -> String {
-    std::env::var("MALUOS_SLIDES_OLLAMA_URL").ok().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| maluos_llm::openai::OLLAMA_BASE_URL.to_string())
 }
 
 // ---------- config ----------
@@ -292,22 +216,12 @@ fn config_dir() -> Option<std::path::PathBuf> {
         .map(|d| d.join("maluos-slides"))
 }
 
-/// The first provider with credentials: Anthropic, then OpenAI, else Ollama (no key).
-fn first_configured_provider() -> ProviderChoice {
-    for (choice, p) in [(ProviderChoice::Anthropic, Provider::Anthropic), (ProviderChoice::OpenAi, Provider::OpenAi)] {
-        if p.env_vars().iter().any(|v| std::env::var(v).map(|k| !k.trim().is_empty()).unwrap_or(false)) {
-            return choice;
-        }
-    }
-    ProviderChoice::Ollama
-}
-
 fn load_config(state: &mut State) {
     state.config_loaded = true;
     let saved =
         config_dir().and_then(|dir| std::fs::read_to_string(dir.join(CONFIG_FILE)).ok()).and_then(|t| serde_json::from_str::<Config>(&t).ok());
     let Some(c) = saved else {
-        state.provider = first_configured_provider();
+        state.provider = maluos_slides_assist::providers::default_choice();
         state.model = state.provider.default_model().into();
         return;
     };

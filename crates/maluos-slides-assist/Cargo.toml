@@ -8,10 +8,15 @@ description = "MaluOS Slides assistant: the tool table shared with the MCP serve
 [lints]
 workspace = true
 
+[features]
+default = ["native"]
+# The real clients (ureq); off on wasm32, where the policy, catalog and loop still compile.
+native = ["maluos-llm/native"]
+
 [dependencies]
 maluos-slides-engine = { workspace = true }
 maluos-slides-mcp = { workspace = true }
-maluos-llm = { workspace = true }
+maluos-llm = { workspace = true, default-features = false }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

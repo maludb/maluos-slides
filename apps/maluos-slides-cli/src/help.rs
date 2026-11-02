@@ -125,6 +125,32 @@ and prints its answer as JSON. COMMAND [PARAMS] runs a command, as run --cmd doe
   maluos-slides-cli app shape.insert '{\"preset\":\"star5\",\"rect\":[100,100,200,200]}'
   maluos-slides-cli app --method ui.screenshot '{\"path\":\"/tmp/shot.png\"}'",
     },
+    // MaluOS: the assistant (docs/maluos-slides/plan.md step 3.7).
+    Subcommand {
+        name: "ask",
+        usage: "ask \"REQUEST\" [--in FILE | --sample] [--out FILE] [--mode answer|confirm|autopilot] [--yes] [--provider P] [--model M] [--json]",
+        summary: "ask the assistant for a change to a presentation, headless",
+        details: "Runs one assistant turn on FILE (or the sample presentation, or a new one) and saves the result to
+--out. The request is one quoted argument, or comes from stdin with --stdin. The answer streams to
+stdout; tool calls and plans go to stderr.
+
+  --mode answer     read and explain only; nothing changes
+  --mode confirm    (default) show each change as a plan; on a terminal it asks y/N/q, in a script
+                    plans are declined unless --yes
+  --mode autopilot  apply changes at once; deletions and new/opened presentations still ask
+  --yes             approve every plan
+  --provider P      anthropic, openai or ollama; the default is the first one with a key in the
+                    environment (MALUOS_SLIDES_ANTHROPIC_API_KEY / ANTHROPIC_API_KEY, the same for
+                    OPENAI), else ollama at http://127.0.0.1:11434/v1 (MALUOS_SLIDES_OLLAMA_URL)
+  --model M         the model name; each provider has a default
+  --json            print one JSON object at the end instead of the streamed answer: answer,
+                    rounds, toolCalls, commands, touchedSlides, removedSlides, usage, undo, saved
+  --quiet           no tool and plan lines on stderr
+  --max-rounds N    model calls allowed for the turn (default 12)
+
+  maluos-slides-cli ask \"add a closing slide that thanks the audience\" --sample --mode autopilot --out out.pptx
+  maluos-slides-cli ask \"tighten every title\" --in deck.pptx --out deck.pptx --yes --json",
+    },
     Subcommand {
         name: "mcp",
         usage: "mcp [--connect PORT] [--sample] [--automation-read-root DIR] [--automation-write-root DIR]",

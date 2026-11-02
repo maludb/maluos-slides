@@ -29,6 +29,7 @@ pub mod catalog;
 pub mod context;
 pub mod exec;
 pub mod policy;
+pub mod providers;
 pub mod tools;
 
 pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, ModelCall, Step, Stop, ToolCall, Turn, TurnEvent, TurnReport, summarize};
