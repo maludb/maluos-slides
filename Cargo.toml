@@ -27,6 +27,8 @@ maluos-slides-engine = { path = "crates/engine" }
 maluos-slides-mcp = { path = "crates/mcp" }
 maluos-slides-ui-egui = { path = "crates/ui-egui" }
 maluos-slides-media = { path = "crates/media" }
+# MaluOS additions (docs/maluos-slides/plan.md): the LLM client shared with Malu123
+maluos-llm = { path = "crates/maluos-llm" }
 # codecs (ported from FilmCraft, same owner and licence)
 maluos-slides-bitstream = { path = "crates/bitstream" }
 maluos-slides-h264 = { path = "crates/h264" }

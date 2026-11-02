@@ -1,6 +1,6 @@
 # MaluOS Slides status
 
-> **Updated:** 2026-11-02 (08:40 UTC)
+> **Updated:** 2026-11-02 (10:30 UTC)
 
 MaluOS Slides is the MaluOS presentation app, forked from
 [storytold/deckcraft](https://github.com/storytold/deckcraft) on 2026-10-24 at upstream
@@ -108,3 +108,15 @@ of the editor the way Cursor has of its IDE, from a chat sidebar like the Select
 decks it makes stay easy to edit by hand (one paragraph's text is one command on one shape);
 providers are Anthropic and OpenAI first, then Ollama. Written up as the Vision section and
 decisions D10 and D11 in [plan.md](plan.md).
+
+## Phase 3: the assistant
+
+| Step | State | Notes |
+|---|---|---|
+| 3.1 `maluos-llm` | done 2026-11-02 | `crates/maluos-llm` (L5, in this repo until a second app consumes it, D6): `LlmClient` trait, provider-neutral `Request`/`Completion`/`ContentBlock`, streaming events with cancel, typed errors; SSE parser; `Transport` seam with the ureq 3 native transport (wasm32 compiles without it); `AnthropicClient` (Messages API 2026-10-21, adaptive thinking, effort, signed thinking blocks round-trip, refusal fallbacks on by default) and `OpenAiClient` (OpenAI flavour and the compatible flavour for Ollama, the gateway, vLLM); env keys; `MockTransport` and `MockClient`. 16 tests, clippy and wasm clean, layering table updated (29 crates). Doc: [llm.md](llm.md). Not done from the step's "done when": a run against the demo agent on the dev VM, because the gateway is a Unix socket with an undocumented protocol and no Ollama is installed here; the mocks stand in until a key or a local model exists |
+| 3.2 context builder | planned | |
+| 3.3 tool schema from the command catalog | planned | |
+| 3.4 the loop | planned | |
+| 3.5 safety rails | planned | |
+| 3.6 assistant pane | planned | |
+| 3.7 `maluos-slides-cli ask` | planned | |

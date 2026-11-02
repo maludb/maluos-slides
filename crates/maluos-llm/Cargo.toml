@@ -1,0 +1,24 @@
+[package]
+name = "maluos-llm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "MaluOS LLM client: one trait over the Anthropic Messages API and OpenAI-compatible servers (OpenAI, Ollama, the MaluOS gateway), streaming, tool use, no async runtime"
+
+[lints]
+workspace = true
+
+[features]
+default = ["native"]
+# The ureq transport. Off on wasm32, where the crate still provides the trait, the request and
+# response types, both backends' parsers and the mocks.
+native = ["dep:ureq"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "3.5", optional = true }
