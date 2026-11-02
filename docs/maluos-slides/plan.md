@@ -103,7 +103,7 @@ assistant share one source of truth: the command catalog in `crates/engine/src/c
 ## Phases
 
 Estimates are agent-hours on this host (one agent; a release build takes ~6 min, `cargo xtask ci`
-longer; the VM is memory-capped).
+longer; builds are memory-capped by habit, see status.md).
 
 ### Phase 1: build and install (done 2026-10-24)
 
@@ -189,7 +189,7 @@ localization) by merging upstream weekly; contribute our fixes upstream. Our Mal
   land as merge commits.
 - Quality gate before every push: `cargo xtask ci`. New crates carry upstream's clippy denies
   (`unwrap_used`, `expect_used`, `panic`, `todo`, `unreachable`).
-- Build on the dev VM under `systemd-run --user --scope -p MemoryHigh=4500M -p MemoryMax=6G` with
+- Build on the dev host (the owner's MaluOS desktop) under `systemd-run --user --scope -p MemoryHigh=4500M -p MemoryMax=6G` with
   `-j 6`; the recipe is in status.md.
 - Never commit: fonts, PowerPoint-authored files, screenshots of Microsoft software, API keys,
   `dist/`, `target/`.

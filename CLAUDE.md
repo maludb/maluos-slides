@@ -22,8 +22,9 @@ not about macOS, Windows or the ArtCraft suite. MaluOS Slides-specific rules:
   files, decks or the repo.
 - **Commit ids** are plan steps: `P2.4: scripted rename, vendor branch`. Run `cargo xtask ci`
   before pushing.
-- **This host** is the MaluOS dev VM: it is killed by the hypervisor on page-cache pressure. Run
-  cargo under `systemd-run --user --scope -p MemoryHigh=4500M -p MemoryMax=6G` with
+- **This host** is the owner's MaluOS desktop (Ubuntu 26.04 base, GNOME 50, Wayland, 12 cores,
+  31 GB), not a VM (owner, 2026-11-02; it was a 9 GB VM until late October). The build cap below
+  is kept as a habit so a build never starves the desktop. Run cargo under `systemd-run --user --scope -p MemoryHigh=4500M -p MemoryMax=6G` with
   `CARGO_BUILD_JOBS=6` (or `-j 6`). Headless GUI checks: `xvfb-run -a maluos-slides --sample
   --control 7990`, then `maluos-slides-cli app --port 7990 --method ui.screenshot '{"path":…}'`.
 

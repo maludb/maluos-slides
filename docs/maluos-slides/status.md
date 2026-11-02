@@ -18,7 +18,7 @@ MaluOS Slides is the MaluOS presentation app, forked from
 | 1.4 install | done 2026-10-24 | `apt-get install ./dist/release/deckcraft-0.10.0-linux-x86_64.deb` on the dev VM; binaries in `/usr/bin`, desktop entry, MIME types and icons registered |
 | 1.5 smoke test | done 2026-10-24 | `deckcraft-cli render --sample --all` draws all 8 sample slides at 1920×1080; `deckcraft --sample --control 7990` under Xvfb answers `ui.screenshot` and `shape.insert` (software Vulkan/EGL, embedded Inter font) |
 
-### Build recipe (dev VM)
+### Build recipe (dev host)
 
 System packages beyond the Rust toolchain: `libxkbcommon-dev`, `libasound2-dev` (the first build
 failed on the missing `alsa.pc`), `pkg-config`, `cmake`; for packaging `nfpm`
@@ -91,7 +91,7 @@ on this host: `xvfb` (headless GUI screenshots), `bc`, `gh`, and the optional CI
 `libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev` (the build does not need
 them). Note: `~/src/maluos-slides` and `~/src/craft-fonts` are stale checkouts from October; the
 live repository is `~/maluos-slides`. The `upstream` remote (storytold/deckcraft) is not configured
-in this clone yet. The VM now reports 31 GB RAM; the build cap in `CLAUDE.md` still applies.
+in this clone yet. The host reports 31 GB RAM; the build cap in `CLAUDE.md` still applies as a habit.
 
 **`cargo xtask ci` on this host:** fmt, pdf-deps, clippy, doctest, assets (34 files), layers
 (28 crates) and wasm (23 crates) pass; tests: 1,788 of 1,789 pass, 6 skipped. The one failure is
@@ -108,6 +108,14 @@ of the editor the way Cursor has of its IDE, from a chat sidebar like the Select
 decks it makes stay easy to edit by hand (one paragraph's text is one command on one shape);
 providers are Anthropic and OpenAI first, then Ollama. Written up as the Vision section and
 decisions D10 and D11 in [plan.md](plan.md).
+
+### The host (owner, 2026-11-02)
+
+This machine is the owner's MaluOS desktop: Ubuntu 26.04 base, GNOME 50 on Wayland, 12 cores,
+31 GB RAM, Ollama 0.40 as a system service. It is not a VM; the "dev VM" of the October entries
+above was the earlier 9 GB machine. The `systemd-run` memory scope and `-j 6` stay as a habit so
+a build never starves the desktop. The app can be run on the desktop directly
+(`target/debug/maluos-slides --sample`); `xvfb` is only for headless screenshots in scripts.
 
 ## Phase 3: the assistant
 
