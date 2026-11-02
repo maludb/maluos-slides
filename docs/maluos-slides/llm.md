@@ -63,6 +63,12 @@ parallel tool calls, HTTP and in-stream errors with `retry-after`, truncated str
 fallback blocks, message mapping in both directions, key lookup precedence and the mock client.
 Nothing touches the network.
 
+`examples/live.rs` is the live check: `cargo run -p maluos-llm --example live -- ollama <model>` (also
+`anthropic [model]`, `openai [model]` with the key in the environment, `compatible <base_url> <model>`).
+It sends one prompt with one tool, streams the answer, answers the tool call and prints the stop
+reason and usage. Cloud models on Ollama need the daemon's key linked to an account (`ollama signin`
+prints the link); until then the daemon answers 401 and the example reports `LlmError::Auth`.
+
 ## Not yet
 
 - The vault key source and a Unix-socket transport for the gateway (above).
@@ -76,3 +82,4 @@ Nothing touches the network.
 | Date | Change | Summary |
 |---|---|---|
 | 2026-11-02 | major | Created with the crate: trait, types, SSE parser, ureq transport, Anthropic and OpenAI-compatible backends, env keys, mocks, 16 tests |
+| 2026-11-02 | minor | `examples/live.rs`, the live check against Ollama / a key |
