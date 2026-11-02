@@ -1,6 +1,6 @@
 # MaluOS Slides status
 
-> **Updated:** 2026-10-24 (02:00 UTC)
+> **Updated:** 2026-11-02 (08:10 UTC)
 
 MaluOS Slides is the MaluOS presentation app, forked from
 [storytold/deckcraft](https://github.com/storytold/deckcraft) on 2026-10-24 at upstream
@@ -65,3 +65,40 @@ files no longer referenced).
 | 2.7 boot test and release | planned | |
 | 2.8 fonts decision applied | planned | D5 |
 | 2.9 upstream sync rehearsal | planned | D7 |
+
+## Session 2026-11-02: owner direction, host tooling, review
+
+**Owner direction (D9 in [plan.md](plan.md)):** MaluOS Slides becomes an AI harness that creates
+real PowerPoint-compatible presentations (native shapes, text, tables and charts in `.pptx`, never
+one rendered image per slide), with the tool at the centre and every function callable from both
+an API and MCP.
+
+**Where the agent surface stands today** (measured on `main` at `df93917`): 321 engine commands
+(`maluos-slides-cli commands`); the MCP server (`maluos-slides-cli mcp`) answers `initialize` with
+`serverInfo.name = maluos-slides`, protocol 2025-06-18, and lists 25 tools (`run_command` and
+`batch` reach every command, `call_app` every control-channel method); the CLI (`run`, `render`,
+`convert`, `info`, `describe`, `app`) and the loopback JSON-lines control channel
+(`--control PORT`) dispatch through the same `Session::execute`. There is no HTTP API: the control
+server rejects HTTP request lines by design (`apps/maluos-slides/src/control_server.rs`). A
+network API (HTTP/JSON over the command catalog, the same table that drives MCP, plan step 3.3) is
+the gap between today and "every function from an API".
+
+**Host tooling installed this session** (the toolchain had only rustc and cargo): rustup
+components `rustfmt` and `clippy`, target `wasm32-unknown-unknown`, `cargo-nextest` 0.9.150,
+`trunk` 0.22.1, `nfpm` 2.48.0 (`~/.local/bin`, checksum verified), `~/craft-fonts` cloned and
+checked out at `43913056` (the commit `maluos-ci.yml` pins). Still missing because they need sudo
+on this host: `xvfb` (headless GUI screenshots), `bc`, `gh`, and the optional CI dev packages
+`libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev` (the build does not need
+them). Note: `~/src/maluos-slides` and `~/src/craft-fonts` are stale checkouts from October; the
+live repository is `~/maluos-slides`. The `upstream` remote (storytold/deckcraft) is not configured
+in this clone yet. The VM now reports 31 GB RAM; the build cap in `CLAUDE.md` still applies.
+
+**`cargo xtask ci` on this host:** fmt, pdf-deps, clippy, doctest, assets (34 files), layers
+(28 crates) and wasm (23 crates) pass; tests: 1,788 of 1,789 pass, 6 skipped. The one failure is
+environment-only: `maluos-slides-pdf tests::unembeddable_font_returns_error_instead_of_a_pdf_missing_text`
+builds its damaged font from `FontDb::global().face("Ubuntu", "Regular")`; craft-fonts ships no
+Ubuntu, so that resolves to MaluOS's system `Ubuntu[wdth,wght].ttf` (fonts-ubuntu 0.869), a
+variable font whose 12 named instances make `add_font` return 12 instead of 1. Fix to send
+upstream: build the fixture from an embedded craft font (Inter) instead of a system family.
+Smoke: `maluos-slides-cli render --sample --all` draws all 8 slides; `run --sample --save x.pptx`
+writes a 58-part package with real `ppt/slides/slideN.xml`; the MCP handshake above.
