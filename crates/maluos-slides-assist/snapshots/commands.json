@@ -1,0 +1,6986 @@
+[
+  {
+    "id": "file.new",
+    "journal": true,
+    "label": "New Presentation",
+    "params": "{theme?: name, template?: starter name, size?: [w,h] pt, blank?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "blank": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "size": {
+          "description": "[w,h] pt",
+          "type": "array"
+        },
+        "template": {
+          "description": "starter name"
+        },
+        "theme": {
+          "description": "name",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.templates",
+    "journal": false,
+    "label": "Starter Templates",
+    "params": "{} → [{name, summary, theme, slides}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{name, summary, theme, slides}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.open",
+    "journal": true,
+    "label": "Open…",
+    "params": "{path}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {}
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.adopt",
+    "journal": true,
+    "label": "Open",
+    "params": "{path, token?} (a presentation the host read in the background and staged with Session::stage_loaded; without one, reads path like file.open)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "a presentation the host read in the background and staged with Session::stage_loaded; without one, reads path like file.open",
+      "properties": {
+        "path": {},
+        "token": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.openBytes",
+    "journal": true,
+    "label": "Open Data",
+    "params": "{name, data: base64}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {}
+      },
+      "required": [
+        "name",
+        "data"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.save",
+    "journal": true,
+    "label": "Save",
+    "params": "{path?, format?: deckcraft|pptx}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "description": "deckcraft|pptx"
+        },
+        "path": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.saveAs",
+    "journal": true,
+    "label": "Save As…",
+    "params": "{path, format?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "description": "optional"
+        },
+        "path": {}
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.saveTemplate",
+    "journal": true,
+    "label": "Save as Template…",
+    "params": "{path}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {}
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.saveBytes",
+    "journal": false,
+    "label": "Save to Data",
+    "params": "{format?: deckcraft|pptx} → {data: base64}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {data: base64}",
+      "properties": {
+        "format": {
+          "description": "deckcraft|pptx"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.export",
+    "journal": true,
+    "label": "Export…",
+    "params": "{path, format?: png|jpeg|pptx|maluos-slides|outline|pdf|gif (else by path), slide?: index, all?: bool, scale?: px per pt, layout?: slides|notes|handouts (pdf), perPage?: 1|2|3|4|6|9, paper?: letter|a4|legal|a3 (pdf), orientation?: portrait|landscape (pdf), dpi?, slides?: [index]|range (\"1-3,5\"), includeHidden?, textLayer?, frame?, transparentBackground?: bool (png: leave the slide background out), width?: px 16-3840|small|medium|large|extraLarge (gif), secondsPerSlide?: 0.1-600 (gif; 5), loop?: bool (gif; true: forever)} → {path, bytes} or {files} (png, jpeg); gif adds frames, width, height, secondsPerSlide",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {path, bytes} or {files} (png, jpeg); gif adds frames, width, height, secondsPerSlide",
+      "properties": {
+        "all": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "dpi": {
+          "description": "optional"
+        },
+        "format": {
+          "description": "png|jpeg|pptx|maluos-slides|outline|pdf|gif (else by path)"
+        },
+        "frame": {
+          "description": "optional"
+        },
+        "includeHidden": {
+          "description": "optional"
+        },
+        "layout": {
+          "description": "slides|notes|handouts (pdf)"
+        },
+        "loop": {
+          "description": "bool (gif; true: forever)",
+          "type": "boolean"
+        },
+        "orientation": {
+          "description": "portrait|landscape (pdf)"
+        },
+        "paper": {
+          "description": "letter|a4|legal|a3 (pdf)"
+        },
+        "path": {},
+        "perPage": {
+          "description": "1|2|3|4|6|9"
+        },
+        "scale": {
+          "description": "px per pt"
+        },
+        "secondsPerSlide": {
+          "description": "0.1-600 (gif; 5)"
+        },
+        "slide": {
+          "description": "index",
+          "type": "integer"
+        },
+        "slides": {
+          "description": "[index]|range (\"1-3,5\")",
+          "type": "array"
+        },
+        "textLayer": {
+          "description": "optional"
+        },
+        "transparentBackground": {
+          "description": "bool (png: leave the slide background out)",
+          "type": "boolean"
+        },
+        "width": {
+          "description": "px 16-3840|small|medium|large|extraLarge (gif)"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.info",
+    "journal": false,
+    "label": "Info",
+    "params": "{} → {title, path, format, dirty, slides, hiddenSlides, sections, bytes?, properties}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {title, path, format, dirty, slides, hiddenSlides, sections, bytes?, properties}",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.render",
+    "journal": false,
+    "label": "Render Slide",
+    "params": "{slide?: index, scale?, edit?: bool, transparentBackground?: bool} → {png: base64, width, height}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {png: base64, width, height}",
+      "properties": {
+        "edit": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "scale": {
+          "description": "optional"
+        },
+        "slide": {
+          "description": "index",
+          "type": "integer"
+        },
+        "transparentBackground": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.colorAt",
+    "journal": false,
+    "label": "Color At",
+    "params": "{slide?: index, x, y (slide units), scale?: px per unit (2)} → {color: \"RRGGBB\", alpha: 0..255, x, y}: the colour drawn at a point of the slide (the Eyedropper)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {color: \"RRGGBB\", alpha: 0..255, x, y}: the colour drawn at a point of the slide (the Eyedropper)",
+      "properties": {
+        "scale": {
+          "description": "px per unit (2)"
+        },
+        "slide": {
+          "description": "index",
+          "type": "integer"
+        },
+        "x": {},
+        "y": {
+          "description": "(slide units)"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.close",
+    "journal": true,
+    "label": "Close",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.properties",
+    "journal": true,
+    "label": "Properties",
+    "params": "{title?, subject?, author?, keywords?, comments?, category?, company?} → properties",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: properties",
+      "properties": {
+        "author": {
+          "description": "optional"
+        },
+        "category": {
+          "description": "optional"
+        },
+        "comments": {
+          "description": "optional"
+        },
+        "company": {
+          "description": "optional"
+        },
+        "keywords": {
+          "description": "optional"
+        },
+        "subject": {
+          "description": "optional"
+        },
+        "title": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "file.recovery.save",
+    "journal": true,
+    "label": "Save AutoRecover Information",
+    "params": "{} → {written}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {written}",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.recovery.list",
+    "journal": false,
+    "label": "Recovered Presentations",
+    "params": "{} → [{uid, path, title, saved}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{uid, path, title, saved}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.recovery.open",
+    "journal": true,
+    "label": "Open Recovered Presentations",
+    "params": "{} → {opened: [document index]}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {opened: [document index]}",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.recovery.discard",
+    "journal": true,
+    "label": "Discard Recovered Presentations",
+    "params": "{uid?: one entry (else all)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "uid": {
+          "description": "one entry (else all)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "file.revert",
+    "journal": true,
+    "label": "Revert",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "window.next",
+    "journal": true,
+    "label": "Next Window",
+    "params": "{index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "edit.undo",
+    "journal": true,
+    "label": "Undo",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "edit.redo",
+    "journal": true,
+    "label": "Redo",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "edit.cut",
+    "journal": true,
+    "label": "Cut",
+    "params": "{scope?: slides} → {text, html?}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {text, html?}",
+      "properties": {
+        "scope": {
+          "description": "slides"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "edit.copy",
+    "journal": true,
+    "label": "Copy",
+    "params": "{scope?: slides} → {text, html?}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {text, html?}",
+      "properties": {
+        "scope": {
+          "description": "slides"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "edit.paste",
+    "journal": true,
+    "label": "Paste",
+    "params": "{text?: plain text to paste, html?: rich text from another app, scope?: slides}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "html": {
+          "description": "rich text from another app"
+        },
+        "scope": {
+          "description": "slides"
+        },
+        "text": {
+          "description": "plain text to paste"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "edit.pasteSpecial",
+    "journal": true,
+    "label": "Paste Special",
+    "params": "{as: destinationTheme|keepSource|picture|text} — Use Destination Theme, Keep Source Formatting, Picture (PNG), Keep Text Only",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Use Destination Theme, Keep Source Formatting, Picture (PNG), Keep Text Only",
+      "properties": {
+        "as": {
+          "description": "destinationTheme|keepSource|picture|text"
+        }
+      },
+      "required": [
+        "as"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "edit.pasteText",
+    "journal": true,
+    "label": "Paste and Match Formatting",
+    "params": "{text?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "edit.duplicate",
+    "journal": true,
+    "label": "Duplicate",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "edit.delete",
+    "journal": true,
+    "label": "Delete",
+    "params": "{ids?, scope?: slides}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "scope": {
+          "description": "slides"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "edit.selectAll",
+    "journal": true,
+    "label": "Select All",
+    "params": "{scope?: slides}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "description": "slides"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "edit.deselect",
+    "journal": true,
+    "label": "Deselect",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "edit.select",
+    "journal": true,
+    "label": "Select Objects",
+    "params": "{ids: [id], add?: bool, toggle?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "add": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "[id]",
+          "type": "array"
+        },
+        "toggle": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ids"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.new",
+    "journal": true,
+    "label": "New Slide",
+    "params": "{layout?: layout name or kind (title, titleAndContent, sectionHeader, twoContent, comparison, titleOnly, blank, contentWithCaption, pictureWithCaption), at?: index, title?: text, body?: text}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "description": "index",
+          "type": "integer"
+        },
+        "body": {
+          "description": "text",
+          "type": "string"
+        },
+        "layout": {
+          "description": "layout name or kind (title, titleAndContent, sectionHeader, twoContent, comparison, titleOnly, blank, contentWithCaption, pictureWithCaption)"
+        },
+        "title": {
+          "description": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.duplicate",
+    "journal": true,
+    "label": "Duplicate Slide",
+    "params": "{index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.delete",
+    "journal": true,
+    "label": "Delete Slide",
+    "params": "{index?, ids?: [slide id]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "[slide id]",
+          "type": "array"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.move",
+    "journal": true,
+    "label": "Move Slide",
+    "params": "{from?: index, to: index}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "description": "index",
+          "type": "integer"
+        },
+        "to": {
+          "description": "index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.go",
+    "journal": true,
+    "label": "Go to Slide",
+    "params": "{index} | {id}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {index} | {id}",
+      "properties": {
+        "id": {},
+        "index": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.next",
+    "journal": true,
+    "label": "Next Slide",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.previous",
+    "journal": true,
+    "label": "Previous Slide",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.first",
+    "journal": true,
+    "label": "First Slide",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.last",
+    "journal": true,
+    "label": "Last Slide",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.selectSlides",
+    "journal": true,
+    "label": "Select Slides",
+    "params": "{ids?: [slide id], indices?: [index], add?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "add": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "[slide id]",
+          "type": "array"
+        },
+        "indices": {
+          "description": "[index]",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.hide",
+    "journal": true,
+    "label": "Hide Slide",
+    "params": "{index?, hidden?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "hidden": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.layout",
+    "journal": true,
+    "label": "Layout",
+    "params": "{layout: name or kind, index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "layout": {
+          "description": "name or kind"
+        }
+      },
+      "required": [
+        "layout"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.reset",
+    "journal": true,
+    "label": "Reset",
+    "params": "{index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.notes",
+    "journal": true,
+    "label": "Notes",
+    "params": "{text | body: formatted notes (as in slide.inspect's notesBody), index?} (text as typed: untouched notes keep their formatting)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "text as typed: untouched notes keep their formatting",
+      "properties": {
+        "body": {
+          "description": "formatted notes (as in slide.inspect's notesBody)"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "text": {}
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.rename",
+    "journal": true,
+    "label": "Rename Slide",
+    "params": "{name, index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "name": {}
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "section.add",
+    "journal": true,
+    "label": "Add Section",
+    "params": "{name?, at?: slide index}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "description": "slide index",
+          "type": "integer"
+        },
+        "name": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "section.rename",
+    "journal": true,
+    "label": "Rename Section",
+    "params": "{index, name}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "name": {}
+      },
+      "required": [
+        "index",
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "section.remove",
+    "journal": true,
+    "label": "Remove Section",
+    "params": "{index, slides?: bool (also delete its slides)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "slides": {
+          "description": "bool (also delete its slides)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "section.removeAll",
+    "journal": true,
+    "label": "Remove All Sections",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "section.move",
+    "journal": true,
+    "label": "Move Section",
+    "params": "{index, to}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "to": {}
+      },
+      "required": [
+        "index",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.fromOutline",
+    "journal": true,
+    "label": "Slides from Outline…",
+    "params": "{text, markdown?: bool (headings are slides, list items bullets)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "markdown": {
+          "description": "bool (headings are slides, list items bullets)",
+          "type": "boolean"
+        },
+        "text": {}
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "slide.reuse",
+    "journal": true,
+    "label": "Reuse Slides…",
+    "params": "{path? | data: base64, name?, slides?: [index] (0-based, default all), keepFormatting?: bool (default false: use the destination theme), at?: index (default after the current slide)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "description": "index (default after the current slide)"
+        },
+        "data": {
+          "description": "base64"
+        },
+        "keepFormatting": {
+          "description": "bool (default false: use the destination theme)",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "optional"
+        },
+        "slides": {
+          "description": "[index] (0-based, default all)",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.insert",
+    "journal": true,
+    "label": "Shapes",
+    "params": "{preset: rect|roundRect|ellipse|triangle|rightArrow|star5|… (see shape.presets), rect: [x,y,w,h] pt, text?: string}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "description": "rect|roundRect|ellipse|triangle|rightArrow|star5|… (see shape.presets)"
+        },
+        "rect": {
+          "description": "[x,y,w,h] pt",
+          "type": "array"
+        },
+        "text": {
+          "description": "string"
+        }
+      },
+      "required": [
+        "preset",
+        "rect"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.icon",
+    "journal": true,
+    "label": "Icons",
+    "params": "{name: star|arrow-right|… (see insert.icons), rect?: [x,y,w,h]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "star|arrow-right|… (see insert.icons)"
+        },
+        "rect": {
+          "description": "[x,y,w,h]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.icons",
+    "journal": false,
+    "label": "Icon Gallery",
+    "params": "{} → [{name, label, category}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{name, label, category}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "shape.presets",
+    "journal": false,
+    "label": "Shape Gallery",
+    "params": "{} → [{name, label, category}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{name, label, category}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "insert.textBox",
+    "journal": true,
+    "label": "Text Box",
+    "params": "{rect?: [x,y,w,h], text?: string}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "rect": {
+          "description": "[x,y,w,h]",
+          "type": "array"
+        },
+        "text": {
+          "description": "string"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.picture",
+    "journal": true,
+    "label": "Picture from File…",
+    "params": "{path? | data: base64, name?, rect?: [x,y,w,h]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "optional"
+        },
+        "rect": {
+          "description": "[x,y,w,h]",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.photoAlbum",
+    "journal": true,
+    "label": "Photo Album…",
+    "params": "{pictures?: [{path?|data: base64, name?, rot?: deg, brightness?: -1..1, contrast?: -1..1} | {text}], layout?: fit|1|2|4|1title|2title|4title, frame?: none|rect|rounded|simple, captions?: bool, grayscale?: bool, theme?: name} — omit pictures to open the dialog",
+    "schema": {
+      "additionalProperties": false,
+      "description": "omit pictures to open the dialog",
+      "properties": {
+        "captions": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "frame": {
+          "description": "none|rect|rounded|simple"
+        },
+        "grayscale": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "layout": {
+          "description": "fit|1|2|4|1title|2title|4title"
+        },
+        "pictures": {
+          "description": "[{path?|data: base64, name?, rot?: deg, brightness?: -1..1, contrast?: -1..1} | {text}]",
+          "type": "array"
+        },
+        "theme": {
+          "description": "name",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.photoAlbumEdit",
+    "journal": true,
+    "label": "Edit Photo Album…",
+    "params": "{album?: id, pictures?: same as insert.photoAlbum, layout?, frame?, captions?, grayscale?, theme?} — omit pictures to reopen the dialog on the current album",
+    "schema": {
+      "additionalProperties": false,
+      "description": "omit pictures to reopen the dialog on the current album",
+      "properties": {
+        "album": {
+          "description": "id"
+        },
+        "captions": {
+          "description": "optional"
+        },
+        "frame": {
+          "description": "optional"
+        },
+        "grayscale": {
+          "description": "optional"
+        },
+        "layout": {
+          "description": "optional"
+        },
+        "pictures": {
+          "description": "same as insert.photoAlbum"
+        },
+        "theme": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.table",
+    "journal": true,
+    "label": "Table…",
+    "params": "{rows, cols, rect?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "cols": {
+          "type": "integer"
+        },
+        "rect": {
+          "description": "optional"
+        },
+        "rows": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rows",
+        "cols"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.chart",
+    "journal": true,
+    "label": "Chart…",
+    "params": "{type?: column|bar|line|pie|doughnut|area|scatter|stackedColumn|…, rect?, categories?: [..], series?: [{name, values}]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "description": "[..]",
+          "type": "array"
+        },
+        "rect": {
+          "description": "optional"
+        },
+        "series": {
+          "description": "[{name, values}]",
+          "type": "array"
+        },
+        "type": {
+          "description": "column|bar|line|pie|doughnut|area|scatter|stackedColumn|…"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.audio",
+    "journal": true,
+    "label": "Audio from File…",
+    "params": "{path? | data: base64, name?, rect?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "optional"
+        },
+        "rect": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.video",
+    "journal": true,
+    "label": "Video from File…",
+    "params": "{path? | data: base64, name?, rect?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "optional"
+        },
+        "rect": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.wordArt",
+    "journal": true,
+    "label": "WordArt",
+    "params": "{text?, style?: 0..}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "description": "0.."
+        },
+        "text": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.slideNumber",
+    "journal": true,
+    "label": "Slide Number",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.dateTime",
+    "journal": true,
+    "label": "Date & Time",
+    "params": "{format?: datetime1..datetime13, update?: bool, language?: en-US|en-GB|fr-FR|ja-JP|sv-SE} — no keys opens the dialog",
+    "schema": {
+      "additionalProperties": false,
+      "description": "no keys opens the dialog",
+      "properties": {
+        "format": {
+          "description": "datetime1..datetime13"
+        },
+        "language": {
+          "description": "en-US|en-GB|fr-FR|ja-JP|sv-SE"
+        },
+        "update": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.symbol",
+    "journal": true,
+    "label": "Symbol",
+    "params": "{text: character(s)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "character(s)"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.action",
+    "journal": true,
+    "label": "Action Settings",
+    "params": "{on?: click|hover, action: none|next|previous|first|last|lastViewed|endShow|playMedia|slide|url|customShow|program, slide?: index, url?, show?: custom show name, path?, highlight?: bool, tooltip?, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "description": "none|next|previous|first|last|lastViewed|endShow|playMedia|slide|url|customShow|program"
+        },
+        "highlight": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "on": {
+          "description": "click|hover"
+        },
+        "path": {
+          "description": "optional"
+        },
+        "show": {
+          "description": "custom show name"
+        },
+        "slide": {
+          "description": "index",
+          "type": "integer"
+        },
+        "tooltip": {
+          "description": "optional"
+        },
+        "url": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.hyperlink",
+    "journal": true,
+    "label": "Link",
+    "params": "{url? | slide?: index, tooltip?, text?: shown when nothing is selected, highlightClick?, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "highlightClick": {
+          "description": "optional"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "slide": {
+          "description": "index",
+          "type": "integer"
+        },
+        "text": {
+          "description": "shown when nothing is selected"
+        },
+        "tooltip": {
+          "description": "optional"
+        },
+        "url": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "chart.type",
+    "journal": true,
+    "label": "Change Chart Type",
+    "params": "{type, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "type": {}
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "chart.data",
+    "journal": true,
+    "label": "Edit Data",
+    "params": "{categories?: [..], levels?: [[..]] (outer category levels, innermost first), series?: [{name, values}], id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "description": "[..]",
+          "type": "array"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "levels": {
+          "description": "[[..]] (outer category levels, innermost first)",
+          "type": "array"
+        },
+        "series": {
+          "description": "[{name, values}]",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "chart.options",
+    "journal": true,
+    "label": "Chart Elements",
+    "params": "{title?: string|null, legend?: b|t|l|r|null, dataLabels?: bool, gridlines?: bool, palette?, binCount?: n|null, binSize?: n|null, subtotals?: [point index], quartiles?: exclusive|inclusive, upDownBars?: bool, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "binCount": {
+          "description": "n|null"
+        },
+        "binSize": {
+          "description": "n|null"
+        },
+        "dataLabels": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "gridlines": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "legend": {
+          "description": "b|t|l|r|null"
+        },
+        "palette": {
+          "description": "optional"
+        },
+        "quartiles": {
+          "description": "exclusive|inclusive"
+        },
+        "subtotals": {
+          "description": "[point index]",
+          "type": "array"
+        },
+        "title": {
+          "description": "string|null"
+        },
+        "upDownBars": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.smartArt",
+    "journal": true,
+    "label": "SmartArt",
+    "params": "{kind: list|process|cycle|hierarchy|pyramid|matrix, items?: [text] (leading tabs = sub-points), nodes?: [{text, level}]} → {id}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id}",
+      "properties": {
+        "items": {
+          "description": "[text] (leading tabs = sub-points)",
+          "type": "array"
+        },
+        "kind": {
+          "description": "list|process|cycle|hierarchy|pyramid|matrix"
+        },
+        "nodes": {
+          "description": "[{text, level}]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.actionButton",
+    "journal": true,
+    "label": "Action Buttons",
+    "params": "{kind: back|forward|beginning|end|home|information|return|movie|document|sound|help|custom, rect?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "back|forward|beginning|end|home|information|return|movie|document|sound|help|custom"
+        },
+        "rect": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.nodes",
+    "journal": false,
+    "label": "Text Pane",
+    "params": "{id?} → {id, kind, nodes: [{text, level}]} (id: the SmartArt group or one of its shapes; default the selection)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id, kind, nodes: [{text, level}]} (id: the SmartArt group or one of its shapes; default the selection)",
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "smartArt.setNodes",
+    "journal": true,
+    "label": "Edit SmartArt Text",
+    "params": "{id?, nodes?: [{text, level}], lines?: [string] (leading tabs set the level), index?, text?, title?} (index + text edits one node; title: its Name and Title box)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "index + text edits one node; title: its Name and Title box",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "lines": {
+          "description": "[string] (leading tabs set the level)",
+          "type": "array"
+        },
+        "nodes": {
+          "description": "[{text, level}]",
+          "type": "array"
+        },
+        "text": {
+          "description": "optional"
+        },
+        "title": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.addNode",
+    "journal": true,
+    "label": "Add Shape",
+    "params": "{id?, index?, position?: after|before|below|above|assistant, text?} → {index} (default: after the last node)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {index} (default: after the last node)",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "position": {
+          "description": "after|before|below|above|assistant"
+        },
+        "text": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.removeNode",
+    "journal": true,
+    "label": "Remove Shape",
+    "params": "{id?, index} (its sub-points move up one level)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "its sub-points move up one level",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.promote",
+    "journal": true,
+    "label": "Promote",
+    "params": "{id?, index}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.demote",
+    "journal": true,
+    "label": "Demote",
+    "params": "{id?, index}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.layout",
+    "journal": true,
+    "label": "Change Layout",
+    "params": "{id?, kind: list|blockList|hBulletList|process|chevron|verticalProcess|stepUp|cycle|blockCycle|radial|hierarchy|pyramid|invertedPyramid|matrix|titledMatrix|pictureList|pictureCaption|pictureProcess|pictureHList|timeline|venn|target|textCycle|continuousCycle|horizontalHierarchy|gridMatrix|gear|funnel|segmentedCycle|multidirectionalCycle|orgChart|halfCircleOrgChart|cycleMatrix|segmentedPyramid|pie|nameTitleOrgChart|verticalBoxList|trapezoidList|tableList|accentProcess|continuousBlockProcess|bendingProcess|linearVenn|stackedVenn|nestedTarget}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "kind": {
+          "description": "list|blockList|hBulletList|process|chevron|verticalProcess|stepUp|cycle|blockCycle|radial|hierarchy|pyramid|invertedPyramid|matrix|titledMatrix|pictureList|pictureCaption|pictureProcess|pictureHList|timeline|venn|target|textCycle|continuousCycle|horizontalHierarchy|gridMatrix|gear|funnel|segmentedCycle|multidirectionalCycle|orgChart|halfCircleOrgChart|cycleMatrix|segmentedPyramid|pie|nameTitleOrgChart|verticalBoxList|trapezoidList|tableList|accentProcess|continuousBlockProcess|bendingProcess|linearVenn|stackedVenn|nestedTarget"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.fromText",
+    "journal": true,
+    "label": "Convert to SmartArt",
+    "params": "{id?, kind?} → {id} (a text box or placeholder becomes a SmartArt graphic in its place: one node per paragraph, indent levels kept)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id} (a text box or placeholder becomes a SmartArt graphic in its place: one node per paragraph, indent levels kept)",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "kind": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.toText",
+    "journal": true,
+    "label": "Convert to Text",
+    "params": "{id?} → {id} (the graphic becomes a text box of its outline, bulleted by level)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id} (the graphic becomes a text box of its outline, bulleted by level)",
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.toShapes",
+    "journal": true,
+    "label": "Convert to Shapes",
+    "params": "{id?} (the graphic becomes a plain group of its shapes; the outline is dropped)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "the graphic becomes a plain group of its shapes; the outline is dropped",
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.picture",
+    "journal": true,
+    "label": "Insert Picture in SmartArt",
+    "params": "{id?, index, data?: base64 | path?: string | reset?: bool} (the node's picture placeholder in picture layouts)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "the node's picture placeholder in picture layouts",
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "description": "string"
+        },
+        "reset": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.style",
+    "journal": true,
+    "label": "SmartArt Styles",
+    "params": "{id?, style: flat|subtle|intense|outline|polished|inset|cartoon|powder|brick}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "style": {
+          "description": "flat|subtle|intense|outline|polished|inset|cartoon|powder|brick"
+        }
+      },
+      "required": [
+        "style"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "smartArt.colors",
+    "journal": true,
+    "label": "Change Colors",
+    "params": "{id?, colors: colorful|range23|range34|range45|range56|accent1|…|accent6|accent1Grad|…|accent6Grad}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "colors": {
+          "description": "colorful|range23|range34|range45|range56|accent1|…|accent6|accent1Grad|…|accent6Grad"
+        },
+        "id": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "colors"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.connect",
+    "journal": true,
+    "label": "Connect Shapes",
+    "params": "{from: shape id, to: shape id, fromSite?, toSite?: site index (default: the closest pair), id?: existing line to glue (else a new connector), preset?: straightConnector1|bentConnector3|curvedConnector3} → {id}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id}",
+      "properties": {
+        "from": {
+          "description": "shape id"
+        },
+        "fromSite": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "existing line to glue (else a new connector)"
+        },
+        "preset": {
+          "description": "straightConnector1|bentConnector3|curvedConnector3"
+        },
+        "to": {
+          "description": "shape id"
+        },
+        "toSite": {
+          "description": "site index (default: the closest pair)"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.freeform",
+    "journal": true,
+    "label": "Freeform",
+    "params": "{points: [[x, y], …] slide pt (≥ 2), closed?: bool (filled shape), smooth?: bool (curve through the points)} → {id}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id}",
+      "properties": {
+        "closed": {
+          "description": "bool (filled shape)",
+          "type": "boolean"
+        },
+        "points": {
+          "description": "[[x, y], …] slide pt (≥ 2)",
+          "type": "array"
+        },
+        "smooth": {
+          "description": "bool (curve through the points)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "draw.inkToShape",
+    "journal": true,
+    "label": "Ink to Shape",
+    "params": "{} → {shapes: [ids], kept: n} turns recognisable ink strokes on the slide into lines, rectangles, ellipses and triangles",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {shapes: [ids], kept: n} turns recognisable ink strokes on the slide into lines, rectangles, ellipses and triangles",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.sites",
+    "journal": false,
+    "label": "Connection Sites",
+    "params": "{id} → [[x, y]] connection sites in slide points",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [[x, y]] connection sites in slide points",
+      "properties": {
+        "id": {}
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "shape.move",
+    "journal": true,
+    "label": "Move",
+    "params": "{dx?: pt (relative), dy?: pt (relative), ids?} | {x?: pt (absolute), y?: pt (absolute), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {dx?: pt (relative), dy?: pt (relative), ids?} | {x?: pt (absolute), y?: pt (absolute), ids?}",
+      "properties": {
+        "dx": {
+          "description": "pt (relative)"
+        },
+        "dy": {
+          "description": "pt (relative)"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "x": {
+          "description": "pt (absolute)"
+        },
+        "y": {
+          "description": "pt (absolute)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.resize",
+    "journal": true,
+    "label": "Size",
+    "params": "{w?: pt, h?: pt, lockAspect?: bool, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "h": {
+          "description": "pt"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "lockAspect": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "w": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.setBounds",
+    "journal": true,
+    "label": "Position and Size",
+    "params": "{x, y, w, h, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "h": {},
+        "ids": {
+          "description": "optional"
+        },
+        "w": {},
+        "x": {},
+        "y": {}
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.rotate",
+    "journal": true,
+    "label": "Rotation",
+    "params": "{deg?: absolute, by?: relative, ids?, gesture?: move|end}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "description": "relative"
+        },
+        "deg": {
+          "description": "absolute"
+        },
+        "gesture": {
+          "description": "move|end"
+        },
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.sizePosition",
+    "journal": true,
+    "label": "Size and Position…",
+    "params": "{x?, y?: pt, w?, h?: pt, rot?: deg, scaleW?, scaleH?: percent of the current size (100 = unchanged), lockAspect?: bool, ids?} — with none of those keys, opens the dialog",
+    "schema": {
+      "additionalProperties": false,
+      "description": "with none of those keys, opens the dialog",
+      "properties": {
+        "h": {
+          "description": "pt"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "lockAspect": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "rot": {
+          "description": "deg"
+        },
+        "scaleH": {
+          "description": "percent of the current size (100 = unchanged)"
+        },
+        "scaleW": {
+          "description": "optional"
+        },
+        "w": {
+          "description": "optional"
+        },
+        "x": {
+          "description": "optional"
+        },
+        "y": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.flip",
+    "journal": true,
+    "label": "Flip",
+    "params": "{axis: horizontal|vertical, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "axis": {
+          "description": "horizontal|vertical"
+        },
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "axis"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.adjust",
+    "journal": true,
+    "label": "Adjust Shape",
+    "params": "{index, value (file units), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "value": {
+          "description": "(file units)"
+        }
+      },
+      "required": [
+        "index",
+        "value"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.change",
+    "journal": true,
+    "label": "Change Shape",
+    "params": "{preset, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "preset": {}
+      },
+      "required": [
+        "preset"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.smoothCorners",
+    "journal": true,
+    "label": "Smooth Corners",
+    "params": "{smoothing: 0..100 (%), radius?: pt (default: the rounded rectangle's own), ids?} → rectangle outline with smoothed (squircle) corners",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: rectangle outline with smoothed (squircle) corners",
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "radius": {
+          "description": "pt (default: the rounded rectangle's own)"
+        },
+        "smoothing": {
+          "description": "0..100 (%)"
+        }
+      },
+      "required": [
+        "smoothing"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.fill",
+    "journal": true,
+    "label": "Shape Fill",
+    "params": "{color? | none?: true | gradient?: {stops: [[pos, color]], angle?, kind?: linear|radial} | picture?: base64 | pattern?: {preset, fg, bg} | transparency?: 0..1 | reset?: true, ids?}; pictureProps?: {tile?: bool, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0..10, align?: tl|t|tr|l|ctr|r|bl|b|br, mirror?: none|x|y|xy, stretch?: [l, t, r, b] fractions, rotateWithShape?: bool} adjusts a picture fill; a group also formats its members",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {color? | none?: true | gradient?: {stops: [[pos, color]], angle?, kind?: linear|radial} | picture?: base64 | pattern?: {preset, fg, bg} | transparency?: 0..1 | reset?: true, ids?}; pictureProps?: {tile?: bool, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0..10, align?: tl|t|tr|l|ctr|r|bl|b|br, mirror?: none|x|y|xy, stretch?: [l, t, r, b] fractions, rotateWithShape?: bool} adjusts a picture fill; a group also formats its members. adjusts a picture fill; a group also formats its members",
+      "properties": {
+        "align": {
+          "description": "tl|t|tr|l|ctr|r|bl|b|br"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "gradient": {
+          "description": "{stops: [[pos, color]], angle?, kind?: linear|radial}"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "mirror": {
+          "description": "none|x|y|xy"
+        },
+        "none": {
+          "description": "true"
+        },
+        "offsetX": {
+          "description": "optional"
+        },
+        "offsetY": {
+          "description": "pt"
+        },
+        "pattern": {
+          "description": "{preset, fg, bg}"
+        },
+        "picture": {
+          "description": "base64"
+        },
+        "reset": {
+          "description": "true"
+        },
+        "rotateWithShape": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "scaleX": {
+          "description": "optional"
+        },
+        "scaleY": {
+          "description": "0..10"
+        },
+        "stretch": {
+          "description": "[l, t, r, b] fractions",
+          "type": "array"
+        },
+        "tile": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "transparency": {
+          "description": "0..1"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.line",
+    "journal": true,
+    "label": "Shape Outline",
+    "params": "{color?, none?, width?: pt, dash?: solid|dot|dash|lgDash|dashDot|sysDot|sysDash, cap?: flat|round|square, join?: round|bevel|miter, compound?: single|double|thickThin|thinThick|triple, head?: none|triangle|stealth|diamond|oval|arrow, tail?, headSize?: sm|med|lg, tailSize?, reset?, ids?}; a group also formats its members",
+    "schema": {
+      "additionalProperties": false,
+      "description": "; a group also formats its members",
+      "properties": {
+        "cap": {
+          "description": "flat|round|square"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "compound": {
+          "description": "single|double|thickThin|thinThick|triple"
+        },
+        "dash": {
+          "description": "solid|dot|dash|lgDash|dashDot|sysDot|sysDash"
+        },
+        "head": {
+          "description": "none|triangle|stealth|diamond|oval|arrow"
+        },
+        "headSize": {
+          "description": "sm|med|lg"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "join": {
+          "description": "round|bevel|miter"
+        },
+        "none": {
+          "description": "optional"
+        },
+        "reset": {
+          "description": "optional"
+        },
+        "tail": {
+          "description": "optional"
+        },
+        "tailSize": {
+          "description": "optional"
+        },
+        "width": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.effects",
+    "journal": true,
+    "label": "Shape Effects",
+    "params": "{shadow?: none|outer|inner|perspective|{color, blur, dist, dir}, glow?: none|{color, radius}, softEdges?: pt, reflection?: none|tight|half|full, bevel?: none|circle|…, threeD?: {camera?: preset, rotX?, rotY?, rotZ?: deg, z?: pt, bevelTop?, bevelBottom?: none|circle|…, bevelTopW?, bevelTopH?, bevelBottomW?, bevelBottomH?, depth?, contour?: pt, material?, lighting?, reset?: true}, shadowProps?: {color?, transparency?: 0..1, blur?: pt, dist?: pt, dir?: deg}, glowProps?: {color?, transparency?, radius?: pt}, reflectionProps?: {transparency?, size?: 0..1, dist?: pt, blur?: pt}, reset?, ids?} (the *Props keys adjust the current effect, adding a default one when there is none)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "the *Props keys adjust the current effect, adding a default one when there is none",
+      "properties": {
+        "bevel": {
+          "description": "none|circle|…"
+        },
+        "glow": {
+          "description": "none|{color, radius}"
+        },
+        "glowProps": {
+          "description": "{color?, transparency?, radius?: pt}"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "reflection": {
+          "description": "none|tight|half|full"
+        },
+        "reflectionProps": {
+          "description": "{transparency?, size?: 0..1, dist?: pt, blur?: pt}"
+        },
+        "reset": {
+          "description": "optional"
+        },
+        "shadow": {
+          "description": "none|outer|inner|perspective|{color, blur, dist, dir}"
+        },
+        "shadowProps": {
+          "description": "{color?, transparency?: 0..1, blur?: pt, dist?: pt, dir?: deg}"
+        },
+        "softEdges": {
+          "description": "pt"
+        },
+        "threeD": {
+          "description": "{camera?: preset, rotX?, rotY?, rotZ?: deg, z?: pt, bevelTop?, bevelBottom?: none|circle|…, bevelTopW?, bevelTopH?, bevelBottomW?, bevelBottomH?, depth?, contour?: pt, material?, lighting?, reset?: true}"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.quickStyle",
+    "journal": true,
+    "label": "Quick Styles",
+    "params": "{index: 0..41 (theme style row×accent), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "index": {
+          "description": "0..41 (theme style row×accent)"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.rename",
+    "journal": true,
+    "label": "Rename",
+    "params": "{name, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "name": {}
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.altText",
+    "journal": true,
+    "label": "Alt Text",
+    "params": "{text, decorative?: bool, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "decorative": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "text": {}
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.visible",
+    "journal": true,
+    "label": "Show/Hide",
+    "params": "{visible?: bool, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "visible": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.lock",
+    "journal": true,
+    "label": "Lock",
+    "params": "{locked?: bool (default: toggle), ids?} (a group locks or unlocks with everything in it)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "a group locks or unlocks with everything in it",
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "locked": {
+          "description": "bool (default: toggle)",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.setDefault",
+    "journal": true,
+    "label": "Set as Default Shape",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.crop",
+    "journal": true,
+    "label": "Crop",
+    "params": "{left?: fraction 0..1, top?: fraction 0..1, right?: fraction 0..1, bottom?: fraction 0..1, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "bottom": {
+          "description": "fraction 0..1"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "left": {
+          "description": "fraction 0..1"
+        },
+        "right": {
+          "description": "fraction 0..1"
+        },
+        "top": {
+          "description": "fraction 0..1"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.adjust",
+    "journal": true,
+    "label": "Corrections",
+    "params": "{brightness?: -1..1, contrast?: -1..1, saturation?: 0..4, grayscale?: bool, transparency?: 0..1, reset?: bool, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "brightness": {
+          "description": "-1..1"
+        },
+        "contrast": {
+          "description": "-1..1"
+        },
+        "grayscale": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "reset": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "saturation": {
+          "description": "0..4"
+        },
+        "transparency": {
+          "description": "0..1"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.reset",
+    "journal": true,
+    "label": "Reset Picture",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.change",
+    "journal": true,
+    "label": "Change Picture",
+    "params": "{path? | data: base64, name?, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "media.options",
+    "journal": true,
+    "label": "Playback",
+    "params": "{autoplay?, loop?, rewind?, acrossSlides?, hide?, fullScreen?, volume?: 0..1, trimStart?: ms, trimEnd?: ms, fadeIn?: ms, fadeOut?: ms, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "acrossSlides": {
+          "description": "optional"
+        },
+        "autoplay": {
+          "description": "optional"
+        },
+        "fadeIn": {
+          "description": "ms"
+        },
+        "fadeOut": {
+          "description": "ms"
+        },
+        "fullScreen": {
+          "description": "optional"
+        },
+        "hide": {
+          "description": "optional"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "loop": {
+          "description": "optional"
+        },
+        "rewind": {
+          "description": "optional"
+        },
+        "trimEnd": {
+          "description": "ms"
+        },
+        "trimStart": {
+          "description": "ms"
+        },
+        "volume": {
+          "description": "0..1"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.removeBackground",
+    "journal": true,
+    "label": "Remove Background",
+    "params": "{tolerance?: 0..100 (how different a colour may be from the edge's, default 20), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "tolerance": {
+          "description": "0..100 (how different a colour may be from the edge's, default 20)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.style",
+    "journal": true,
+    "label": "Picture Styles",
+    "params": "{style: simpleFrameWhite|dropShadowRectangle|softEdgeOval|… | none (see picture.styles), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "none": {
+          "description": "(see picture.styles)"
+        },
+        "style": {
+          "description": "simpleFrameWhite|dropShadowRectangle|softEdgeOval|…"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.styles",
+    "journal": false,
+    "label": "Picture Style Gallery",
+    "params": "{} → [{id, label}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{id, label}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "picture.recolor",
+    "journal": true,
+    "label": "Recolor",
+    "params": "{preset: none|grayscale|sepia|washout|bw25|bw50|bw75|accent1Dark…accent6Dark|accent1Light…accent6Light|tx2Dark|tx2Light (see picture.recolors), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        },
+        "preset": {
+          "description": "none|grayscale|sepia|washout|bw25|bw50|bw75|accent1Dark…accent6Dark|accent1Light…accent6Light|tx2Dark|tx2Light (see picture.recolors)"
+        }
+      },
+      "required": [
+        "preset"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.recolors",
+    "journal": false,
+    "label": "Recolor Gallery",
+    "params": "{} → [{id, label}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{id, label}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "picture.transparentColor",
+    "journal": true,
+    "label": "Set Transparent Color",
+    "params": "{color: #RRGGBB | at: [x, y] | none: true, ids?} (pixels of that colour become transparent; `at` takes the colour of the picture's own pixel under that slide point, as a click does in PowerPoint)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "pixels of that colour become transparent; `at` takes the colour of the picture's own pixel under that slide point, as a click does in PowerPoint",
+      "properties": {
+        "at": {
+          "description": "[x, y]",
+          "type": "array"
+        },
+        "color": {
+          "description": "#RRGGBB"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "none": {
+          "description": "true"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "guide.add",
+    "journal": true,
+    "label": "Add Guide",
+    "params": "{vertical: bool, pos?: pt (default: the slide's centre)} → {index}. `defaults: true` adds the two centre guides when there are none",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {index}. `defaults: true` adds the two centre guides when there are none",
+      "properties": {
+        "pos": {
+          "description": "pt (default: the slide's centre)"
+        },
+        "vertical": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "vertical"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "guide.move",
+    "journal": true,
+    "label": "Move Guide",
+    "params": "{index, pos: pt}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "pos": {
+          "description": "pt"
+        }
+      },
+      "required": [
+        "index",
+        "pos"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "guide.delete",
+    "journal": true,
+    "label": "Delete Guide",
+    "params": "{index}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "guide.list",
+    "journal": false,
+    "label": "Guides",
+    "params": "{} → [{vertical, pos}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{vertical, pos}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "arrange.bringToFront",
+    "journal": true,
+    "label": "Bring to Front",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.bringForward",
+    "journal": true,
+    "label": "Bring Forward",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.sendBackward",
+    "journal": true,
+    "label": "Send Backward",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.sendToBack",
+    "journal": true,
+    "label": "Send to Back",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.reorder",
+    "journal": true,
+    "label": "Reorder Objects",
+    "params": "{id, index: position among its siblings (0 = back; a group's child stays in its group)} → {index}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {index}",
+      "properties": {
+        "id": {},
+        "index": {
+          "description": "position among its siblings (0 = back; a group's child stays in its group)"
+        }
+      },
+      "required": [
+        "id",
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.group",
+    "journal": true,
+    "label": "Group",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.ungroup",
+    "journal": true,
+    "label": "Ungroup",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.regroup",
+    "journal": true,
+    "label": "Regroup",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.align",
+    "journal": true,
+    "label": "Align",
+    "params": "{edge: left|center|right|top|middle|bottom, to?: slide|selection (default: slide for one object), ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "edge": {
+          "description": "left|center|right|top|middle|bottom"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "to": {
+          "description": "slide|selection (default: slide for one object)"
+        }
+      },
+      "required": [
+        "edge"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.distribute",
+    "journal": true,
+    "label": "Distribute",
+    "params": "{dir: horizontal|vertical, to?: slide|selection, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "description": "horizontal|vertical"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "to": {
+          "description": "slide|selection"
+        }
+      },
+      "required": [
+        "dir"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.rotateLeft",
+    "journal": true,
+    "label": "Rotate Left 90°",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.rotateRight",
+    "journal": true,
+    "label": "Rotate Right 90°",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.flipHorizontal",
+    "journal": true,
+    "label": "Flip Horizontal",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.flipVertical",
+    "journal": true,
+    "label": "Flip Vertical",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "arrange.nudge",
+    "journal": true,
+    "label": "Nudge",
+    "params": "{dx, dy, ids?} (arrow keys: 6 pt, with Alt 1 pt)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "arrow keys: 6 pt, with Alt 1 pt",
+      "properties": {
+        "dx": {},
+        "dy": {},
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "dx",
+        "dy"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "selection.select",
+    "journal": true,
+    "label": "Select",
+    "params": "{ids | id, toggle?: bool (Ctrl+click), add?: bool} → {selected}: objects in groups too; a hidden object picked from the list is shown",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {selected}: objects in groups too; a hidden object picked from the list is shown",
+      "properties": {
+        "add": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "id": {},
+        "ids": {},
+        "toggle": {
+          "description": "bool (Ctrl+click)",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "selection.showAll",
+    "journal": true,
+    "label": "Show All",
+    "params": "{} shows every object on the slide, inside groups too",
+    "schema": {
+      "additionalProperties": false,
+      "description": "shows every object on the slide, inside groups too",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "selection.hideAll",
+    "journal": true,
+    "label": "Hide All",
+    "params": "{} hides every top-level object on the slide",
+    "schema": {
+      "additionalProperties": false,
+      "description": "hides every top-level object on the slide",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.merge",
+    "journal": true,
+    "label": "Merge Shapes",
+    "params": "{op: union|combine|fragment|intersect|subtract, ids?: shapes in selection order (the first one's formatting is kept)} → {ids}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {ids}",
+      "properties": {
+        "ids": {
+          "description": "shapes in selection order (the first one's formatting is kept)"
+        },
+        "op": {
+          "description": "union|combine|fragment|intersect|subtract"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.editPoints",
+    "journal": true,
+    "label": "Edit Points",
+    "params": "{on?: bool (default: toggle), id?} — enter or leave Edit Points for one selected shape; entering turns a preset into a freeform",
+    "schema": {
+      "additionalProperties": false,
+      "description": "enter or leave Edit Points for one selected shape; entering turns a preset into a freeform",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "on": {
+          "description": "bool (default: toggle)",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.points",
+    "journal": false,
+    "label": "Points",
+    "params": "{id?} → {id, paths: [[[x, y] slide pt]], types: [[smooth|straight|corner]]} vertices of a freeform",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id, paths: [[[x, y] slide pt]], types: [[smooth|straight|corner]]} vertices of a freeform",
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "shape.movePoint",
+    "journal": true,
+    "label": "Move Point",
+    "params": "{path?: 0, index, x, y: slide pt, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "description": "0"
+        },
+        "x": {},
+        "y": {
+          "description": "slide pt"
+        }
+      },
+      "required": [
+        "index",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.addPoint",
+    "journal": true,
+    "label": "Add Point",
+    "params": "{path?: 0, segment: index of the vertex ending it, t?: 0..1 (0.5), id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "0"
+        },
+        "segment": {
+          "description": "index of the vertex ending it"
+        },
+        "t": {
+          "description": "0..1 (0.5)"
+        }
+      },
+      "required": [
+        "segment"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.pointType",
+    "journal": true,
+    "label": "Point Type",
+    "params": "{path?: 0, index, type: smooth|straight|corner, id?} — smooth: handles in line and equal; straight: in line; corner: independent",
+    "schema": {
+      "additionalProperties": false,
+      "description": "smooth: handles in line and equal; straight: in line; corner: independent",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "description": "0"
+        },
+        "type": {
+          "description": "smooth|straight|corner"
+        }
+      },
+      "required": [
+        "index",
+        "type"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.moveHandle",
+    "journal": true,
+    "label": "Move Handle",
+    "params": "{path?: 0, index, side: in|out, x, y: slide pt, type?: smooth|straight|corner (default: read from the handles), id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "description": "0"
+        },
+        "side": {
+          "description": "in|out"
+        },
+        "type": {
+          "description": "smooth|straight|corner (default: read from the handles)"
+        },
+        "x": {},
+        "y": {
+          "description": "slide pt"
+        }
+      },
+      "required": [
+        "index",
+        "side",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.deletePoint",
+    "journal": true,
+    "label": "Delete Point",
+    "params": "{path?: 0, index, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "description": "0"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "font.used",
+    "journal": false,
+    "label": "Fonts in Presentation",
+    "params": "{} → [family] (theme fonts resolved)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [family] (theme fonts resolved)",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "font.replace",
+    "journal": true,
+    "label": "Replace Fonts",
+    "params": "{from, to} — every explicit use of family `from`, theme fonts included → {replaced}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "every explicit use of family `from`, theme fonts included. Returns: {replaced}",
+      "properties": {
+        "from": {},
+        "to": {}
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "text.edit",
+    "journal": true,
+    "label": "Edit Text",
+    "params": "{id?, at?: [paragraph, char], end?: bool, cell?: [row, col], notes?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "description": "[paragraph, char]",
+          "type": "array"
+        },
+        "cell": {
+          "description": "[row, col]",
+          "type": "array"
+        },
+        "end": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "notes": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.exit",
+    "journal": true,
+    "label": "Stop Editing Text",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.autocorrect",
+    "journal": true,
+    "label": "AutoCorrect Options",
+    "params": "{on?, twoInitials?, sentenceCaps?, days?, capsLock?, fractions?, ordinals?: bool, add?: [from, to], remove?: from} → the options and the replacement list",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: the options and the replacement list",
+      "properties": {
+        "add": {
+          "description": "[from, to]",
+          "type": "array"
+        },
+        "capsLock": {
+          "description": "optional"
+        },
+        "days": {
+          "description": "optional"
+        },
+        "fractions": {
+          "description": "optional"
+        },
+        "on": {
+          "description": "optional"
+        },
+        "ordinals": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "remove": {
+          "description": "from"
+        },
+        "sentenceCaps": {
+          "description": "optional"
+        },
+        "twoInitials": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.insert",
+    "journal": true,
+    "label": "Type Text",
+    "params": "{text} (\\n = new paragraph, \\u000b = line break)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "\\n = new paragraph, \\u000b = line break",
+      "properties": {
+        "text": {}
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "text.compose",
+    "journal": false,
+    "label": "Compose Text",
+    "params": "{text, active?: [start, end]} — an input method's composition (preedit) at the insertion point; empty text cancels it",
+    "schema": {
+      "additionalProperties": false,
+      "description": "an input method's composition (preedit) at the insertion point; empty text cancels it",
+      "properties": {
+        "active": {
+          "description": "[start, end]",
+          "type": "array"
+        },
+        "text": {}
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.commit",
+    "journal": true,
+    "label": "Commit Composition",
+    "params": "{text} — the input method's result replaces its composition, as one undo step",
+    "schema": {
+      "additionalProperties": false,
+      "description": "the input method's result replaces its composition, as one undo step",
+      "properties": {
+        "text": {}
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.delete",
+    "journal": true,
+    "label": "Delete Text",
+    "params": "{dir?: backward|forward|wordBackward|wordForward} — the word directions are Ctrl+Backspace/Delete: they work from the start of a selection without deleting it",
+    "schema": {
+      "additionalProperties": false,
+      "description": "the word directions are Ctrl+Backspace/Delete: they work from the start of a selection without deleting it",
+      "properties": {
+        "dir": {
+          "description": "backward|forward|wordBackward|wordForward"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "text.move",
+    "journal": true,
+    "label": "Move Insertion Point",
+    "params": "{to: left|right|up|down|wordLeft|wordRight|lineStart|lineEnd|paraStart|paraEnd|paraUp|paraDown|start|end, extend?: bool} — left/right are on screen: in a right-to-left paragraph left goes forward",
+    "schema": {
+      "additionalProperties": false,
+      "description": "left/right are on screen: in a right-to-left paragraph left goes forward",
+      "properties": {
+        "extend": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "to": {
+          "description": "left|right|up|down|wordLeft|wordRight|lineStart|lineEnd|paraStart|paraEnd|paraUp|paraDown|start|end"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.select",
+    "journal": true,
+    "label": "Select Text",
+    "params": "{anchor: [p, c], caret: [p, c]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "description": "[p, c]",
+          "type": "array"
+        },
+        "caret": {
+          "description": "[p, c]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "anchor",
+        "caret"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.selectAll",
+    "journal": true,
+    "label": "Select All Text",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.selectWord",
+    "journal": true,
+    "label": "Select Word",
+    "params": "{at?: [p, c]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "description": "[p, c]",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.selectParagraph",
+    "journal": true,
+    "label": "Select Paragraph",
+    "params": "{at?: [p, c]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "description": "[p, c]",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.set",
+    "journal": true,
+    "label": "Set Text",
+    "params": "{id?, text, cell?: [r, c]} — replaces the whole text, keeping the first run's formatting",
+    "schema": {
+      "additionalProperties": false,
+      "description": "replaces the whole text, keeping the first run's formatting",
+      "properties": {
+        "cell": {
+          "description": "[r, c]",
+          "type": "array"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "text": {}
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "text.get",
+    "journal": false,
+    "label": "Get Text",
+    "params": "{id?} → {text, paragraphs}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {text, paragraphs}",
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "font.add",
+    "journal": true,
+    "label": "Add Font",
+    "params": "{data: base64 TTF/OTF/TTC} → {faces} added for this session",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {faces} added for this session",
+      "properties": {
+        "data": {
+          "description": "base64 TTF/OTF/TTC"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "font.rescan",
+    "journal": true,
+    "label": "Rescan Installed Fonts",
+    "params": "{} → {faces, families} (fonts installed since start-up)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {faces, families} (fonts installed since start-up)",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "format.bold",
+    "journal": true,
+    "label": "Bold",
+    "params": "{on?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.italic",
+    "journal": true,
+    "label": "Italic",
+    "params": "{on?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.underline",
+    "journal": true,
+    "label": "Underline",
+    "params": "{on?: bool, style?: sng|dbl|heavy|dotted|dash|wavy}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "style": {
+          "description": "sng|dbl|heavy|dotted|dash|wavy"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.strikethrough",
+    "journal": true,
+    "label": "Strikethrough",
+    "params": "{on?: bool, double?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "double": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.superscript",
+    "journal": true,
+    "label": "Superscript",
+    "params": "{on?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.subscript",
+    "journal": true,
+    "label": "Subscript",
+    "params": "{on?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.font",
+    "journal": true,
+    "label": "Font",
+    "params": "{family}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "family": {}
+      },
+      "required": [
+        "family"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.size",
+    "journal": true,
+    "label": "Font Size",
+    "params": "{size: pt}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "size": {
+          "description": "pt"
+        }
+      },
+      "required": [
+        "size"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.grow",
+    "journal": true,
+    "label": "Increase Font Size",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.shrink",
+    "journal": true,
+    "label": "Decrease Font Size",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.color",
+    "journal": true,
+    "label": "Font Color",
+    "params": "{color: #RRGGBB|accent1..6|tx1…|{scheme, lumMod…}}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "description": "#RRGGBB|accent1..6|tx1…|{scheme, lumMod…}"
+        }
+      },
+      "required": [
+        "color"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.textTransparency",
+    "journal": true,
+    "label": "Text Transparency",
+    "params": "{value: 0..1} — 0 opaque, 1 invisible; keeps the text's colour (inherited colours included)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "0 opaque, 1 invisible; keeps the text's colour (inherited colours included",
+      "properties": {
+        "value": {
+          "description": "0..1"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.language",
+    "journal": true,
+    "label": "Language",
+    "params": "{lang?, noProof?: bool} (proofing language of the selected text, and Do Not Check Spelling)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "proofing language of the selected text, and Do Not Check Spelling",
+      "properties": {
+        "lang": {
+          "description": "optional"
+        },
+        "noProof": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.highlight",
+    "journal": true,
+    "label": "Text Highlight Color",
+    "params": "{color? (absent = none)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "description": "(absent = none)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.case",
+    "journal": true,
+    "label": "Change Case",
+    "params": "{mode?: cycle|sentence|lower|upper|title|toggle} — cycle (Shift+F3, the default) goes lowercase → Capitalize Each Word → UPPERCASE; a caret in a word changes that word",
+    "schema": {
+      "additionalProperties": false,
+      "description": "cycle (Shift+F3, the default) goes lowercase. Returns: Capitalize Each Word",
+      "properties": {
+        "mode": {
+          "description": "cycle|sentence|lower|upper|title|toggle"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.caps",
+    "journal": true,
+    "label": "Caps",
+    "params": "{caps: none|small|all}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "caps": {
+          "description": "none|small|all"
+        }
+      },
+      "required": [
+        "caps"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.spacing",
+    "journal": true,
+    "label": "Character Spacing",
+    "params": "{pt} (veryTight -3, tight -1.5, normal 0, loose 3, veryLoose 6)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "veryTight -3, tight -1.5, normal 0, loose 3, veryLoose 6",
+      "properties": {
+        "pt": {}
+      },
+      "required": [
+        "pt"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.clear",
+    "journal": true,
+    "label": "Clear All Formatting",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.fontDialog",
+    "journal": true,
+    "label": "Font…",
+    "params": "{family?, size?: pt, bold?: bool, italic?: bool, underline?: none|sng|dbl|heavy|dotted|dash|wavy, color?, strike?: none|sng|dbl, baseline?: none|super|sub|<fraction>, caps?: none|small|all, spacing?: pt} — with none of these, opens the Font dialog",
+    "schema": {
+      "additionalProperties": false,
+      "description": "with none of these, opens the Font dialog",
+      "properties": {
+        "baseline": {
+          "description": "none|super|sub|<fraction>"
+        },
+        "bold": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "caps": {
+          "description": "none|small|all"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "family": {
+          "description": "optional"
+        },
+        "italic": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "size": {
+          "description": "pt"
+        },
+        "spacing": {
+          "description": "pt"
+        },
+        "strike": {
+          "description": "none|sng|dbl"
+        },
+        "underline": {
+          "description": "none|sng|dbl|heavy|dotted|dash|wavy"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.textShadow",
+    "journal": true,
+    "label": "Text Shadow",
+    "params": "{on?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.textOutline",
+    "journal": true,
+    "label": "Text Outline",
+    "params": "{color?, width?: pt} (no color = none)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "no color = none",
+      "properties": {
+        "color": {
+          "description": "optional"
+        },
+        "width": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.textWarp",
+    "journal": true,
+    "label": "Text Transform",
+    "params": "{preset: a prstTxWarp name or none, adj?: [finite raw guide values, at most 8]} — none clears the transform; omitted adj uses the preset's defaults",
+    "schema": {
+      "additionalProperties": false,
+      "description": "none clears the transform; omitted adj uses the preset's defaults",
+      "properties": {
+        "adj": {
+          "description": "[finite raw guide values, at most 8]",
+          "type": "array"
+        },
+        "preset": {
+          "description": "a prstTxWarp name or none"
+        }
+      },
+      "required": [
+        "preset"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.align",
+    "journal": true,
+    "label": "Align",
+    "params": "{align: left|center|right|justify|justifyLow|distributed}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "align": {
+          "description": "left|center|right|justify|justifyLow|distributed"
+        }
+      },
+      "required": [
+        "align"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.rtl",
+    "journal": true,
+    "label": "Right-to-Left Text Direction",
+    "params": "{on?: bool} (off = left-to-right; switching mirrors left/right alignment)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "off = left-to-right; switching mirrors left/right alignment",
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.alignLeft",
+    "journal": true,
+    "label": "Align Left",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.alignCenter",
+    "journal": true,
+    "label": "Center",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.alignRight",
+    "journal": true,
+    "label": "Align Right",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.justify",
+    "journal": true,
+    "label": "Justify",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.bullets",
+    "journal": true,
+    "label": "Bullets",
+    "params": "{on?: bool, char?: •|○|■|□|◆|➢|✓|–, color?, size?: % of text}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "char": {
+          "description": "•|○|■|□|◆|➢|✓|–"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "size": {
+          "description": "% of text"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.numbering",
+    "journal": true,
+    "label": "Numbering",
+    "params": "{on?: bool, scheme?: arabicPeriod|arabicParenR|romanUcPeriod|romanLcPeriod|alphaUcPeriod|alphaLcParenR|alphaLcPeriod, start?: n, color?, size?: % of text}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "description": "optional"
+        },
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "scheme": {
+          "description": "arabicPeriod|arabicParenR|romanUcPeriod|romanLcPeriod|alphaUcPeriod|alphaLcParenR|alphaLcPeriod"
+        },
+        "size": {
+          "description": "% of text"
+        },
+        "start": {
+          "description": "n"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.indent",
+    "journal": true,
+    "label": "Increase List Level",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.outdent",
+    "journal": true,
+    "label": "Decrease List Level",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.lineSpacing",
+    "journal": true,
+    "label": "Line Spacing",
+    "params": "{lines?: 1.0|1.5|2.0…, pt?: exactly}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "lines": {
+          "description": "1.0|1.5|2.0…"
+        },
+        "pt": {
+          "description": "exactly"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.paragraph",
+    "journal": true,
+    "label": "Paragraph…",
+    "params": "{align?, indentLeft?: pt, indentFirst?: pt (negative = hanging), spaceBefore?: pt, spaceAfter?: pt, lineSpacing?: lines}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "align": {
+          "description": "optional"
+        },
+        "indentFirst": {
+          "description": "pt (negative = hanging)"
+        },
+        "indentLeft": {
+          "description": "pt"
+        },
+        "lineSpacing": {
+          "description": "lines"
+        },
+        "spaceAfter": {
+          "description": "pt"
+        },
+        "spaceBefore": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.ruler",
+    "journal": false,
+    "label": "Ruler",
+    "params": "{} → {x, y, width, rotated, marginLeft, indent, tabs: [{pos, align}], defaultTab} for the paragraph with the caret (x, y: the text area's top-left in slide pt)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {x, y, width, rotated, marginLeft, indent, tabs: [{pos, align}], defaultTab} for the paragraph with the caret (x, y: the text area's top-left in slide pt)",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "format.paragraphDialog",
+    "journal": true,
+    "label": "Paragraph…",
+    "params": "{align?: left|center|right|justify|justLow|distributed, indentLeft?: pt, indentRight?: pt, special?: none|first|hanging, specialBy?: pt, indentFirst?: pt, spaceBefore?: pt, spaceAfter?: pt, spaceBeforeKind?: pts|pct, spaceAfterKind?: pts|pct, lineSpacing?: lines, lineSpacingPt?: pt} — with none of these, opens the Paragraph dialog",
+    "schema": {
+      "additionalProperties": false,
+      "description": "with none of these, opens the Paragraph dialog",
+      "properties": {
+        "align": {
+          "description": "left|center|right|justify|justLow|distributed"
+        },
+        "indentFirst": {
+          "description": "pt"
+        },
+        "indentLeft": {
+          "description": "pt"
+        },
+        "indentRight": {
+          "description": "pt"
+        },
+        "lineSpacing": {
+          "description": "lines"
+        },
+        "lineSpacingPt": {
+          "description": "pt"
+        },
+        "spaceAfter": {
+          "description": "pt"
+        },
+        "spaceAfterKind": {
+          "description": "pts|pct"
+        },
+        "spaceBefore": {
+          "description": "pt"
+        },
+        "spaceBeforeKind": {
+          "description": "pts|pct"
+        },
+        "special": {
+          "description": "none|first|hanging"
+        },
+        "specialBy": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.tabs",
+    "journal": true,
+    "label": "Tabs…",
+    "params": "{set?: [{pos, align?}] (replaces all), add?: {pos, align?: l|ctr|r|dec}, move?: {from, to}, remove?: pos, clear?: bool, defaultTab?: pt} on the selected paragraphs; with none of them, opens the Tabs dialog (pos in pt from the text area's left)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "on the selected paragraphs; with none of them, opens the Tabs dialog (pos in pt from the text area's left",
+      "properties": {
+        "add": {
+          "description": "{pos, align?: l|ctr|r|dec}"
+        },
+        "clear": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "defaultTab": {
+          "description": "pt"
+        },
+        "move": {
+          "description": "{from, to}"
+        },
+        "remove": {
+          "description": "pos"
+        },
+        "set": {
+          "description": "[{pos, align?}] (replaces all)",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.anchor",
+    "journal": true,
+    "label": "Align Text",
+    "params": "{anchor: top|middle|bottom}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "description": "top|middle|bottom"
+        }
+      },
+      "required": [
+        "anchor"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.direction",
+    "journal": true,
+    "label": "Text Direction",
+    "params": "{dir: horizontal|rotate90|rotate270|stacked}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "description": "horizontal|rotate90|rotate270|stacked"
+        }
+      },
+      "required": [
+        "dir"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.columns",
+    "journal": true,
+    "label": "Columns",
+    "params": "{count, spacing?: pt}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {},
+        "spacing": {
+          "description": "pt"
+        }
+      },
+      "required": [
+        "count"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.autofit",
+    "journal": true,
+    "label": "Autofit",
+    "params": "{mode: none|shrink|resize}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "none|shrink|resize"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.wrap",
+    "journal": true,
+    "label": "Wrap Text in Shape",
+    "params": "{on: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "on"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.margins",
+    "journal": true,
+    "label": "Text Box Margins",
+    "params": "{left?: pt, top?: pt, right?: pt, bottom?: pt}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "bottom": {
+          "description": "pt"
+        },
+        "left": {
+          "description": "pt"
+        },
+        "right": {
+          "description": "pt"
+        },
+        "top": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.painter",
+    "journal": true,
+    "label": "Format Painter",
+    "params": "{sticky?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "sticky": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "format.painterApply",
+    "journal": true,
+    "label": "Paste Formatting",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "format.state",
+    "journal": false,
+    "label": "Formatting State",
+    "params": "{} → the effective formatting at the selection (font, size, bold, …)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: the effective formatting at the selection (font, size, bold, …)",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "design.theme",
+    "journal": true,
+    "label": "Themes",
+    "params": "{name} (see design.themes)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "see design.themes",
+      "properties": {
+        "name": {}
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.browseTheme",
+    "journal": true,
+    "label": "Browse for Themes…",
+    "params": "{path} | {name, data: base64} — apply the theme of a .thmx, .pptx or .potx file",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {path} | {name, data: base64} — apply the theme of a .thmx, .pptx or .potx file. apply the theme of a .thmx, .pptx or .potx file",
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {},
+        "path": {}
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.themes",
+    "journal": false,
+    "label": "Theme Gallery",
+    "params": "{} → themes, colour schemes, font schemes and effect schemes",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: themes, colour schemes, font schemes and effect schemes",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "design.colors",
+    "journal": true,
+    "label": "Colors",
+    "params": "{} opens Create New Theme Colors | {name} | {colors: {dk1|lt1|dk2|lt2|accent1..6|hlink|folHlink: #RRGGBB}}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {} opens Create New Theme Colors | {name} | {colors: {dk1|lt1|dk2|lt2|accent1..6|hlink|folHlink: #RRGGBB}}",
+      "properties": {
+        "colors": {
+          "description": "{dk1|lt1|dk2|lt2|accent1..6|hlink|folHlink: #RRGGBB}"
+        },
+        "name": {}
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.variant",
+    "journal": true,
+    "label": "Variants",
+    "params": "{index: 0..3} (see design.variants)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "see design.variants",
+      "properties": {
+        "index": {
+          "description": "0..3"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.variants",
+    "journal": false,
+    "label": "Variant Gallery",
+    "params": "{} → the current theme's four colour variants and which is applied",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: the current theme's four colour variants and which is applied",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "design.fonts",
+    "journal": true,
+    "label": "Fonts",
+    "params": "{} opens Create New Theme Fonts | {name} | {major, minor}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {} opens Create New Theme Fonts | {name} | {major, minor}",
+      "properties": {
+        "major": {},
+        "minor": {},
+        "name": {}
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.effects",
+    "journal": true,
+    "label": "Effects",
+    "params": "{name} (see design.themes)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "see design.themes",
+      "properties": {
+        "name": {}
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.background",
+    "journal": true,
+    "label": "Format Background",
+    "params": "{color? | gradient? | picture?: base64 | pattern? | style?: 1..12 | reset?, all?: bool, index?, transparency?: 0..1, pictureProps?: {tile?, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0.01..10, align?, mirror?, stretch?: [l,t,r,b], rotateWithShape?}, copy?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "copy": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "gradient": {
+          "description": "optional"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "pattern": {
+          "description": "optional"
+        },
+        "picture": {
+          "description": "base64"
+        },
+        "pictureProps": {
+          "description": "{tile?, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0.01..10, align?, mirror?, stretch?: [l,t,r,b], rotateWithShape?}"
+        },
+        "reset": {
+          "description": "optional"
+        },
+        "style": {
+          "description": "1..12"
+        },
+        "transparency": {
+          "description": "0..1"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.hideBackgroundGraphics",
+    "journal": true,
+    "label": "Hide Background Graphics",
+    "params": "{hide?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "hide": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.slideSize",
+    "journal": true,
+    "label": "Slide Size",
+    "params": "{preset: widescreen|standard|…, orientation?: portrait|landscape, scale?: maximize|ensureFit|none} | {w: pt, h: pt, orientation?: portrait|landscape, scale?: maximize|ensureFit|none}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {preset: widescreen|standard|…, orientation?: portrait|landscape, scale?: maximize|ensureFit|none} | {w: pt, h: pt, orientation?: portrait|landscape, scale?: maximize|ensureFit|none}",
+      "properties": {
+        "h": {
+          "description": "pt"
+        },
+        "orientation": {
+          "description": "portrait|landscape"
+        },
+        "preset": {
+          "description": "widescreen|standard|…"
+        },
+        "scale": {
+          "description": "maximize|ensureFit|none"
+        },
+        "w": {
+          "description": "pt"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.headerFooter",
+    "journal": true,
+    "label": "Header and Footer…",
+    "params": "{date?: bool, dateText?: fixed text, slideNumber?: bool, footer?: bool, footerText?, hideOnTitle?: bool, all?: bool (default true)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "description": "bool (default true)",
+          "type": "boolean"
+        },
+        "date": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "dateText": {
+          "description": "fixed text"
+        },
+        "footer": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "footerText": {
+          "description": "optional"
+        },
+        "hideOnTitle": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "slideNumber": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "view.slideMaster",
+    "journal": true,
+    "label": "Slide Master",
+    "params": "{master?: index, layout?: index}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "layout": {
+          "description": "index",
+          "type": "integer"
+        },
+        "master": {
+          "description": "index",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "view.handoutMaster",
+    "journal": true,
+    "label": "Handout Master",
+    "params": "{} (creates the handout master with header, date, footer and page number if the deck has none)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "creates the handout master with header, date, footer and page number if the deck has none",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "handout.placeholders",
+    "journal": true,
+    "label": "Handout Placeholders",
+    "params": "{header?: bool, date?: bool, footer?: bool, pageNumber?: bool} (show or hide each)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "show or hide each",
+      "properties": {
+        "date": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "footer": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "header": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "pageNumber": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "view.notesMaster",
+    "journal": true,
+    "label": "Notes Master",
+    "params": "{} (creates the notes master with header, date, slide image, notes body, footer and page number if the deck has none)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "creates the notes master with header, date, slide image, notes body, footer and page number if the deck has none",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "notes.placeholders",
+    "journal": true,
+    "label": "Notes Placeholders",
+    "params": "{header?, date?, slideImage?, body?, footer?, pageNumber?: bool} (show or hide each)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "show or hide each",
+      "properties": {
+        "body": {
+          "description": "optional"
+        },
+        "date": {
+          "description": "optional"
+        },
+        "footer": {
+          "description": "optional"
+        },
+        "header": {
+          "description": "optional"
+        },
+        "pageNumber": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "slideImage": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "view.closeMaster",
+    "journal": true,
+    "label": "Close Master View",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "master.insertLayout",
+    "journal": true,
+    "label": "Insert Layout",
+    "params": "{name?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "master.renameLayout",
+    "journal": true,
+    "label": "Rename Layout",
+    "params": "{name, master?, layout?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "layout": {
+          "description": "optional"
+        },
+        "master": {
+          "description": "optional"
+        },
+        "name": {}
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "master.deleteLayout",
+    "journal": true,
+    "label": "Delete Layout",
+    "params": "{master?, layout?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "layout": {
+          "description": "optional"
+        },
+        "master": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "master.insertPlaceholder",
+    "journal": true,
+    "label": "Insert Placeholder",
+    "params": "{kind: content|text|picture|chart|table|media, rect?: [x,y,w,h]}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "content|text|picture|chart|table|media"
+        },
+        "rect": {
+          "description": "[x,y,w,h]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "master.preserve",
+    "journal": true,
+    "label": "Preserve",
+    "params": "{preserve?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "preserve": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "master.placeholders",
+    "journal": true,
+    "label": "Layout Placeholders",
+    "params": "{title?: bool, footers?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "footers": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "title": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "design.ideas",
+    "journal": false,
+    "label": "Design Ideas",
+    "params": "{slide?} → [{id, label}] ideas for the slide",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{id, label}] ideas for the slide",
+      "properties": {
+        "slide": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "design.applyIdea",
+    "journal": true,
+    "label": "Apply Design Idea",
+    "params": "{id, slide?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {},
+        "slide": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "transition.set",
+    "journal": true,
+    "label": "Transition",
+    "params": "{kind: none|morph|fade|push|wipe|split|reveal|cut|randomBar|shape|uncover|cover|flash|… (transition.list), option?, duration?: ms, index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "duration": {
+          "description": "ms"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "none|morph|fade|push|wipe|split|reveal|cut|randomBar|shape|uncover|cover|flash|… (transition.list)"
+        },
+        "option": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "transition.options",
+    "journal": true,
+    "label": "Effect Options",
+    "params": "{option, index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "option": {}
+      },
+      "required": [
+        "option"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "transition.timing",
+    "journal": true,
+    "label": "Timing",
+    "params": "{duration?: ms, onClick?: bool, after?: ms | null, index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "description": "ms"
+        },
+        "duration": {
+          "description": "ms"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "null": {},
+        "onClick": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "transition.sound",
+    "journal": true,
+    "label": "Sound",
+    "params": "{builtin?: chime|click|camera|whoosh|drumRoll|laser | path? | data: base64, name?, none?: true (No Sound), stopPrevious?: true, loop?: bool (Loop Until Next Sound), index?} — the sound plays as the slide comes in",
+    "schema": {
+      "additionalProperties": false,
+      "description": "the sound plays as the slide comes in",
+      "properties": {
+        "builtin": {
+          "description": "chime|click|camera|whoosh|drumRoll|laser"
+        },
+        "data": {
+          "description": "base64"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "loop": {
+          "description": "bool (Loop Until Next Sound)",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "none": {
+          "description": "true (No Sound)"
+        },
+        "path": {
+          "description": "optional"
+        },
+        "stopPrevious": {
+          "description": "true"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "transition.applyAll",
+    "journal": true,
+    "label": "Apply To All",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "transition.list",
+    "journal": false,
+    "label": "Transition Gallery",
+    "params": "{} → [{id, label, category, duration, options}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{id, label, category, duration, options}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "animation.set",
+    "journal": true,
+    "label": "Animation Styles",
+    "params": "{effect: fade|fly|zoom|wipe|appear|spin|pulse|fadeOut|lines|… (animation.list), class?: entrance|emphasis|exit|path, option?, ids?} — replaces the shapes' animations",
+    "schema": {
+      "additionalProperties": false,
+      "description": "replaces the shapes' animations",
+      "properties": {
+        "class": {
+          "description": "entrance|emphasis|exit|path"
+        },
+        "effect": {
+          "description": "fade|fly|zoom|wipe|appear|spin|pulse|fadeOut|lines|… (animation.list)"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "option": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "effect"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.add",
+    "journal": true,
+    "label": "Add Animation",
+    "params": "{effect, class?, option?, start?: onClick|withPrevious|afterPrevious, duration?: ms, delay?: ms, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "class": {
+          "description": "optional"
+        },
+        "delay": {
+          "description": "ms"
+        },
+        "duration": {
+          "description": "ms"
+        },
+        "effect": {},
+        "ids": {
+          "description": "optional"
+        },
+        "option": {
+          "description": "optional"
+        },
+        "start": {
+          "description": "onClick|withPrevious|afterPrevious"
+        }
+      },
+      "required": [
+        "effect"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.remove",
+    "journal": true,
+    "label": "Remove Animation",
+    "params": "{index} | {ids? (all of the shapes' animations)}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {index} | {ids? (all of the shapes' animations)}",
+      "properties": {
+        "ids": {
+          "description": "(all of the shapes' animations)"
+        },
+        "index": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.move",
+    "journal": true,
+    "label": "Reorder Animation",
+    "params": "{index, to}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "to": {}
+      },
+      "required": [
+        "index",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.timing",
+    "journal": true,
+    "label": "Timing",
+    "params": "{index? (else selected shapes), start?: onClick|withPrevious|afterPrevious, duration?: ms, delay?: ms, repeat?: n, rewind?: bool, trigger?: shape id | null}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "delay": {
+          "description": "ms"
+        },
+        "duration": {
+          "description": "ms"
+        },
+        "index": {
+          "description": "(else selected shapes)"
+        },
+        "null": {},
+        "repeat": {
+          "description": "n"
+        },
+        "rewind": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "start": {
+          "description": "onClick|withPrevious|afterPrevious"
+        },
+        "trigger": {
+          "description": "shape id"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.options",
+    "journal": true,
+    "label": "Effect Options",
+    "params": "{option?, textBuild?: asOne|byParagraph|byWord|byLetter, index?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "option": {
+          "description": "optional"
+        },
+        "textBuild": {
+          "description": "asOne|byParagraph|byWord|byLetter"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.clear",
+    "journal": true,
+    "label": "Remove All Animations",
+    "params": "{index?: slide}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "description": "slide"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.painter",
+    "journal": true,
+    "label": "Animation Painter",
+    "params": "{sticky?: bool, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "sticky": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "animation.painterApply",
+    "journal": true,
+    "label": "Apply Animation",
+    "params": "{ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "animation.list",
+    "journal": false,
+    "label": "Animation Gallery",
+    "params": "{} → [{id, label, class, options}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{id, label, class, options}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "animation.get",
+    "journal": false,
+    "label": "Animations on Slide",
+    "params": "{slide?} → [animation]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [animation]",
+      "properties": {
+        "slide": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "table.insertRowAbove",
+    "journal": true,
+    "label": "Insert Above",
+    "params": "{row?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "row": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.insertRowBelow",
+    "journal": true,
+    "label": "Insert Below",
+    "params": "{row?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "row": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.insertColumnLeft",
+    "journal": true,
+    "label": "Insert Left",
+    "params": "{col?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "col": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.insertColumnRight",
+    "journal": true,
+    "label": "Insert Right",
+    "params": "{col?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "col": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.deleteRow",
+    "journal": true,
+    "label": "Delete Rows",
+    "params": "{row?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "row": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.deleteColumn",
+    "journal": true,
+    "label": "Delete Columns",
+    "params": "{col?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "col": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.merge",
+    "journal": true,
+    "label": "Merge Cells",
+    "params": "{from: [r, c], to: [r, c], id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "description": "[r, c]",
+          "type": "array"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "to": {
+          "description": "[r, c]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.split",
+    "journal": true,
+    "label": "Split Cells",
+    "params": "{cell?: [r, c] (else the edited cell), id?} | {row?: index, col?: index, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {cell?: [r, c] (else the edited cell), id?} | {row?: index, col?: index, id?}",
+      "properties": {
+        "cell": {
+          "description": "[r, c] (else the edited cell)",
+          "type": "array"
+        },
+        "col": {
+          "description": "index",
+          "type": "integer"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "row": {
+          "description": "index",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.style",
+    "journal": true,
+    "label": "Table Styles",
+    "params": "{style: medium2-accent1|light1-accent2|dark1-tx1|grid|none…, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "style": {
+          "description": "medium2-accent1|light1-accent2|dark1-tx1|grid|none…"
+        }
+      },
+      "required": [
+        "style"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.options",
+    "journal": true,
+    "label": "Table Style Options",
+    "params": "{headerRow?: bool, totalRow?: bool, bandedRows?: bool, firstColumn?: bool, lastColumn?: bool, bandedColumns?: bool, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "bandedColumns": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "bandedRows": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "firstColumn": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "headerRow": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "lastColumn": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "totalRow": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.cellFill",
+    "journal": true,
+    "label": "Shading",
+    "params": "{color? | none?, cells?: [[r,c],…] (default: selected cells or all), id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "cells": {
+          "description": "[[r,c],…] (default: selected cells or all)",
+          "type": "array"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "none": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.borders",
+    "journal": true,
+    "label": "Borders",
+    "params": "{which: all|outside|inside|insideH|insideV|top|bottom|left|right|diagDown|diagUp|none, color?, width?: pt, dash?: solid|dash|dot…, cells?: [[r,c],…] (default: selected cells or all), id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "cells": {
+          "description": "[[r,c],…] (default: selected cells or all)",
+          "type": "array"
+        },
+        "color": {
+          "description": "optional"
+        },
+        "dash": {
+          "description": "solid|dash|dot…"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "which": {
+          "description": "all|outside|inside|insideH|insideV|top|bottom|left|right|diagDown|diagUp|none"
+        },
+        "width": {
+          "description": "pt"
+        }
+      },
+      "required": [
+        "which"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.cellMargins",
+    "journal": true,
+    "label": "Cell Margins",
+    "params": "{preset?: normal|none|narrow|wide, left?, right?, top?, bottom?: pt, cells?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "bottom": {
+          "description": "pt"
+        },
+        "cells": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "left": {
+          "description": "optional"
+        },
+        "preset": {
+          "description": "normal|none|narrow|wide"
+        },
+        "right": {
+          "description": "optional"
+        },
+        "top": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.cellAlign",
+    "journal": true,
+    "label": "Align Cell Text",
+    "params": "{anchor: top|middle|bottom, cells?, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "description": "top|middle|bottom"
+        },
+        "cells": {
+          "description": "optional"
+        },
+        "id": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "anchor"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.distributeRows",
+    "journal": true,
+    "label": "Distribute Rows",
+    "params": "{id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.distributeColumns",
+    "journal": true,
+    "label": "Distribute Columns",
+    "params": "{id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.columnWidth",
+    "journal": true,
+    "label": "Width",
+    "params": "{col, width: pt, keepTotal?: bool (the next column absorbs the change), id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "col": {},
+        "id": {
+          "description": "optional"
+        },
+        "keepTotal": {
+          "description": "bool (the next column absorbs the change)",
+          "type": "boolean"
+        },
+        "width": {
+          "description": "pt"
+        }
+      },
+      "required": [
+        "col",
+        "width"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.rowHeight",
+    "journal": true,
+    "label": "Height",
+    "params": "{row, height: pt, id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "description": "pt"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "row": {}
+      },
+      "required": [
+        "row",
+        "height"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.drawLine",
+    "journal": true,
+    "label": "Draw Table",
+    "params": "{from: [x, y], to: [x, y] slide pt, id?: table (default: the one under `from`)} splits the cells the line crosses",
+    "schema": {
+      "additionalProperties": false,
+      "description": "splits the cells the line crosses",
+      "properties": {
+        "from": {
+          "description": "[x, y]",
+          "type": "array"
+        },
+        "id": {
+          "description": "table (default: the one under `from`)"
+        },
+        "to": {
+          "description": "[x, y] slide pt",
+          "type": "array"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.eraseLine",
+    "journal": true,
+    "label": "Table Eraser",
+    "params": "{at: [x, y] slide pt, id?, tol?: pt (default 6)} merges the two cells on either side of the nearest border",
+    "schema": {
+      "additionalProperties": false,
+      "description": "merges the two cells on either side of the nearest border",
+      "properties": {
+        "at": {
+          "description": "[x, y] slide pt",
+          "type": "array"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "tol": {
+          "description": "pt (default 6)"
+        }
+      },
+      "required": [
+        "at"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "table.selectCells",
+    "journal": true,
+    "label": "Select Cells",
+    "params": "{from: [r,c], to: [r,c], id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "description": "[r,c]",
+          "type": "array"
+        },
+        "id": {
+          "description": "optional"
+        },
+        "to": {
+          "description": "[r,c]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.find",
+    "journal": false,
+    "label": "Find",
+    "params": "{text, matchCase?: bool, wholeWords?: bool} → [{slide, shape (null = notes), cell?: [row, col], para, start, end}] (char offsets in the paragraph)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{slide, shape (null = notes), cell?: [row, col], para, start, end}] (char offsets in the paragraph)",
+      "properties": {
+        "matchCase": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "text": {},
+        "wholeWords": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "text.replace",
+    "journal": true,
+    "label": "Replace",
+    "params": "{text, with, matchCase?, wholeWords?, at?: a text.find match (replace just that one; default: replace all)} → {replaced}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {replaced}",
+      "properties": {
+        "at": {
+          "description": "a text.find match (replace just that one; default: replace all)"
+        },
+        "matchCase": {
+          "description": "optional"
+        },
+        "text": {},
+        "wholeWords": {
+          "description": "optional"
+        },
+        "with": {}
+      },
+      "required": [
+        "text",
+        "with"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "comment.add",
+    "journal": true,
+    "label": "New Comment",
+    "params": "{text, x?, y?, id?: shape}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "shape"
+        },
+        "text": {},
+        "x": {
+          "description": "optional"
+        },
+        "y": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "comment.reply",
+    "journal": true,
+    "label": "Reply",
+    "params": "{index, text}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "text": {}
+      },
+      "required": [
+        "index",
+        "text"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "comment.delete",
+    "journal": true,
+    "label": "Delete Comment",
+    "params": "{index? | all?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "comment.resolve",
+    "journal": true,
+    "label": "Resolve Thread",
+    "params": "{index, resolved?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "resolved": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "comment.list",
+    "journal": false,
+    "label": "Comments",
+    "params": "{slide?} → comments",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: comments",
+      "properties": {
+        "slide": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "comment.next",
+    "journal": true,
+    "label": "Next Comment",
+    "params": "{slide?, index?} → {slide, index, text}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {slide, index, text}",
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "slide": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "comment.prev",
+    "journal": true,
+    "label": "Previous Comment",
+    "params": "{slide?, index?} → {slide, index, text}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {slide, index, text}",
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        },
+        "slide": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.accessibility",
+    "journal": false,
+    "label": "Check Accessibility",
+    "params": "{} → [{slide, shape, issue}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{slide, shape, issue}]",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.spelling",
+    "journal": false,
+    "label": "Spelling",
+    "params": "{lang?, ignore?:[word]} → [{slide, shape?, row?, col?, notes?, para, start, end, word, lang, suggestions}] (shapes, table cells and notes; repeated words as {repeated, deleteFrom}; runs marked noProof skipped; each run in its own language, lang? for runs without one; Hunspell dictionaries installed on the system, else a built-in list of common misspellings)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{slide, shape?, row?, col?, notes?, para, start, end, word, lang, suggestions}] (shapes, table cells and notes; repeated words as {repeated, deleteFrom}; runs marked noProof skipped; each run in its own language, lang? for runs without one; Hunspell dictionaries installed on the system, else a built-in list of common misspellings)",
+      "properties": {
+        "ignore": {
+          "description": "[word]",
+          "type": "array"
+        },
+        "lang": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.spellingChange",
+    "journal": true,
+    "label": "Change Spelling",
+    "params": "{shape, word, to, all?, para?, start?, row?, col?} → {changed} (replace the whole word in that shape's text, the one at para/start, or in every shape with all)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {changed} (replace the whole word in that shape's text, the one at para/start, or in every shape with all)",
+      "properties": {
+        "all": {
+          "description": "optional"
+        },
+        "col": {
+          "description": "optional"
+        },
+        "para": {
+          "description": "optional"
+        },
+        "row": {
+          "description": "optional"
+        },
+        "shape": {},
+        "start": {
+          "description": "optional"
+        },
+        "to": {},
+        "word": {}
+      },
+      "required": [
+        "shape",
+        "word",
+        "to"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "review.addToDictionary",
+    "journal": true,
+    "label": "Add to Dictionary",
+    "params": "{word} → {word, file} (append to the user dictionary file; not an undo step)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {word, file} (append to the user dictionary file; not an undo step)",
+      "properties": {
+        "word": {}
+      },
+      "required": [
+        "word"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.dictionary",
+    "journal": false,
+    "label": "Spelling Dictionary",
+    "params": "{lang?} → {lang, available, found, folders} (whether review.spelling has a dictionary, and which file)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {lang, available, found, folders} (whether review.spelling has a dictionary, and which file)",
+      "properties": {
+        "lang": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.thesaurus",
+    "journal": false,
+    "label": "Thesaurus",
+    "params": "{word? (default: the selected word, or the word at the caret)} → {word, senses: [{word, synonyms}]}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {word, senses: [{word, synonyms}]}",
+      "properties": {
+        "word": {
+          "description": "(default: the selected word, or the word at the caret)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.replaceWord",
+    "journal": true,
+    "label": "Insert Synonym",
+    "params": "{with}: replace the selected word (or the word at the caret) while editing text",
+    "schema": {
+      "additionalProperties": false,
+      "description": ": replace the selected word (or the word at the caret) while editing text",
+      "properties": {
+        "with": {}
+      },
+      "required": [
+        "with"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "review.compare",
+    "journal": true,
+    "label": "Compare",
+    "params": "{path} | {name, data: base64} — compare with a revised copy → {name, changes}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {path} | {name, data: base64} — compare with a revised copy. compare with a revised copy. Returns: {name, changes}",
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {},
+        "path": {}
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.revisions",
+    "journal": false,
+    "label": "Revisions",
+    "params": "{} → {name, changes: [{kind: inserted|deleted|changed, slide, revised, details}]}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {name, changes: [{kind: inserted|deleted|changed, slide, revised, details}]}",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "review.accept",
+    "journal": true,
+    "label": "Accept Revision",
+    "params": "{index} | {all: true}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {index} | {all: true}",
+      "properties": {
+        "all": {
+          "description": "true"
+        },
+        "index": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "review.endCompare",
+    "journal": true,
+    "label": "End Review",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "show.fromStart",
+    "journal": true,
+    "label": "Play from Start",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "show.fromCurrent",
+    "journal": true,
+    "label": "Play from Current Slide",
+    "params": "{}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "show.setup",
+    "journal": true,
+    "label": "Set Up Slide Show…",
+    "params": "{type?: speaker|browsed|kiosk, loop?: bool, noNarration?, noAnimation?, useTimings?, showMediaControls?, from?, to?, custom?: name}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "custom": {
+          "description": "name",
+          "type": "string"
+        },
+        "from": {
+          "description": "optional"
+        },
+        "loop": {
+          "description": "bool",
+          "type": "boolean"
+        },
+        "noAnimation": {
+          "description": "optional"
+        },
+        "noNarration": {
+          "description": "optional"
+        },
+        "showMediaControls": {
+          "description": "optional"
+        },
+        "to": {
+          "description": "optional"
+        },
+        "type": {
+          "description": "speaker|browsed|kiosk"
+        },
+        "useTimings": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "show.customShow",
+    "journal": true,
+    "label": "Custom Slide Show",
+    "params": "{name, slides: [index]} | {name, delete: true}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {name, slides: [index]} | {name, delete: true}",
+      "properties": {
+        "delete": {
+          "description": "true"
+        },
+        "name": {},
+        "slides": {
+          "description": "[index]",
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "document.inspect",
+    "journal": false,
+    "label": "Inspect Presentation",
+    "params": "{} → slides with titles, layouts, shape counts; selection; size; theme",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: slides with titles, layouts, shape counts; selection; size; theme",
+      "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.inspect",
+    "journal": false,
+    "label": "Inspect Slide",
+    "params": "{index?} → the slide's shapes with ids, kinds, boxes, text, fills, animations, transition, notes (text, and notesBody with its formatting)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: the slide's shapes with ids, kinds, boxes, text, fills, animations, transition, notes (text, and notesBody with its formatting)",
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "shape.inspect",
+    "journal": false,
+    "label": "Inspect Shape",
+    "params": "{id} → full shape JSON plus its effective box",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: full shape JSON plus its effective box",
+      "properties": {
+        "id": {}
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "commands.list",
+    "journal": false,
+    "label": "List Commands",
+    "params": "{filter?: substring} → [{id, label, params, enabled}]",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: [{id, label, params, enabled}]",
+      "properties": {
+        "filter": {
+          "description": "substring"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.play",
+    "journal": true,
+    "label": "Play",
+    "params": "{id?, from?: ms}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "description": "ms"
+        },
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.pause",
+    "journal": true,
+    "label": "Pause",
+    "params": "{id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.toggle",
+    "journal": true,
+    "label": "Play/Pause",
+    "params": "{id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.stop",
+    "journal": true,
+    "label": "Stop",
+    "params": "{id?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.seek",
+    "journal": true,
+    "label": "Seek",
+    "params": "{id?, ms}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "ms": {}
+      },
+      "required": [
+        "ms"
+      ],
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.info",
+    "journal": false,
+    "label": "Media Info",
+    "params": "{id?} → {id, name, contentType, bytes, durationMs, video, width, height, probe: {container, audio?, video?}, options, status?}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id, name, contentType, bytes, durationMs, video, width, height, probe: {container, audio?, video?}, options, status?}",
+      "properties": {
+        "id": {
+          "description": "optional"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "media.posterFrame",
+    "journal": true,
+    "label": "Poster Frame",
+    "params": "{id?, ms?: frame time (default: current position)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "ms": {
+          "description": "frame time (default: current position)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "media.gifPlay",
+    "journal": true,
+    "label": "Play/Pause GIF",
+    "params": "{id?, play?: bool (default: toggle)} → {id, playing}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {id, playing}",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "play": {
+          "description": "bool (default: toggle)",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "picture.artisticEffect",
+    "journal": true,
+    "label": "Artistic Effects",
+    "params": "{effect: none|artisticBlur|artisticPencilGrayscale|artisticLineDrawing|artisticFilmGrain|artisticCutout|artisticGlowEdges|artisticPhotocopy, ids?}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "effect": {
+          "description": "none|artisticBlur|artisticPencilGrayscale|artisticLineDrawing|artisticFilmGrain|artisticCutout|artisticGlowEdges|artisticPhotocopy"
+        },
+        "ids": {
+          "description": "optional"
+        }
+      },
+      "required": [
+        "effect"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "insert.zoom",
+    "journal": true,
+    "label": "Zoom",
+    "params": "{kind?: slide|section|summary (default slide); slides?: [index] (slide and summary zooms); sections?: [index] (section zoom); returnToZoom?: bool (default: on for section and summary, off for slide)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "slide|section|summary (default slide); slides?: [index] (slide and summary zooms); sections?: [index] (section zoom); returnToZoom?: bool (default: on for section and summary, off for slide)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "picture.compress",
+    "journal": true,
+    "label": "Compress Pictures",
+    "params": "{ppi?: 330|220|150|96 (default 220), deleteCropped?: bool (default true), all?: bool (every picture in the presentation; default the selected pictures), ids?} → {pictures, before, after}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {pictures, before, after}",
+      "properties": {
+        "all": {
+          "description": "bool (every picture in the presentation; default the selected pictures)",
+          "type": "boolean"
+        },
+        "deleteCropped": {
+          "description": "bool (default true)",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "optional"
+        },
+        "ppi": {
+          "description": "330|220|150|96 (default 220)"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  }
+]

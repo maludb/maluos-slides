@@ -1,0 +1,17 @@
+[package]
+name = "maluos-slides-assist"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "MaluOS Slides assistant: the tool table shared with the MCP server, the command catalog and its schemas, tool execution through engine commands"
+
+[lints]
+workspace = true
+
+[dependencies]
+maluos-slides-engine = { workspace = true }
+maluos-slides-mcp = { workspace = true }
+maluos-llm = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }

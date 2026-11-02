@@ -63,6 +63,9 @@ pub const TABLE: &[(&str, Class)] = &[
     ("maluos-llm", Class::Layer(5)),
     ("ui-egui", Class::Layer(6)),
     ("mcp", Class::Layer(6)),
+    // MaluOS: the assistant reuses the MCP tool table (one table drives both, D9), so it sits
+    // with `mcp` at L6; `ui-egui` hosts its pane (step 3.6). No UI crate below it.
+    ("assist", Class::Layer(6)),
     ("testkit", Class::Testkit),
     // L7 apps and tooling
     ("maluos-slides", Class::Exempt),
@@ -76,7 +79,7 @@ pub const TABLE: &[(&str, Class)] = &[
 pub const DEV_EXCEPTIONS: &[(&str, &str)] = &[("pptx", "engine")];
 
 /// Explicit orderings *within* a layer (earlier may be used by later).
-pub const INTRA_LAYER_ORDER: &[&[&str]] = &[];
+pub const INTRA_LAYER_ORDER: &[&[&str]] = &[&["mcp", "assist", "ui-egui"]];
 
 fn intra_layer_allowed(from: &str, to: &str) -> bool {
     let (from, to) = (short_name(from), short_name(to));
