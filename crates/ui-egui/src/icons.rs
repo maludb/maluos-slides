@@ -155,6 +155,8 @@ icons! {
     SlideSize => "slide-size",
     FormatBackground => "format-background",
     DesignIdeas => "design-ideas",
+    /// MaluOS: the assistant ("Ask Malu"): a four-point spark with a smaller one.
+    AskMalu => "ask-malu",
     // Transitions / animations
     Preview => "preview",
     EffectOptions => "effect-options",
@@ -1595,6 +1597,10 @@ fn draw(p: &Pen<'_>, icon: Icon) {
             p.rline(&[(10.0, 17.0), (2.0, 17.0), (2.0, 4.0), (20.0, 4.0), (20.0, 9.0)], 1.5, K);
             p.rect(4.5, 6.5, 13.5, 12.5, 0.6, t(PU), N);
             p.brush((12.0, 20.5), -45.0, 13.0, Y);
+        }
+        I::AskMalu => {
+            p.shape(&[(10.0, 2.5), (12.2, 9.8), (19.5, 12.0), (12.2, 14.2), (10.0, 21.5), (7.8, 14.2), (0.5, 12.0), (7.8, 9.8)], Y.a(0.9), K);
+            p.shape(&[(19.0, 14.5), (20.1, 17.9), (23.5, 19.0), (20.1, 20.1), (19.0, 23.5), (17.9, 20.1), (14.5, 19.0), (17.9, 17.9)], B, N);
         }
         I::DesignIdeas => {
             p.circle((12.0, 9.5), 6.0, Y.a(0.5), K);

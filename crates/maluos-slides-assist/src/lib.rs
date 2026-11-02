@@ -31,7 +31,7 @@ pub mod exec;
 pub mod policy;
 pub mod tools;
 
-pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, Stop, ToolCall, TurnEvent, TurnReport};
+pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, ModelCall, Step, Stop, ToolCall, Turn, TurnEvent, TurnReport, summarize};
 pub use catalog::{Catalog, CommandEntry, params_schema};
 pub use context::{Budget, Context, ContextCache};
 pub use exec::{MAX_RESULT_BYTES, ToolOutcome, run_tool};

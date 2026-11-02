@@ -18,6 +18,9 @@ maluos-slides-render = { workspace = true }
 maluos-slides-anim = { workspace = true }
 maluos-slides-engine = { workspace = true }
 maluos-slides-media = { workspace = true }
+# MaluOS: the assistant pane (docs/maluos-slides/plan.md step 3.6)
+maluos-slides-assist = { workspace = true }
+maluos-llm = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

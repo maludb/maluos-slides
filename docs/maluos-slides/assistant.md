@@ -122,6 +122,48 @@ turn. The mode's one-line instruction is in the system text. `TurnReport` counts
 `declined` and `refused`, and lists `touched_slides` (added or changed, by content, not pointer)
 and `removed_slides`, which the autopilot answer shows.
 
+## The pane (step 3.6)
+
+`crates/ui-egui/src/malu_assistant.rs` is the fork's pane; the upstream crate carries only fenced
+hooks (a `mod` line, the `malu` field on `SlideApp`, two UI commands, a shortcut row, one
+title-bar button, one icon, two lines in the pane dispatcher, one poll call in the frame loop).
+
+- **Opening it**: the spark button in the title bar next to Comments, `Ctrl+Shift+A`, or the
+  command `assist.ask {text?, send?, toggle?}`; `view.pane {pane: "assistant"}` opens it too.
+  The pane is titled "Malu".
+- **Settings row**: provider (Anthropic, OpenAI, Ollama), model (a list of suggestions plus a
+  text field), mode (Answer only, Confirm changes, Autopilot). A status line says where the key
+  comes from (`key from ANTHROPIC_API_KEY`) or that there is none; Ollama needs no key
+  (`MALUOS_SLIDES_OLLAMA_URL` overrides the address). The first run picks the first provider
+  with credentials, else Ollama. Provider, model and mode are saved in `assistant.json` beside
+  `ui.json`; keys never are.
+- **A turn**: the request joins the transcript; the model call runs on a worker thread
+  (`ModelCall::run`, streaming text and reasoning back through a channel); every tool call runs
+  on the UI thread through `SlideApp::run`, so it is an ordinary command with the app's undo,
+  status line and repaint. The pane drives `Assistant::begin` / `on_completion` / `on_verdict`
+  from the frame loop; nothing blocks the window.
+- **Plans**: in confirm mode (and for destructive commands in autopilot) a card shows "Malu wants
+  to:" with each call and the engine commands behind it; Approve, Decline and Stop answer it. The
+  command `assist.plan {verdict: approve|decline|cancel, reason?}` answers it from a script.
+- **The answer**: the final text, "Show reasoning" when the model reasoned, one line per tool call
+  (✓ or ✗ and a compact result), "Changed slides …", an **Undo** button that reverts the whole
+  turn while it is the top of the history, and the token counts. Stop ends a turn; Clear forgets
+  the conversation (the deck stays).
+- The app host offers the headless tool table (`render_slide`, not `screenshot`, which needs the
+  async frame path) and answers `ui.pointer`, `ui.key`, `ui.text` and `ui.tool.select` through the
+  session like the headless backend does.
+
+Screenshots (sample deck, Ollama `glm-5.3-flash:cloud`, confirm mode) in
+[`screenshots/`](screenshots/): the pane opened with a request typed
+(`3.6-pane-open.png`), the plan waiting (`3.6-pane-plan.png`), the turn done with the new
+slide, the tool line, Changed slide 9 and Undo (`3.6-pane-done.png`).
+
+Tests (`cargo nextest run -p maluos-slides-ui-egui malu_assistant`, 5 tests on the egui kittest
+harness with `MockClient`): the command and the shortcut open the pane with the box focused; an
+autopilot turn adds a slide, the Undo button reverts it and a second turn continues the
+conversation; confirm mode shows the plan and Approve applies it; Decline keeps the deck and Stop
+ends the turn as cancelled; a model error is shown and the pane recovers.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -152,3 +194,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Step 3.2: `Context`, `Budget`, `ContextCache`, the sample-deck snapshot, 5 more tests |
 | 2026-11-02 | major | Step 3.4: `Assistant::ask`, `Host`, `Limits`, `TurnEvent`, `TurnReport`, one undo entry per turn, `examples/ask.rs`, 8 more tests |
 | 2026-11-02 | major | Step 3.5: `Policy`, `Mode`, `Plan`, `Confirm`, destructive lists, touched slides, `--mode`/`--yes` on the example, 6 more tests |
+| 2026-11-02 | major | Step 3.6: the loop as a step machine (`Turn`, `Step`, `ModelCall`), the pane in `ui-egui`, `assist.ask` / `assist.plan`, screenshots, 5 pane tests |

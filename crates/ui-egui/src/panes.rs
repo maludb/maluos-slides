@@ -31,6 +31,8 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
                 "smartart" => "Text Pane",
                 "thesaurus" => "Thesaurus",
                 "revisions" => "Revisions",
+                // MaluOS: the assistant pane.
+                crate::malu_assistant::PANE => "Malu",
                 _ => "Pane",
             };
             ui.horizontal(|ui| {
@@ -57,6 +59,8 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
                 "smartart" => smartart(app, ui),
                 "thesaurus" => thesaurus(app, ui),
                 "revisions" => revisions(app, ui),
+                // MaluOS: the assistant pane.
+                crate::malu_assistant::PANE => crate::malu_assistant::show(app, ui),
                 _ => {}
             });
         });

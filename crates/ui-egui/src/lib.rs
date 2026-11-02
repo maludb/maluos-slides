@@ -25,6 +25,8 @@ mod preview;
 pub mod qat;
 pub mod ribbon;
 pub mod selpane;
+// MaluOS: the assistant pane (fork code, docs/maluos-slides/plan.md step 3.6).
+pub mod malu_assistant;
 pub mod settings;
 pub mod show;
 pub mod sorter;
@@ -372,7 +374,15 @@ pub const UI_COMMANDS: &[(&str, &str, Option<&str>, &str)] = &[
     ("view.zoom", "Set Zoom", None, "{percent}"),
     ("view.zoomDialog", "Zoom…", None, "{}"),
     ("view.fit", "Fit to Window", None, "{}"),
-    ("view.pane", "Task Pane", None, "{pane: format|animation|selection|comments|designer|background|smartart|null}"),
+    ("view.pane", "Task Pane", None, "{pane: format|animation|selection|comments|designer|background|smartart|assistant|null}"),
+    // MaluOS: the assistant pane.
+    (
+        "assist.ask",
+        "Ask Malu",
+        Some("Cmd+Shift+A"),
+        "{text?: a request to put in the box, send?: bool (send it at once), toggle?: bool (close the pane when it is open)}",
+    ),
+    ("assist.plan", "Answer Malu's Plan", None, "{verdict: approve|decline|cancel, reason?}"),
     ("review.thesaurusPane", "Thesaurus", Some("Shift+F7"), "{word?}: open the Thesaurus pane on the selected word"),
     ("view.tab", "Ribbon Tab", None, "{tab}"),
     ("view.collapseRibbon", "Collapse the Ribbon", Some("Cmd+F1"), "{}"),
@@ -502,6 +512,8 @@ pub struct SlideApp {
     pub(crate) thumb_drag: Option<(usize, usize)>,
     /// Selection pane: folded groups, renaming, drag and drop.
     pub selpane: selpane::State,
+    /// MaluOS: the assistant pane ("Ask Malu").
+    pub malu: malu_assistant::State,
     /// Arrange ▸ Align: Align to Slide (`true`) or Align Selected Objects, ticked for that selection.
     pub(crate) align_to: Option<(Vec<maluos_slides_model::ShapeId>, bool)>,
     /// View › New Window: a second window on one presentation. `None` when it is closed.
@@ -582,6 +594,7 @@ impl SlideApp {
             ui_fonts: uifonts::UiFonts::default(),
             thumb_drag: None,
             selpane: selpane::State::default(),
+            malu: malu_assistant::State::from_config(),
             align_to: None,
             doc_window: None,
             sorter: sorter::State::default(),
@@ -943,6 +956,31 @@ impl SlideApp {
                 if let Some(tab) = p.get("tab").and_then(Value::as_str) {
                     self.ui.format_tab = tab.to_string();
                 }
+            }
+            // MaluOS: open the assistant pane with the input focused.
+            "assist.ask" => {
+                if p.get("toggle").and_then(Value::as_bool).unwrap_or(false) && self.ui.pane.as_deref() == Some(malu_assistant::PANE) {
+                    self.ui.pane = None;
+                    return Ok(Value::Null);
+                }
+                self.ui.pane = Some(malu_assistant::PANE.into());
+                self.malu.focus_input = true;
+                if let Some(t) = p.get("text").and_then(Value::as_str) {
+                    self.malu.input = t.to_string();
+                }
+                self.malu.send_requested = p.get("send").and_then(Value::as_bool).unwrap_or(false);
+            }
+            "assist.plan" => {
+                if self.malu.pending_plan.is_none() {
+                    return Err("no plan is waiting".into());
+                }
+                let reason = p.get("reason").and_then(Value::as_str).map(String::from);
+                self.malu.verdict_requested = Some(match p.get("verdict").and_then(Value::as_str).unwrap_or("") {
+                    "approve" | "yes" => maluos_slides_assist::Verdict::Approve,
+                    "decline" | "no" => maluos_slides_assist::Verdict::Decline(reason),
+                    "cancel" | "stop" => maluos_slides_assist::Verdict::Cancel,
+                    other => return Err(format!("unknown verdict `{other}` (approve|decline|cancel)")),
+                });
             }
             "view.tab" => {
                 let tab = p.get("tab").and_then(Value::as_str).ok_or("missing `tab`")?;
@@ -1592,6 +1630,8 @@ impl SlideApp {
         }
         self.last_time = now;
         self.drain_control(ctx);
+        // MaluOS: the assistant's worker thread and turn state.
+        malu_assistant::poll(self, ctx);
         self.poll_opening();
         if self.fonts_ready {
             self.drain_inbox();
@@ -2099,6 +2139,9 @@ mod slide_size_tests;
 mod texture_limit_tests;
 #[cfg(test)]
 mod ui_soak_tests;
+// MaluOS: the assistant pane's tests.
+#[cfg(test)]
+mod malu_assistant_tests;
 
 #[cfg(test)]
 #[path = "datetime_tests.rs"]

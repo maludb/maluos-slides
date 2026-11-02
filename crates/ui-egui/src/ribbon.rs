@@ -101,6 +101,10 @@ pub fn title_bar(app: &mut SlideApp, ui: &mut Ui) {
         if icon_toggle(&mut right, Icon::CommentsBubble, "Comments", has_doc, app.ui.pane.as_deref() == Some("comments")).clicked() {
             let _ = app.run("view.pane", json!({"pane": "comments", "toggle": true}));
         }
+        // MaluOS: the assistant pane (docs/maluos-slides/plan.md step 3.6).
+        if icon_toggle(&mut right, Icon::AskMalu, "Ask Malu (⇧⌘A)", true, app.ui.pane.as_deref() == Some(crate::malu_assistant::PANE)).clicked() {
+            let _ = app.run("assist.ask", json!({"toggle": true}));
+        }
         if icon_toggle(
             &mut right,
             if app.ui.brightness == theme::Brightness::Dark { Icon::Sparkle } else { Icon::Palette },

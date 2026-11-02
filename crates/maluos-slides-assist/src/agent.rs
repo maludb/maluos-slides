@@ -135,6 +135,91 @@ pub enum Stop {
     MaxTokens,
 }
 
+/// One user message in progress, driven by [`Assistant::begin`], [`Assistant::on_completion`]
+/// and [`Assistant::on_verdict`]. Nothing in it touches the deck outside those calls.
+pub struct Turn {
+    request_text: String,
+    table: ToolTable,
+    catalog: Catalog,
+    undo_mark: HistoryMark,
+    journal_mark: usize,
+    slide_mark: Vec<SlideMark>,
+    report: TurnReport,
+    tool_calls: usize,
+    cancelled: bool,
+    pending: Option<Pending>,
+    done: bool,
+}
+
+impl Turn {
+    /// The user's request.
+    pub fn request_text(&self) -> &str {
+        &self.request_text
+    }
+
+    /// What has happened so far (the final report comes with [`Step::Done`]).
+    pub fn report(&self) -> &TurnReport {
+        &self.report
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.done
+    }
+}
+
+struct Pending {
+    uses: Vec<(String, String, Value)>,
+    planned: Vec<(PlannedCall, Decision)>,
+}
+
+/// What the driver does next.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Step {
+    /// Send this to the model (on a worker thread, through [`ModelCall::run`]) and pass the
+    /// result to [`Assistant::on_completion`].
+    Model(Request),
+    /// Show this plan; pass the verdict to [`Assistant::on_verdict`].
+    Confirm(Plan),
+    Done(TurnReport),
+}
+
+/// A model call with the retry policy, owned by whichever thread makes it.
+pub struct ModelCall {
+    client: Arc<dyn LlmClient>,
+    retries: usize,
+    retry_delay: Duration,
+}
+
+impl ModelCall {
+    /// Calls the model, retrying a retryable error (rate limit, overload, transport) with the
+    /// delay doubling and `retry-after` honoured. `on_event` sees the stream.
+    pub fn run(&self, request: &Request, on_event: &mut dyn FnMut(Event) -> Flow) -> Result<Completion, LlmError> {
+        let mut delay = self.retry_delay;
+        let mut attempt = 0;
+        loop {
+            match self.client.complete(request, on_event) {
+                Err(e) if e.retryable() && attempt < self.retries => {
+                    attempt += 1;
+                    log::warn!("model call failed ({e}); retry {attempt} in {delay:?}");
+                    let wait = match &e {
+                        LlmError::RateLimited { retry_after: Some(s), .. } => (*s).max(delay),
+                        _ => delay,
+                    };
+                    if !wait.is_zero() {
+                        std::thread::sleep(wait);
+                    }
+                    delay *= 2;
+                }
+                other => return other,
+            }
+        }
+    }
+
+    pub fn provider(&self) -> &str {
+        self.client.provider()
+    }
+}
+
 /// The assistant: a model, the tools, the conversation.
 pub struct Assistant {
     client: Arc<dyn LlmClient>,
@@ -224,172 +309,230 @@ impl Assistant {
         s
     }
 
-    /// One user message: the loop runs until the model answers or a limit stops it. `confirm`
-    /// answers the plans the mode requires (see [`Policy`]); `on_event` sees the stream and each
-    /// tool call, and returning [`Flow::Stop`] cancels after the current tool call.
+    /// One user message, driven to the end on this thread: model calls block (with retries),
+    /// plans go to `confirm`, the stream and each tool call reach `on_event`, and returning
+    /// [`Flow::Stop`] from it cancels after the current tool call. A pane that must not block
+    /// drives the same machinery itself with [`Assistant::begin`], [`Assistant::on_completion`]
+    /// and [`Assistant::on_verdict`].
     pub fn ask(&mut self, host: &mut dyn Host, text: &str, confirm: &mut dyn Confirm, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> TurnReport {
-        let mut report = TurnReport::default();
-        let table = ToolTable::for_backend(host.has_ui());
-        let catalog = Catalog::from_session(host.session());
-        let undo_mark = history_mark(host.session());
-        let journal_mark = host.session().journal.len();
-        let slide_mark = slide_marks(host.session());
-        self.messages.push(Message::user(text));
-        self.trim_messages();
-
-        let mut tool_calls = 0usize;
-        let mut cancelled = false;
-        'rounds: for round in 1..=self.limits.max_rounds {
-            report.rounds = round;
-            if on_event(TurnEvent::Round(round)) == Flow::Stop {
-                cancelled = true;
-                break;
-            }
-            let system = self.system_text(host);
-            let tools: Vec<_> = self.policy.tools(&table).into_iter().cloned().collect();
-            let mut request = Request::new(self.model.clone(), self.messages.clone())
-                .with_system(system)
-                .with_tools(tools)
-                .with_max_tokens(self.limits.max_output_tokens);
-            if let Some(e) = self.effort {
-                request = request.with_effort(e);
-            }
-            let completion = match self.complete_with_retry(&request, on_event) {
-                Ok(c) => c,
-                Err(LlmError::Cancelled) => {
-                    cancelled = true;
-                    break;
+        let (mut turn, mut step) = self.begin(host, text, on_event);
+        loop {
+            match step {
+                Step::Model(request) => {
+                    let call = self.model_call();
+                    let result = call.run(&request, &mut |e| match e {
+                        Event::TextDelta(t) => on_event(TurnEvent::Text(t)),
+                        Event::ThinkingDelta(t) => on_event(TurnEvent::Thinking(t)),
+                        _ => Flow::Continue,
+                    });
+                    step = self.on_completion(&mut turn, host, result, on_event);
                 }
-                Err(e) => {
-                    report.error = Some(e);
-                    break;
+                Step::Confirm(plan) => {
+                    let verdict = confirm.confirm(&plan);
+                    step = self.on_verdict(&mut turn, host, verdict, on_event);
                 }
-            };
-            add_usage(&mut report.usage, &completion.usage);
-            let uses: Vec<(String, String, Value)> =
-                completion.tool_uses().map(|(id, name, input)| (id.to_string(), name.to_string(), input.clone())).collect();
-            let answer = completion.text();
-            self.messages.push(completion.as_message());
-            match completion.stop_reason {
-                StopReason::Refusal => {
-                    report.answer = answer;
-                    report.stopped = Some(Stop::Refusal);
-                    break;
-                }
-                StopReason::MaxTokens if uses.is_empty() => {
-                    report.answer = answer;
-                    report.stopped = Some(Stop::MaxTokens);
-                    break;
-                }
-                _ if uses.is_empty() => {
-                    report.answer = answer;
-                    break;
-                }
-                _ => {}
-            }
-            // Classify every call first, so the user sees one plan per round.
-            let planned: Vec<(PlannedCall, Decision)> = uses
-                .iter()
-                .map(|(id, name, input)| {
-                    let call = self.policy.classify(&table, &catalog, id, name, input);
-                    let decision = self.policy.decide(call.class);
-                    (call, decision)
-                })
-                .collect();
-            let plan = Plan { calls: planned.iter().filter(|(_, d)| *d == Decision::Confirm).map(|(c, _)| c.clone()).collect() };
-            let verdict = if plan.calls.is_empty() || cancelled {
-                Verdict::Approve
-            } else {
-                report.plans += 1;
-                let v = confirm.confirm(&plan);
-                if v == Verdict::Cancel {
-                    cancelled = true;
-                }
-                v
-            };
-            let mut results = Vec::with_capacity(uses.len());
-            for ((id, name, input), (_, decision)) in uses.into_iter().zip(planned) {
-                let outcome = if cancelled {
-                    ToolOutcome::error_for(&id, &name, "cancelled by the user")
-                } else if let Decision::Refuse(reason) = &decision {
-                    report.refused += 1;
-                    ToolOutcome::error_for(&id, &name, reason.clone())
-                } else if decision == Decision::Confirm && verdict != Verdict::Approve {
-                    report.declined += 1;
-                    let reason = match &verdict {
-                        Verdict::Decline(Some(r)) => format!("the user declined this change: {r}"),
-                        _ => "the user declined this change; do not retry it, ask what they want instead".into(),
-                    };
-                    ToolOutcome::error_for(&id, &name, reason)
-                } else if tool_calls >= self.limits.max_tool_calls {
-                    report.stopped = Some(Stop::ToolCallLimit);
-                    ToolOutcome::error_for(
-                        &id,
-                        &name,
-                        format!("tool call limit of {} reached for this turn; answer with what you have", self.limits.max_tool_calls),
-                    )
-                } else {
-                    tool_calls += 1;
-                    if on_event(TurnEvent::ToolStart { name: name.clone(), input: input.clone() }) == Flow::Stop {
-                        cancelled = true;
-                        ToolOutcome::error_for(&id, &name, "cancelled by the user")
-                    } else {
-                        let o = run_tool(host, &table, &catalog, &id, &name, &input);
-                        if on_event(TurnEvent::ToolDone(o.clone())) == Flow::Stop {
-                            cancelled = true;
-                        }
-                        o
-                    }
-                };
-                report.tool_calls.push(ToolCall { name: name.clone(), input, ok: !outcome.is_error, summary: summary(&outcome.text) });
-                results.push(outcome.block());
-            }
-            self.messages.push(Message::tool_results(results));
-            if cancelled {
-                break 'rounds;
+                Step::Done(report) => return report,
             }
         }
-        if cancelled {
-            report.stopped = Some(Stop::Cancelled);
-            // A dangling tool call would make the next request invalid: answer it.
-            self.close_open_tool_calls();
-        } else if report.answer.is_empty() && report.error.is_none() && report.stopped.is_none() && report.rounds >= self.limits.max_rounds {
-            report.stopped = Some(Stop::RoundLimit);
-        }
-        if report.error.is_some() {
-            self.close_open_tool_calls();
-        }
-        report.commands = host.session().journal.iter().skip(journal_mark).map(|(id, _)| id.clone()).collect();
-        (report.touched_slides, report.removed_slides) = slides_touched(host.session(), &slide_mark);
-        report.undo_label = fold_history(host.session_mut(), undo_mark, text);
-        report
     }
 
-    fn complete_with_retry(&self, request: &Request, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> Result<Completion, LlmError> {
-        let mut delay = self.limits.retry_delay;
-        let mut attempt = 0;
-        loop {
-            let mut forward = |e: Event| match e {
-                Event::TextDelta(t) => on_event(TurnEvent::Text(t)),
-                Event::ThinkingDelta(t) => on_event(TurnEvent::Thinking(t)),
-                _ => Flow::Continue,
-            };
-            match self.client.complete(request, &mut forward) {
-                Err(e) if e.retryable() && attempt < self.limits.retries => {
-                    attempt += 1;
-                    log::warn!("model call failed ({e}); retry {attempt} in {delay:?}");
-                    let wait = match &e {
-                        LlmError::RateLimited { retry_after: Some(s), .. } => (*s).max(delay),
-                        _ => delay,
-                    };
-                    if !wait.is_zero() {
-                        std::thread::sleep(wait);
-                    }
-                    delay *= 2;
-                }
-                other => return other,
-            }
+    /// Starts a turn: the user message joins the conversation and the first request is built.
+    /// The caller sends it (`Step::Model`) and comes back with [`Assistant::on_completion`].
+    pub fn begin(&mut self, host: &mut dyn Host, text: &str, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> (Turn, Step) {
+        let mut turn = Turn {
+            request_text: text.to_string(),
+            table: ToolTable::for_backend(host.has_ui()),
+            catalog: Catalog::from_session(host.session()),
+            undo_mark: history_mark(host.session()),
+            journal_mark: host.session().journal.len(),
+            slide_mark: slide_marks(host.session()),
+            report: TurnReport::default(),
+            tool_calls: 0,
+            cancelled: false,
+            pending: None,
+            done: false,
+        };
+        self.messages.push(Message::user(text));
+        self.trim_messages();
+        let step = self.next_round(&mut turn, host, on_event);
+        (turn, step)
+    }
+
+    /// The model answered (or failed). Runs the tool calls it made, or returns the plan the
+    /// mode wants approved first, or ends the turn.
+    pub fn on_completion(
+        &mut self,
+        turn: &mut Turn,
+        host: &mut dyn Host,
+        result: Result<Completion, LlmError>,
+        on_event: &mut dyn FnMut(TurnEvent) -> Flow,
+    ) -> Step {
+        if turn.done {
+            return Step::Done(turn.report.clone());
         }
+        let completion = match result {
+            Ok(c) => c,
+            Err(LlmError::Cancelled) => {
+                turn.cancelled = true;
+                return self.finish(turn, host);
+            }
+            Err(e) => {
+                turn.report.error = Some(e);
+                return self.finish(turn, host);
+            }
+        };
+        add_usage(&mut turn.report.usage, &completion.usage);
+        let uses: Vec<(String, String, Value)> =
+            completion.tool_uses().map(|(id, name, input)| (id.to_string(), name.to_string(), input.clone())).collect();
+        let answer = completion.text();
+        self.messages.push(completion.as_message());
+        match completion.stop_reason {
+            StopReason::Refusal => {
+                turn.report.answer = answer;
+                turn.report.stopped = Some(Stop::Refusal);
+                return self.finish(turn, host);
+            }
+            StopReason::MaxTokens if uses.is_empty() => {
+                turn.report.answer = answer;
+                turn.report.stopped = Some(Stop::MaxTokens);
+                return self.finish(turn, host);
+            }
+            _ if uses.is_empty() => {
+                turn.report.answer = answer;
+                return self.finish(turn, host);
+            }
+            _ => {}
+        }
+        // Classify every call first, so the user sees one plan per round.
+        let planned: Vec<(PlannedCall, Decision)> = uses
+            .iter()
+            .map(|(id, name, input)| {
+                let call = self.policy.classify(&turn.table, &turn.catalog, id, name, input);
+                let decision = self.policy.decide(call.class);
+                (call, decision)
+            })
+            .collect();
+        let plan = Plan { calls: planned.iter().filter(|(_, d)| *d == Decision::Confirm).map(|(c, _)| c.clone()).collect() };
+        turn.pending = Some(Pending { uses, planned });
+        if plan.calls.is_empty() || turn.cancelled {
+            self.run_pending(turn, host, Verdict::Approve, on_event)
+        } else {
+            turn.report.plans += 1;
+            Step::Confirm(plan)
+        }
+    }
+
+    /// The user answered the plan: the round's calls run (or are declined), and the next
+    /// request is built.
+    pub fn on_verdict(&mut self, turn: &mut Turn, host: &mut dyn Host, verdict: Verdict, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> Step {
+        if turn.done {
+            return Step::Done(turn.report.clone());
+        }
+        if verdict == Verdict::Cancel {
+            turn.cancelled = true;
+        }
+        self.run_pending(turn, host, verdict, on_event)
+    }
+
+    /// Ends the turn now (the user pressed Stop while the model was being called): the next
+    /// completion, if one still arrives, is ignored.
+    pub fn cancel(&mut self, turn: &mut Turn, host: &mut dyn Host) -> Step {
+        if turn.done {
+            return Step::Done(turn.report.clone());
+        }
+        turn.cancelled = true;
+        self.finish(turn, host)
+    }
+
+    /// The model caller a worker thread can own: the client and the retry policy.
+    pub fn model_call(&self) -> ModelCall {
+        ModelCall { client: self.client.clone(), retries: self.limits.retries, retry_delay: self.limits.retry_delay }
+    }
+
+    fn next_round(&mut self, turn: &mut Turn, host: &mut dyn Host, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> Step {
+        if turn.cancelled {
+            return self.finish(turn, host);
+        }
+        if turn.report.rounds >= self.limits.max_rounds {
+            if turn.report.answer.is_empty() && turn.report.error.is_none() && turn.report.stopped.is_none() {
+                turn.report.stopped = Some(Stop::RoundLimit);
+            }
+            return self.finish(turn, host);
+        }
+        turn.report.rounds += 1;
+        if on_event(TurnEvent::Round(turn.report.rounds)) == Flow::Stop {
+            turn.cancelled = true;
+            return self.finish(turn, host);
+        }
+        let system = self.system_text(host);
+        let tools: Vec<_> = self.policy.tools(&turn.table).into_iter().cloned().collect();
+        let mut request = Request::new(self.model.clone(), self.messages.clone())
+            .with_system(system)
+            .with_tools(tools)
+            .with_max_tokens(self.limits.max_output_tokens);
+        if let Some(e) = self.effort {
+            request = request.with_effort(e);
+        }
+        Step::Model(request)
+    }
+
+    fn run_pending(&mut self, turn: &mut Turn, host: &mut dyn Host, verdict: Verdict, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> Step {
+        let Some(Pending { uses, planned }) = turn.pending.take() else { return self.next_round(turn, host, on_event) };
+        let mut results = Vec::with_capacity(uses.len());
+        for ((id, name, input), (_, decision)) in uses.into_iter().zip(planned) {
+            let outcome = if turn.cancelled {
+                ToolOutcome::error_for(&id, &name, "cancelled by the user")
+            } else if let Decision::Refuse(reason) = &decision {
+                turn.report.refused += 1;
+                ToolOutcome::error_for(&id, &name, reason.clone())
+            } else if decision == Decision::Confirm && verdict != Verdict::Approve {
+                turn.report.declined += 1;
+                let reason = match &verdict {
+                    Verdict::Decline(Some(r)) => format!("the user declined this change: {r}"),
+                    _ => "the user declined this change; do not retry it, ask what they want instead".into(),
+                };
+                ToolOutcome::error_for(&id, &name, reason)
+            } else if turn.tool_calls >= self.limits.max_tool_calls {
+                turn.report.stopped = Some(Stop::ToolCallLimit);
+                ToolOutcome::error_for(
+                    &id,
+                    &name,
+                    format!("tool call limit of {} reached for this turn; answer with what you have", self.limits.max_tool_calls),
+                )
+            } else {
+                turn.tool_calls += 1;
+                if on_event(TurnEvent::ToolStart { name: name.clone(), input: input.clone() }) == Flow::Stop {
+                    turn.cancelled = true;
+                    ToolOutcome::error_for(&id, &name, "cancelled by the user")
+                } else {
+                    let o = run_tool(host, &turn.table, &turn.catalog, &id, &name, &input);
+                    if on_event(TurnEvent::ToolDone(o.clone())) == Flow::Stop {
+                        turn.cancelled = true;
+                    }
+                    o
+                }
+            };
+            turn.report.tool_calls.push(ToolCall { name: name.clone(), input, ok: !outcome.is_error, summary: summarize(&outcome.text) });
+            results.push(outcome.block());
+        }
+        self.messages.push(Message::tool_results(results));
+        self.next_round(turn, host, on_event)
+    }
+
+    fn finish(&mut self, turn: &mut Turn, host: &mut dyn Host) -> Step {
+        turn.done = true;
+        if turn.cancelled {
+            turn.report.stopped = Some(Stop::Cancelled);
+            // A dangling tool call would make the next request invalid: answer it.
+            self.close_open_tool_calls();
+        }
+        if turn.report.error.is_some() {
+            self.close_open_tool_calls();
+        }
+        turn.report.commands = host.session().journal.iter().skip(turn.journal_mark).map(|(id, _)| id.clone()).collect();
+        (turn.report.touched_slides, turn.report.removed_slides) = slides_touched(host.session(), &turn.slide_mark);
+        turn.report.undo_label = fold_history(host.session_mut(), turn.undo_mark.clone(), &turn.request_text);
+        Step::Done(turn.report.clone())
     }
 
     /// If the last assistant message asked for tools nobody answered, answer them as cancelled.
@@ -433,14 +576,20 @@ fn add_usage(total: &mut Usage, u: &Usage) {
     total.cache_creation_input_tokens += u.cache_creation_input_tokens;
 }
 
-fn summary(text: &str) -> String {
-    let line: String = text.lines().take(2).collect::<Vec<_>>().join(" ");
+/// A line or two of a result: JSON results compact (`{"id":291,"index":8}`), text as its
+/// first lines, at most 160 characters.
+pub fn summarize(text: &str) -> String {
+    let line: String = match serde_json::from_str::<Value>(text) {
+        Ok(v) => v.to_string(),
+        Err(_) => text.lines().take(2).collect::<Vec<_>>().join(" "),
+    };
     let n = line.chars().count();
     if n <= 160 { line } else { line.chars().take(159).chain(std::iter::once('…')).collect() }
 }
 
 /// The active document's identity and its document pointer before a turn: the first undo entry
 /// the turn pushes holds exactly this document.
+#[derive(Clone)]
 struct HistoryMark {
     uid: u64,
     doc: Option<*const maluos_slides_engine::model::Presentation>,

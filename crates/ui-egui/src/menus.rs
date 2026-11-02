@@ -59,6 +59,8 @@ pub fn ui_shortcut(app: &mut SlideApp, key: egui::Key, m: Mods) -> bool {
             return true;
         }
         (P, true, true, false) => "app.palette",
+        // MaluOS: the assistant pane.
+        (A, true, true, false) => "assist.ask",
         (Comma, true, false, false) => "app.preferences",
         (Equals | Plus, true, false, false) => "view.zoomIn",
         (Minus, true, false, false) => "view.zoomOut",
