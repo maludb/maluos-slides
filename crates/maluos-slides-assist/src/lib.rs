@@ -14,6 +14,8 @@
 //!   text, notes, the selection, the theme), cut to a budget, cached on the revision.
 //! - [`Assistant::ask`]: the loop (step 3.4): prompt, model, tool calls, results, answer, one
 //!   undo entry per turn, limits on rounds, tool calls and tokens, retries on retryable errors.
+//! - [`Policy`] (step 3.5): the modes answer-only, confirm and autopilot; destructive commands
+//!   always confirmed; plans the user approves through [`Confirm`].
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -26,6 +28,7 @@ pub mod agent;
 pub mod catalog;
 pub mod context;
 pub mod exec;
+pub mod policy;
 pub mod tools;
 
 pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, Stop, ToolCall, TurnEvent, TurnReport};
@@ -33,6 +36,7 @@ pub use catalog::{Catalog, CommandEntry, params_schema};
 pub use context::{Budget, Context, ContextCache};
 pub use exec::{MAX_RESULT_BYTES, ToolOutcome, run_tool};
 pub use maluos_slides_mcp::{Backend, Headless, ToolResult};
+pub use policy::{ApproveAll, Class, Confirm, Decision, DeclineAll, Mode, Plan, PlannedCall, Policy, Verdict};
 pub use tools::ToolTable;
 
 #[cfg(test)]

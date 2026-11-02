@@ -20,6 +20,7 @@ use serde_json::Value;
 use crate::catalog::Catalog;
 use crate::context::{Budget, ContextCache};
 use crate::exec::{ToolOutcome, run_tool};
+use crate::policy::{Confirm, Decision, Mode, Plan, PlannedCall, Policy, Verdict};
 use crate::tools::ToolTable;
 
 /// What the loop runs against: an MCP backend whose session it can also read, for the deck
@@ -114,6 +115,15 @@ pub struct TurnReport {
     /// Why the turn ended early, if it did.
     pub stopped: Option<Stop>,
     pub error: Option<LlmError>,
+    /// Plans the user was asked about, and how many were declined.
+    pub plans: usize,
+    pub declined: usize,
+    /// Calls the mode refused (answer-only).
+    pub refused: usize,
+    /// Slides (0-based, as they stand after the turn) the turn added or changed, and how many
+    /// it removed.
+    pub touched_slides: Vec<usize>,
+    pub removed_slides: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -133,6 +143,7 @@ pub struct Assistant {
     pub limits: Limits,
     pub budget: Budget,
     pub instructions: String,
+    pub policy: Policy,
     pub messages: Vec<Message>,
     catalog: Option<Catalog>,
     cache: ContextCache,
@@ -158,6 +169,7 @@ impl Assistant {
             limits: Limits::default(),
             budget: Budget::default(),
             instructions: INSTRUCTIONS.into(),
+            policy: Policy::new(Mode::Confirm),
             messages: Vec::new(),
             catalog: None,
             cache: ContextCache::new(),
@@ -174,6 +186,19 @@ impl Assistant {
         self
     }
 
+    pub fn with_mode(mut self, mode: Mode) -> Self {
+        self.policy = Policy::new(mode);
+        self
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.policy.mode
+    }
+
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.policy.mode = mode;
+    }
+
     pub fn provider(&self) -> &str {
         self.client.provider()
     }
@@ -188,6 +213,8 @@ impl Assistant {
         let catalog = self.catalog.get_or_insert_with(Catalog::new);
         let mut s = String::with_capacity(self.limits.catalog_bytes + 4096);
         s.push_str(&self.instructions);
+        s.push_str("\n\n");
+        s.push_str(self.policy.mode.instruction());
         if self.limits.catalog_bytes > 0 {
             s.push_str("\n\n# Command catalog (run_command ids with their params)\n");
             s.push_str(&catalog.prompt_text("", self.limits.catalog_bytes));
@@ -197,15 +224,16 @@ impl Assistant {
         s
     }
 
-    /// One user message: the loop runs until the model answers or a limit stops it. `on_event`
-    /// sees the stream and each tool call; returning [`Flow::Stop`] cancels after the current
-    /// tool call.
-    pub fn ask(&mut self, host: &mut dyn Host, text: &str, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> TurnReport {
+    /// One user message: the loop runs until the model answers or a limit stops it. `confirm`
+    /// answers the plans the mode requires (see [`Policy`]); `on_event` sees the stream and each
+    /// tool call, and returning [`Flow::Stop`] cancels after the current tool call.
+    pub fn ask(&mut self, host: &mut dyn Host, text: &str, confirm: &mut dyn Confirm, on_event: &mut dyn FnMut(TurnEvent) -> Flow) -> TurnReport {
         let mut report = TurnReport::default();
         let table = ToolTable::for_backend(host.has_ui());
         let catalog = Catalog::from_session(host.session());
         let undo_mark = history_mark(host.session());
         let journal_mark = host.session().journal.len();
+        let slide_mark = slide_marks(host.session());
         self.messages.push(Message::user(text));
         self.trim_messages();
 
@@ -218,9 +246,10 @@ impl Assistant {
                 break;
             }
             let system = self.system_text(host);
+            let tools: Vec<_> = self.policy.tools(&table).into_iter().cloned().collect();
             let mut request = Request::new(self.model.clone(), self.messages.clone())
                 .with_system(system)
-                .with_tools(table.defs().to_vec())
+                .with_tools(tools)
                 .with_max_tokens(self.limits.max_output_tokens);
             if let Some(e) = self.effort {
                 request = request.with_effort(e);
@@ -258,17 +287,47 @@ impl Assistant {
                 }
                 _ => {}
             }
+            // Classify every call first, so the user sees one plan per round.
+            let planned: Vec<(PlannedCall, Decision)> = uses
+                .iter()
+                .map(|(id, name, input)| {
+                    let call = self.policy.classify(&table, &catalog, id, name, input);
+                    let decision = self.policy.decide(call.class);
+                    (call, decision)
+                })
+                .collect();
+            let plan = Plan { calls: planned.iter().filter(|(_, d)| *d == Decision::Confirm).map(|(c, _)| c.clone()).collect() };
+            let verdict = if plan.calls.is_empty() || cancelled {
+                Verdict::Approve
+            } else {
+                report.plans += 1;
+                let v = confirm.confirm(&plan);
+                if v == Verdict::Cancel {
+                    cancelled = true;
+                }
+                v
+            };
             let mut results = Vec::with_capacity(uses.len());
-            for (id, name, input) in uses {
-                let outcome = if tool_calls >= self.limits.max_tool_calls {
+            for ((id, name, input), (_, decision)) in uses.into_iter().zip(planned) {
+                let outcome = if cancelled {
+                    ToolOutcome::error_for(&id, &name, "cancelled by the user")
+                } else if let Decision::Refuse(reason) = &decision {
+                    report.refused += 1;
+                    ToolOutcome::error_for(&id, &name, reason.clone())
+                } else if decision == Decision::Confirm && verdict != Verdict::Approve {
+                    report.declined += 1;
+                    let reason = match &verdict {
+                        Verdict::Decline(Some(r)) => format!("the user declined this change: {r}"),
+                        _ => "the user declined this change; do not retry it, ask what they want instead".into(),
+                    };
+                    ToolOutcome::error_for(&id, &name, reason)
+                } else if tool_calls >= self.limits.max_tool_calls {
                     report.stopped = Some(Stop::ToolCallLimit);
                     ToolOutcome::error_for(
                         &id,
                         &name,
                         format!("tool call limit of {} reached for this turn; answer with what you have", self.limits.max_tool_calls),
                     )
-                } else if cancelled {
-                    ToolOutcome::error_for(&id, &name, "cancelled by the user")
                 } else {
                     tool_calls += 1;
                     if on_event(TurnEvent::ToolStart { name: name.clone(), input: input.clone() }) == Flow::Stop {
@@ -301,6 +360,7 @@ impl Assistant {
             self.close_open_tool_calls();
         }
         report.commands = host.session().journal.iter().skip(journal_mark).map(|(id, _)| id.clone()).collect();
+        (report.touched_slides, report.removed_slides) = slides_touched(host.session(), &slide_mark);
         report.undo_label = fold_history(host.session_mut(), undo_mark, text);
         report
     }
@@ -411,6 +471,30 @@ fn fold_history(s: &mut Session, mark: HistoryMark, request: &str) -> Option<Str
     st.history.undo[first].label = label.clone();
     st.history.redo.clear();
     Some(label)
+}
+
+type SlideMark = (maluos_slides_engine::model::SlideId, Arc<maluos_slides_engine::model::Slide>);
+
+/// Each slide as it stood: the id and the slide itself (an `Arc` clone, no copy).
+fn slide_marks(s: &Session) -> Vec<SlideMark> {
+    s.active().map(|st| st.doc.slides.iter().map(|sl| (sl.id, sl.clone())).collect()).unwrap_or_default()
+}
+
+/// Slides added or changed since `before` (indexes now), and how many are gone. A slide whose
+/// pointer moved but whose content is equal counts as unchanged (the engine rewrites the
+/// current slide's `Arc` on every edit while rerouting connectors).
+fn slides_touched(s: &Session, before: &[SlideMark]) -> (Vec<usize>, usize) {
+    let Some(st) = s.active() else { return (vec![], before.len()) };
+    let touched = st
+        .doc
+        .slides
+        .iter()
+        .enumerate()
+        .filter(|(_, sl)| !before.iter().any(|(id, was)| *id == sl.id && (Arc::ptr_eq(was, sl) || **was == ***sl)))
+        .map(|(i, _)| i)
+        .collect();
+    let removed = before.iter().filter(|(id, _)| !st.doc.slides.iter().any(|sl| sl.id == *id)).count();
+    (touched, removed)
 }
 
 fn summary_label(request: &str) -> String {

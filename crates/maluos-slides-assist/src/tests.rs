@@ -398,7 +398,7 @@ use std::time::Duration;
 use maluos_llm::mock::MockClient;
 use maluos_llm::{Completion, Flow, LlmError, Role, StopReason, Usage};
 
-use crate::{Assistant, Limits, Stop, TurnEvent};
+use crate::{ApproveAll, Assistant, Limits, Stop, TurnEvent};
 
 fn usage(input: u64, output: u64) -> Usage {
     Usage { input_tokens: input, output_tokens: output, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
@@ -426,7 +426,7 @@ fn quick_limits() -> Limits {
 }
 
 fn assistant(mock: &Arc<MockClient>) -> Assistant {
-    Assistant::new(mock.clone(), "mock-model").with_limits(quick_limits())
+    Assistant::new(mock.clone(), "mock-model").with_limits(quick_limits()).with_mode(crate::Mode::Autopilot)
 }
 
 fn no_events() -> impl FnMut(TurnEvent) -> Flow {
@@ -455,7 +455,7 @@ fn closing_slide_through_the_mock_backend() {
     let mut a = assistant(&mock);
     let events = Arc::new(Mutex::new(Vec::new()));
     let ev = events.clone();
-    let report = a.ask(&mut host, "add a closing slide that thanks the audience", &mut |e| {
+    let report = a.ask(&mut host, "add a closing slide that thanks the audience", &mut ApproveAll, &mut |e| {
         ev.lock().unwrap().push(e);
         Flow::Continue
     });
@@ -514,7 +514,7 @@ fn round_limit_ends_a_turn_that_never_answers() {
     }
     let mut host = Headless::with_document();
     let mut a = assistant(&mock).with_limits(Limits { max_rounds: 2, retry_delay: Duration::ZERO, ..Limits::default() });
-    let report = a.ask(&mut host, "look around", &mut no_events());
+    let report = a.ask(&mut host, "look around", &mut ApproveAll, &mut no_events());
     assert_eq!(report.stopped, Some(Stop::RoundLimit));
     assert_eq!(report.rounds, 2);
     assert_eq!(report.tool_calls.len(), 2);
@@ -533,7 +533,7 @@ fn tool_call_limit_answers_the_extra_calls_with_an_error() {
     mock.push(answer("Added one slide; the limit stopped the second."));
     let mut host = Headless::with_document();
     let mut a = assistant(&mock).with_limits(Limits { max_tool_calls: 1, retry_delay: Duration::ZERO, ..Limits::default() });
-    let report = a.ask(&mut host, "add two blank slides", &mut no_events());
+    let report = a.ask(&mut host, "add two blank slides", &mut ApproveAll, &mut no_events());
     assert_eq!(report.stopped, Some(Stop::ToolCallLimit));
     assert_eq!(report.tool_calls.len(), 2);
     assert!(report.tool_calls[0].ok && !report.tool_calls[1].ok);
@@ -551,7 +551,8 @@ fn cancel_stops_before_the_tool_runs_and_keeps_the_conversation_valid() {
     mock.push(answer("ok"));
     let mut host = Headless::with_document();
     let mut a = assistant(&mock);
-    let report = a.ask(&mut host, "add a slide", &mut |e| if matches!(e, TurnEvent::ToolStart { .. }) { Flow::Stop } else { Flow::Continue });
+    let report =
+        a.ask(&mut host, "add a slide", &mut ApproveAll, &mut |e| if matches!(e, TurnEvent::ToolStart { .. }) { Flow::Stop } else { Flow::Continue });
     assert_eq!(report.stopped, Some(Stop::Cancelled));
     assert!(report.commands.is_empty());
     assert_eq!(host.session.active().unwrap().doc.slides.len(), 1);
@@ -560,7 +561,7 @@ fn cancel_stops_before_the_tool_runs_and_keeps_the_conversation_valid() {
     assert!(
         matches!(&a.messages.last().unwrap().content[0], ContentBlock::ToolResult { tool_use_id, is_error: true, content, .. } if tool_use_id == "a" && content.contains("cancel"))
     );
-    let report = a.ask(&mut host, "never mind", &mut no_events());
+    let report = a.ask(&mut host, "never mind", &mut ApproveAll, &mut no_events());
     assert_eq!(report.answer, "ok");
     let reqs = mock.requests();
     assert_eq!(reqs[1].messages.len(), 4);
@@ -575,7 +576,7 @@ fn retryable_errors_are_retried_and_others_are_not() {
     mock.push(answer("fine now"));
     let mut host = Headless::with_document();
     let mut a = assistant(&mock);
-    let report = a.ask(&mut host, "hello", &mut no_events());
+    let report = a.ask(&mut host, "hello", &mut ApproveAll, &mut no_events());
     assert_eq!(report.answer, "fine now");
     assert!(report.error.is_none());
     assert_eq!(mock.requests().len(), 3);
@@ -584,7 +585,7 @@ fn retryable_errors_are_retried_and_others_are_not() {
     mock.push_error(LlmError::Auth("bad key".into()));
     mock.push(answer("unreachable"));
     let mut a = assistant(&mock);
-    let report = a.ask(&mut host, "hello", &mut no_events());
+    let report = a.ask(&mut host, "hello", &mut ApproveAll, &mut no_events());
     assert_eq!(report.error, Some(LlmError::Auth("bad key".into())));
     assert!(report.answer.is_empty());
     assert_eq!(mock.requests().len(), 1);
@@ -599,7 +600,7 @@ fn an_error_after_a_tool_call_keeps_the_change_as_one_undo_step() {
     mock.push_error(LlmError::Server { status: 500, message: "boom".into() });
     let mut host = Headless::with_document();
     let mut a = assistant(&mock).with_limits(Limits { retries: 0, retry_delay: Duration::ZERO, ..Limits::default() });
-    let report = a.ask(&mut host, "add a slide and then explain it", &mut no_events());
+    let report = a.ask(&mut host, "add a slide and then explain it", &mut ApproveAll, &mut no_events());
     assert!(matches!(report.error, Some(LlmError::Server { .. })));
     assert_eq!(report.commands, vec!["slide.new"]);
     let st = host.session.active().unwrap();
@@ -620,7 +621,7 @@ fn old_turns_are_trimmed_at_user_messages() {
     let mut host = Headless::with_document();
     let mut a = assistant(&mock).with_limits(Limits { max_messages: 5, retry_delay: Duration::ZERO, ..Limits::default() });
     for i in 0..4 {
-        a.ask(&mut host, &format!("turn {i}"), &mut no_events());
+        a.ask(&mut host, &format!("turn {i}"), &mut ApproveAll, &mut no_events());
     }
     // Each turn is four messages (user, call, result, answer). Trimming happens when a turn
     // starts, cutting at a user message, so the previous turn stays whole beside the new one.
@@ -640,4 +641,256 @@ fn system_text_follows_the_limits() {
     let bare = a.system_text(&host);
     assert!(!bare.contains("# Command catalog") && bare.contains("# The open presentation"));
     assert!(bare.len() < full.len() / 4, "{} vs {}", bare.len(), full.len());
+}
+
+// ---------- safety rails ----------
+
+use crate::{Class, Decision, Mode, Plan, Policy, Verdict};
+
+/// Records every plan it is asked about and answers with a fixed verdict.
+struct Recorder {
+    plans: Vec<Plan>,
+    verdict: Verdict,
+}
+
+impl Recorder {
+    fn new(verdict: Verdict) -> Self {
+        Recorder { plans: vec![], verdict }
+    }
+}
+
+impl crate::Confirm for Recorder {
+    fn confirm(&mut self, plan: &Plan) -> Verdict {
+        self.plans.push(plan.clone());
+        self.verdict.clone()
+    }
+}
+
+fn slides(h: &Headless) -> usize {
+    h.session.active().unwrap().doc.slides.len()
+}
+
+#[test]
+fn destructive_lists_name_real_commands_and_tools() {
+    let c = Catalog::new();
+    for id in crate::policy::DESTRUCTIVE_COMMANDS {
+        assert!(c.get(id).is_some(), "{id} is not a command");
+    }
+    let t = ToolTable::all();
+    for name in crate::policy::DESTRUCTIVE_TOOLS {
+        assert!(t.get(name).is_some(), "{name} is not a tool");
+    }
+    for name in t.names() {
+        if let Some(id) = crate::policy::tool_command(name) {
+            assert!(c.get(id).is_some(), "{name} maps to unknown {id}");
+        }
+    }
+    assert_eq!(Mode::parse("Auto"), Some(Mode::Autopilot));
+    assert_eq!(Mode::parse("answer"), Some(Mode::AnswerOnly));
+    assert_eq!(Mode::parse("nope"), None);
+}
+
+#[test]
+fn policy_classifies_calls_and_decides_per_mode() {
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::new();
+    let p = Policy::new(Mode::Confirm);
+    let read = p.classify(&table, &catalog, "1", "inspect_slide", &json!({}));
+    let query = p.classify(&table, &catalog, "2", "run_command", &json!({"command": "slide.inspect", "params": {"index": 0}}));
+    let change = p.classify(&table, &catalog, "3", "add_slide", &json!({"layout": "blank"}));
+    let cmd = p.classify(&table, &catalog, "4", "run_command", &json!({"command": "slide.new", "params": {"layout": "blank"}}));
+    let del = p.classify(&table, &catalog, "5", "run_command", &json!({"command": "slide.delete", "params": {"index": 1}}));
+    let batch = p.classify(
+        &table,
+        &catalog,
+        "6",
+        "batch",
+        &json!({"commands": [{"command": "slide.inspect"}, {"command": "section.remove", "params": {"index": 0, "slides": true}}]}),
+    );
+    let fresh = p.classify(&table, &catalog, "7", "new_presentation", &json!({}));
+    assert_eq!(read.class, Class::ReadOnly);
+    assert_eq!(query.class, Class::ReadOnly);
+    assert_eq!(change.class, Class::Change);
+    assert_eq!(change.commands[0].0, "slide.new");
+    assert_eq!(cmd.class, Class::Change);
+    assert_eq!(cmd.commands[0].1, "New Slide");
+    assert_eq!(del.class, Class::Destructive);
+    assert_eq!(batch.class, Class::Destructive, "a batch is as dangerous as its worst command");
+    assert_eq!(batch.commands.len(), 2);
+    assert_eq!(fresh.class, Class::Destructive);
+
+    let decide = |mode: Mode, class: Class| Policy::new(mode).decide(class);
+    assert_eq!(decide(Mode::AnswerOnly, Class::ReadOnly), Decision::Allow);
+    assert!(matches!(decide(Mode::AnswerOnly, Class::Change), Decision::Refuse(_)));
+    assert!(matches!(decide(Mode::AnswerOnly, Class::Destructive), Decision::Refuse(_)));
+    assert_eq!(decide(Mode::Confirm, Class::ReadOnly), Decision::Allow);
+    assert_eq!(decide(Mode::Confirm, Class::Change), Decision::Confirm);
+    assert_eq!(decide(Mode::Confirm, Class::Destructive), Decision::Confirm);
+    assert_eq!(decide(Mode::Autopilot, Class::Change), Decision::Allow);
+    assert_eq!(decide(Mode::Autopilot, Class::Destructive), Decision::Confirm);
+
+    // The plan reads well.
+    let plan = Plan { calls: vec![change.clone(), del.clone()] };
+    assert!(plan.destructive());
+    let text = plan.describe();
+    assert!(text.contains("add_slide layout=\"blank\""), "{text}");
+    assert!(text.contains("run_command (destructive)\n  slide.delete — Delete Slide {\"index\":1}"), "{text}");
+
+    // Answer-only offers the read-only tools, run_command and list_commands, nothing else.
+    let offered: Vec<&str> = Policy::new(Mode::AnswerOnly).tools(&table).iter().map(|t| t.name.as_str()).collect();
+    assert!(
+        offered.contains(&"inspect_slide")
+            && offered.contains(&"run_command")
+            && offered.contains(&"list_commands")
+            && offered.contains(&"render_slide")
+    );
+    assert!(!offered.contains(&"add_slide") && !offered.contains(&"set_text") && !offered.contains(&"batch"), "{offered:?}");
+    assert_eq!(Policy::new(Mode::Confirm).tools(&table).len(), table.defs().len());
+}
+
+#[test]
+fn answer_only_mode_reads_but_never_changes() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![
+        tool_use("a", "inspect_document", json!({})),
+        tool_use("b", "run_command", json!({"command": "slide.inspect", "params": {}})),
+    ]));
+    mock.push(calls(vec![tool_use("c", "run_command", json!({"command": "slide.new", "params": {"layout": "blank"}}))]));
+    mock.push(answer("I would add a blank slide after slide 1 with slide.new."));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_mode(Mode::AnswerOnly);
+    let mut rec = Recorder::new(Verdict::Approve);
+    let report = a.ask(&mut host, "what would you do to add a slide?", &mut rec, &mut no_events());
+    assert_eq!(report.answer, "I would add a blank slide after slide 1 with slide.new.");
+    assert_eq!(report.refused, 1);
+    assert!(rec.plans.is_empty(), "answer-only never asks");
+    assert!(report.tool_calls[0].ok && report.tool_calls[1].ok && !report.tool_calls[2].ok);
+    assert!(report.tool_calls[2].summary.contains("answer-only mode"), "{}", report.tool_calls[2].summary);
+    assert_eq!(slides(&host), 1);
+    assert!(report.commands.is_empty(), "{:?}", report.commands);
+    assert!(report.undo_label.is_none() && report.touched_slides.is_empty());
+    let reqs = mock.requests();
+    assert!(reqs[0].system.as_deref().unwrap().contains("Mode: answer only"));
+    assert!(reqs[0].tools.iter().all(|t| t.name != "add_slide"));
+}
+
+#[test]
+fn confirm_mode_shows_the_plan_and_applies_only_on_approval() {
+    let script = |mock: &MockClient| {
+        mock.push(calls(vec![
+            tool_use("r", "inspect_slide", json!({})),
+            tool_use("a", "add_slide", json!({"layout": "titleOnly", "title": "Agenda"})),
+            tool_use("b", "run_command", json!({"command": "slide.notes", "params": {"text": "Walk through the agenda"}})),
+        ]));
+        mock.push(answer("Done."));
+    };
+
+    // Approved: the plan names both changing calls with their commands; the read-only one ran
+    // without asking.
+    let mock = Arc::new(MockClient::new());
+    script(&mock);
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_mode(Mode::Confirm);
+    let mut rec = Recorder::new(Verdict::Approve);
+    let report = a.ask(&mut host, "add an agenda slide with notes", &mut rec, &mut no_events());
+    assert_eq!(rec.plans.len(), 1);
+    let plan = &rec.plans[0];
+    assert_eq!(plan.calls.len(), 2, "{plan:?}");
+    assert_eq!(plan.calls[0].name, "add_slide");
+    assert_eq!(plan.calls[0].commands[0].0, "slide.new");
+    assert_eq!(plan.calls[1].commands[0], ("slide.notes".to_string(), "Notes".to_string(), json!({"text": "Walk through the agenda"})));
+    assert!(!plan.destructive());
+    assert_eq!(report.plans, 1);
+    assert_eq!(report.declined, 0);
+    assert_eq!(report.commands, vec!["slide.new", "slide.notes"]);
+    assert_eq!(slides(&host), 2);
+    assert_eq!(report.touched_slides, vec![1]);
+    assert_eq!(host.session.active().unwrap().history.undo.len(), 1);
+    assert!(mock.requests()[0].system.as_deref().unwrap().contains("Mode: confirm"));
+
+    // Declined with a reason: nothing ran, the model heard the reason and answered.
+    let mock = Arc::new(MockClient::new());
+    script(&mock);
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_mode(Mode::Confirm);
+    let mut rec = Recorder::new(Verdict::Decline(Some("not before the title is fixed".into())));
+    let report = a.ask(&mut host, "add an agenda slide with notes", &mut rec, &mut no_events());
+    assert_eq!(report.answer, "Done.");
+    assert_eq!((report.plans, report.declined), (1, 2));
+    assert!(report.tool_calls[0].ok && !report.tool_calls[1].ok && !report.tool_calls[2].ok);
+    assert!(report.tool_calls[1].summary.contains("declined this change: not before the title is fixed"), "{}", report.tool_calls[1].summary);
+    assert_eq!(slides(&host), 1);
+    assert!(report.commands.is_empty());
+    assert!(report.undo_label.is_none());
+    let reqs = mock.requests();
+    assert!(matches!(&reqs[1].messages[2].content[1], ContentBlock::ToolResult { is_error: true, content, .. } if content.contains("declined")));
+
+    // Cancelled from the dialog: the turn stops, nothing ran, the conversation stays valid.
+    let mock = Arc::new(MockClient::new());
+    script(&mock);
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_mode(Mode::Confirm);
+    let mut rec = Recorder::new(Verdict::Cancel);
+    let report = a.ask(&mut host, "add an agenda slide with notes", &mut rec, &mut no_events());
+    assert_eq!(report.stopped, Some(Stop::Cancelled));
+    assert_eq!(slides(&host), 1);
+    assert!(matches!(a.messages.last().unwrap().content[0], ContentBlock::ToolResult { .. }));
+}
+
+#[test]
+fn autopilot_applies_changes_and_confirms_only_destructive_ones() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("a", "add_slide", json!({"layout": "blank"})), tool_use("b", "add_slide", json!({"layout": "blank"}))]));
+    mock.push(calls(vec![tool_use("d", "run_command", json!({"command": "slide.delete", "params": {"index": 1}}))]));
+    mock.push(calls(vec![tool_use(
+        "e",
+        "batch",
+        json!({"commands": [{"command": "slide.go", "params": {"index": 0}}, {"command": "slide.delete", "params": {"index": 1}}]}),
+    )]));
+    mock.push(calls(vec![tool_use("f", "new_presentation", json!({}))]));
+    mock.push(answer("Added two slides; the deletions and the new deck were declined."));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock).with_mode(Mode::Autopilot);
+    let mut rec = Recorder::new(Verdict::Decline(None));
+    let report = a.ask(&mut host, "add two slides then delete one and start over", &mut rec, &mut no_events());
+    // The two additions ran without a plan; each destructive round asked and was declined.
+    assert_eq!(rec.plans.len(), 3, "{:?}", rec.plans.iter().map(Plan::describe).collect::<Vec<_>>());
+    assert!(rec.plans.iter().all(Plan::destructive));
+    assert!(rec.plans[1].describe().contains("slide.go — Go to Slide"), "the whole batch is shown: {}", rec.plans[1].describe());
+    assert_eq!((report.plans, report.declined), (3, 3));
+    assert_eq!(report.commands, vec!["slide.new", "slide.new"]);
+    assert_eq!(slides(&host), 3);
+    assert_eq!(report.touched_slides, vec![1, 2]);
+    assert_eq!(report.removed_slides, 0);
+    assert_eq!(host.session.active().unwrap().history.undo.len(), 1);
+    assert!(mock.requests()[0].system.as_deref().unwrap().contains("Mode: autopilot"));
+
+    // Approved: the deletion goes through and is counted as removed.
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("d", "run_command", json!({"command": "slide.delete", "params": {"index": 1}}))]));
+    mock.push(answer("Deleted slide 2."));
+    let mut a = assistant(&mock).with_mode(Mode::Autopilot);
+    let mut rec = Recorder::new(Verdict::Approve);
+    let report = a.ask(&mut host, "delete slide 2", &mut rec, &mut no_events());
+    assert_eq!(rec.plans.len(), 1);
+    assert_eq!(report.commands, vec!["slide.delete"]);
+    assert_eq!(slides(&host), 2);
+    assert_eq!(report.removed_slides, 1);
+    assert!(report.touched_slides.is_empty(), "{:?}", report.touched_slides);
+}
+
+#[test]
+fn touched_slides_follow_edits() {
+    let mock = Arc::new(MockClient::new());
+    let title = Headless::with_document().session.doc().unwrap().current_slide().unwrap().shapes[0].id;
+    mock.push(calls(vec![
+        tool_use("a", "set_text", json!({"id": title, "text": "New title"})),
+        tool_use("b", "add_slide", json!({"layout": "blank"})),
+    ]));
+    mock.push(answer("ok"));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "retitle and add", &mut ApproveAll, &mut no_events());
+    assert_eq!(report.touched_slides, vec![0, 1]);
+    assert_eq!(report.removed_slides, 0);
 }

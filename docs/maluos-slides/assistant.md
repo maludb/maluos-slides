@@ -93,6 +93,35 @@ slide that thanks the audience" --save out.pptx` (also `anthropic`, `openai`, `-
 outline already includes the turn's edits, because without that it mistook its new slide for an
 existing one.
 
+## Safety rails (step 3.5)
+
+`Policy` (in `policy.rs`) decides what a tool call may do in the current `Mode`:
+
+| Mode | Read-only calls | Changes | Destructive |
+|---|---|---|---|
+| answer-only | run | refused with a reason the model reads; only read-only tools, `run_command` (query commands) and `list_commands` are offered | refused |
+| confirm (default) | run | shown as a plan, applied on approval | shown as a plan, applied on approval |
+| autopilot | run | applied at once | shown as a plan, applied on approval |
+
+A call's `Class` comes from the MCP `readOnlyHint` for the named tools, from the catalog for
+`run_command` (query commands are read-only) and from the worst command of a `batch`.
+`DESTRUCTIVE_COMMANDS` (`slide.delete`, `section.remove`, `section.removeAll`,
+`master.deleteLayout`, `file.new`, `file.open`, `file.openBytes`, `file.close`, `file.revert`,
+`file.adopt`, `file.recovery.open`) and `DESTRUCTIVE_TOOLS` (`new_presentation`,
+`open_presentation`) are confirmed in every mode that allows changes; a test checks every name
+against the catalog and the tool table. Saving and exporting are ordinary changes: writing files
+is what those tools are for.
+
+The loop classifies all calls of a round first and asks once per round with a `Plan`: each
+`PlannedCall` names the tool, its arguments and the engine commands behind it (the real ones
+for `run_command` and `batch`, the mapped one for the others), with `describe()` for a dialog
+or terminal. `Confirm` answers it (`ApproveAll`, `DeclineAll`, any closure, the pane's dialog):
+`Approve` runs the calls; `Decline(reason)` answers each with an error the model reads ("the
+user declined this change: …; do not retry it, ask what they want instead"); `Cancel` ends the
+turn. The mode's one-line instruction is in the system text. `TurnReport` counts `plans`,
+`declined` and `refused`, and lists `touched_slides` (added or changed, by content, not pointer)
+and `removed_slides`, which the autopilot answer shows.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -104,18 +133,16 @@ shows up here as a diff to read, not a failure to silence).
 
 ## Tests
 
-`cargo nextest run -p maluos-slides-assist`: 25 tests. The table mirrors the server definition
+`cargo nextest run -p maluos-slides-assist`: 31 tests. The table mirrors the server definition
 for definition; the headless table drops the app-only tools; every one of the engine's params
 docs parses into a schema (a guard against upstream drift in the grammar); schema rules on hand-
 written docs; validation of unknown commands, keys and non-object params; the prompt listing's
 filter and cut; and, on the headless engine, tool calls that add and inspect slides, a
 `run_command` that pushes one undo step, refusals that leave the revision untouched, image and
-long-result shaping. For the context: the sample-deck snapshot, no document, the selection and an edited text range, a 121-slide deck cut at a small budget with the current slide whole and every marker present, and the cache rebuilding only on revision, selection or document change. For the loop, with `maluos_llm::mock::MockClient`: "add a closing slide that thanks the audience" scripted as `run_command slide.new` then `set_text` produces the slide, the text, the journal `[slide.new, text.set]` and exactly one undo entry `Assistant: add a closing slide…` that `edit.undo` reverts whole; the requests carry instructions, catalog, outline (rebuilt per round) and the tool table; the round limit; the tool-call limit; cancel at `ToolStart` leaving the conversation valid; retry on rate limit and overload, none on auth; an error after a tool call keeping the change as one undo step; trimming at user messages; the system text with and without the catalog. The MCP crate's 25 tests still pass.
+long-result shaping. For the context: the sample-deck snapshot, no document, the selection and an edited text range, a 121-slide deck cut at a small budget with the current slide whole and every marker present, and the cache rebuilding only on revision, selection or document change. For the loop, with `maluos_llm::mock::MockClient`: "add a closing slide that thanks the audience" scripted as `run_command slide.new` then `set_text` produces the slide, the text, the journal `[slide.new, text.set]` and exactly one undo entry `Assistant: add a closing slide…` that `edit.undo` reverts whole; the requests carry instructions, catalog, outline (rebuilt per round) and the tool table; the round limit; the tool-call limit; cancel at `ToolStart` leaving the conversation valid; retry on rate limit and overload, none on auth; an error after a tool call keeping the change as one undo step; trimming at user messages; the system text with and without the catalog. For the rails: the destructive lists name real commands and tools; classification and decisions per mode and the plan text; answer-only reads and refuses with the tools it offers; confirm mode approved, declined with a reason the model hears, and cancelled; autopilot applying additions without a plan and confirming each destructive round (a batch shown whole), approved deletion counted as removed; touched slides after an edit and an addition. The MCP crate's 25 tests still pass.
 
 ## Next
 
-- 3.5 safety rails use `ToolTable::is_read_only` and `CommandEntry::undoable`; the always-confirm
-  list (`slide.delete`, `section.remove`, `file.new`, replace-all) lives there.
 
 ## Revision history
 
@@ -124,3 +151,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Created with step 3.3: tool table, catalog, generated schemas, validation, `run_tool`, snapshots, 12 tests |
 | 2026-11-02 | major | Step 3.2: `Context`, `Budget`, `ContextCache`, the sample-deck snapshot, 5 more tests |
 | 2026-11-02 | major | Step 3.4: `Assistant::ask`, `Host`, `Limits`, `TurnEvent`, `TurnReport`, one undo entry per turn, `examples/ask.rs`, 8 more tests |
+| 2026-11-02 | major | Step 3.5: `Policy`, `Mode`, `Plan`, `Confirm`, destructive lists, touched slides, `--mode`/`--yes` on the example, 6 more tests |

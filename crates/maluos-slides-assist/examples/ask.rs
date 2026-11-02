@@ -11,11 +11,13 @@ use std::io::Write;
 use std::sync::Arc;
 
 use maluos_llm::{AnthropicClient, Flow, LlmClient, OpenAiClient, UreqTransport};
-use maluos_slides_assist::{Assistant, Headless, TurnEvent};
+use maluos_slides_assist::{Assistant, Headless, Mode, Plan, TurnEvent, Verdict};
 use serde_json::json;
 
 fn usage() -> ! {
-    eprintln!("usage: ask (ollama|anthropic|openai) <model or \"\"> \"<request>\" [--open deck.pptx] [--save out.pptx] [--sample]");
+    eprintln!(
+        "usage: ask (ollama|anthropic|openai) <model or \"\"> \"<request>\" [--open deck.pptx] [--save out.pptx] [--sample] [--mode answer|confirm|autopilot] [--yes]"
+    );
     std::process::exit(2)
 }
 
@@ -26,6 +28,8 @@ fn main() {
     let open = flag("--open");
     let save = flag("--save");
     let sample = args.iter().any(|a| a == "--sample");
+    let yes = args.iter().any(|a| a == "--yes");
+    let mode = flag("--mode").map(|m| Mode::parse(&m).unwrap_or_else(|| usage())).unwrap_or(Mode::Autopilot);
 
     let transport = Arc::new(UreqTransport::default());
     let (client, model): (Arc<dyn LlmClient>, String) = match backend.as_str() {
@@ -60,9 +64,23 @@ fn main() {
         std::process::exit(1)
     }
 
-    let mut assistant = Assistant::new(client, model);
+    let mut assistant = Assistant::new(client, model).with_mode(mode);
+    let mut confirm = |plan: &Plan| -> Verdict {
+        eprintln!("\x1b[33m[plan]{}\n{}\x1b[0m", if plan.destructive() { " destructive" } else { "" }, plan.describe());
+        if yes {
+            return Verdict::Approve;
+        }
+        eprint!("Apply? [y/N/q] ");
+        let mut line = String::new();
+        let _ = std::io::stdin().read_line(&mut line);
+        match line.trim().to_ascii_lowercase().as_str() {
+            "y" | "yes" => Verdict::Approve,
+            "q" | "quit" => Verdict::Cancel,
+            other => Verdict::Decline(if other.is_empty() || other == "n" || other == "no" { None } else { Some(other.to_string()) }),
+        }
+    };
     let mut out = std::io::stdout();
-    let report = assistant.ask(&mut host, request, &mut |e| {
+    let report = assistant.ask(&mut host, request, &mut confirm, &mut |e| {
         match e {
             TurnEvent::Round(n) => eprintln!("\x1b[2m[round {n}]\x1b[0m"),
             TurnEvent::Text(t) => {
