@@ -1,6 +1,6 @@
 # MaluOS Slides status
 
-> **Updated:** 2026-11-02 (08:10 UTC)
+> **Updated:** 2026-11-02 (08:40 UTC)
 
 MaluOS Slides is the MaluOS presentation app, forked from
 [storytold/deckcraft](https://github.com/storytold/deckcraft) on 2026-10-24 at upstream
@@ -102,3 +102,9 @@ variable font whose 12 named instances make `add_font` return 12 instead of 1. F
 upstream: build the fixture from an embedded craft font (Inter) instead of a system family.
 Smoke: `maluos-slides-cli render --sample --all` draws all 8 slides; `run --sample --save x.pptx`
 writes a 58-part package with real `ppt/slides/slideN.xml`; the MCP handshake above.
+
+**Owner vision (later the same day):** "Cursor for presentations". The assistant has full control
+of the editor the way Cursor has of its IDE, from a chat sidebar like the Selection Pane; the
+decks it makes stay easy to edit by hand (one paragraph's text is one command on one shape);
+providers are Anthropic and OpenAI first, then Ollama. Written up as the Vision section and
+decisions D10 and D11 in [plan.md](plan.md).

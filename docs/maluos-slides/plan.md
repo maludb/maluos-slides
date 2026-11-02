@@ -10,6 +10,37 @@ MaluOS Slides adds the MaluOS fit: a MaluOS package on the desktop image, MaluOS
 assistant that works on the open deck through the MaluOS gateway. We get there in slices; every
 slice leaves an installable app.
 
+## Vision (owner, 2026-11-02): Cursor for presentations
+
+Cursor took an editor people already know and put an agent in full control of it: a chat sidebar
+that reads the whole project, a model picker, targeted edits on a selection and an autonomous mode
+that works through a plan, with every change shown as a diff the person reviews. MaluOS Slides is
+that for presentations. The engine is the IDE: 321 commands, undo, PPTX in and out. The assistant
+sits in a sidebar like the Selection Pane and has the same control a person has.
+
+The problem it solves: decks made by AI tools are very hard to change afterwards. Changing the text
+of one paragraph is a major task when the slide is an image or a page of absolutely placed boxes.
+Here every slide is native shapes, placeholders, tables and charts, so "change the second bullet
+on slide 4" is one `text.set` on one shape, undoable, and the deck stays an editable `.pptx`.
+
+What this means for the design:
+
+- **The chat pane is a pane.** It opens like the Selection Pane (`view.pane {pane: "assistant"}`),
+  docks on the right, and holds the conversation, the model picker, the mode selector and the
+  list of commands each turn ran, each turn one undo step.
+- **Context is the open deck, not a prompt the person writes.** The assistant always sees the deck
+  outline, the current slide, the selection and the theme (step 3.2), the way Cursor sees the open
+  file, the cursor and the repository.
+- **The selection is the target.** Select a shape, a paragraph or a slide and ask; the assistant's
+  edits land there (Cursor's Cmd+K). With nothing selected it works on the current slide; "the whole
+  deck" is explicit.
+- **Changes are reviewable.** Every turn shows the commands it ran and the slides it touched;
+  confirm-before-change mode shows the plan first (step 3.5); Undo reverts a turn.
+- **Models: Anthropic and OpenAI first, Ollama next** (D10). Keys come from the vault or an
+  environment variable, never from a deck or a settings file.
+- **The same harness serves agents outside the app**: MCP today, the HTTP API (D9) next, so a
+  script, Claude Code or a MaluOS agent can do what the sidebar does.
+
 ## Why DeckCraft
 
 | What we need | What DeckCraft gives us |
@@ -38,8 +69,9 @@ MaluOS does not need.
    what is ours to remove: packaging directories, workflows, README sections.
 3. **Everything the assistant does is a command.** It calls the command catalog a click calls, so
    undo, history, the control channel and tests cover it for free.
-4. **Local first, provider agnostic.** The MaluOS gateway and local agents are the default LLM
-   provider; cloud providers behind the vault. Keys never live in decks or settings files.
+4. **Provider agnostic.** Anthropic and OpenAI first, Ollama next, the MaluOS gateway and local
+   agents behind the same trait (D10). Keys come from the vault or an environment variable and never
+   live in decks or settings files.
 5. **Never crash, never silently change a slide.** The assistant proposes, the engine executes, the
    person sees what changed and can undo. DeckCraft's never-crash policy stays in force.
 6. **Rust only; wasm keeps compiling** (`cargo xtask wasm` is upstream's gate too). Whether the
@@ -178,3 +210,5 @@ proceeds with unless the owner says otherwise.
 | D7 | Upstream sync weekly through the vendor branch | recommended | step 2.9 measures the real cost |
 | D8 | Where the MaluOS deb lives: vendored prebuilt deb in the maluos repo (like maludb-core) rather than a `packages/` source build | recommended | step 2.6; a Rust build inside `build-packages.sh` would need the toolchain and ~6 min per release |
 | D9 | **MaluOS Slides is an AI harness for real presentations**: decks are built from native shapes, text, tables and charts and saved as editable `.pptx`, never as one rendered image per slide; the tool is the centre and every function is callable from both an API and MCP | **owner, 2026-11-02** | Phase 3 keeps the command catalog as the single source of truth for MCP and the assistant (step 3.3); add a network API over the same table (HTTP/JSON, the control channel's methods) as a Phase 3 step; the Phase 4 features produce native slide content, not pictures |
+| D10 | **LLM providers: Anthropic and OpenAI first, then Ollama** (local models through its OpenAI-compatible endpoint); the MaluOS gateway and local agents stay on the `LlmClient` trait as further backends | **owner, 2026-11-02** | step 3.1 implements the Anthropic Messages API and the OpenAI-compatible backend first (the latter also covers Ollama and the gateway when it speaks that protocol); keys from the vault or `MALUOS_SLIDES_<PROVIDER>_API_KEY` |
+| D11 | **The assistant lives in a sidebar pane** like the Selection Pane, with a model picker and a mode selector; the selection is the target of an edit | **owner, 2026-11-02** | step 3.6 builds it as `view.pane {pane: "assistant"}`; the pane reads engine state and acts only through commands (thin UI) |
