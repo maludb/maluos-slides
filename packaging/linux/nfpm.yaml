@@ -26,6 +26,10 @@ description: |-
 # The binaries link only glibc and libgcc_s directly. Windowing (X11/Wayland, xkbcommon) and the
 # GPU (Vulkan, EGL/GL) are loaded at runtime, so they are dependencies/recommendations here
 # rather than ELF NEEDED entries.
+# xz shrinks the deb by a third against gzip (the binaries embed the presentation fonts).
+deb:
+  compression: xz
+
 overrides:
   deb:
     depends:
