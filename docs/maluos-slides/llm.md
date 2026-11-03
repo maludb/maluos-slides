@@ -73,7 +73,7 @@ answer, usage on both turns.
 
 ## Not yet
 
-- The vault key source and a Unix-socket transport for the gateway (above).
+- The vault key source and a Unix-socket transport for the gateway: protocols now known, see [maluos-integration.md](maluos-integration.md).
 - Prompt caching breakpoints (`cache_control`) on the Anthropic request: step 3.2 decides where
   the stable prefix ends (system text and tools first, the deck outline after).
 - Retry with backoff on `retryable()` errors: the harness loop (step 3.4) owns the policy.

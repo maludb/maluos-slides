@@ -117,6 +117,14 @@ above was the earlier 9 GB machine. The `systemd-run` memory scope and `-j 6` st
 a build never starves the desktop. The app can be run on the desktop directly
 (`target/debug/maluos-slides --sample`); `xvfb` is only for headless screenshots in scripts.
 
+### MaluOS vault and gateway (2026-11-02)
+
+The vault and gateway protocols are not undocumented after all: their sources are installed
+(`/usr/lib/maluos/maluos_vault.py`, `/usr/lib/maluos/maluos_gateway/`). Both are HTTP + JSON over Unix sockets; the vault
+identifies callers by `SO_PEERCRED` and the owner (`user:maludb`) is enrolled; the gateway has OpenAI and Anthropic faces
+with tools and streaming. What Slides builds and what it asks of the MaluOS build is in
+[maluos-integration.md](maluos-integration.md).
+
 ## Phase 3: the assistant
 
 | Step | State | Notes |
