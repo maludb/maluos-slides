@@ -291,6 +291,7 @@ pub fn tool_command(tool: &str) -> Option<&'static str> {
         "insert_chart" => "insert.chart",
         "select" => "edit.select",
         "build_deck" => "slide.new",
+        "deck_timing" => "document.inspect",
         _ => return None,
     })
 }

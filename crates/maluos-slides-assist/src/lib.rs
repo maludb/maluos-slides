@@ -18,6 +18,8 @@
 //!   always confirmed; plans the user approves through [`Confirm`].
 //! - [`outline`] (step 4.1): a deck from Markdown or a slide list, the `build_deck` tool, and
 //!   [`mcp_ext::Server`], the MCP server with the fork's tools added.
+//! - [`timing`] (step 4.4): how long a deck takes, per slide and in total, and the cue line
+//!   presenter view shows; the `deck_timing` tool.
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -34,6 +36,7 @@ pub mod mcp_ext;
 pub mod outline;
 pub mod policy;
 pub mod providers;
+pub mod timing;
 pub mod tools;
 
 pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, ModelCall, Step, Stop, ToolCall, Turn, TurnEvent, TurnReport, summarize};

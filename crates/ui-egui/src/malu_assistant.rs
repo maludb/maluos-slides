@@ -659,6 +659,10 @@ pub const QUICK_ACTIONS: &[(&str, &str)] = &[
     ("Write notes", "Write speaker notes for this slide: three to six spoken sentences that add what the slide does not say."),
     ("Chart from table", "Suggest a chart for the table on this slide and insert it next to the table."),
     ("Fix layout", "Fix the layout of this slide: align the shapes, even out the spacing, and shrink any text that overflows."),
+    (
+        "Q&A prep",
+        "Prepare me for questions: six to ten likely audience questions with answers from the deck, on one hidden slide at the end titled Q&A prep.",
+    ),
 ];
 
 fn quick_actions(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) {

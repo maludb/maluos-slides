@@ -1971,6 +1971,23 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
                     ui.label(egui::RichText::new(clock.clone()).size(16.0).color(Color32::from_gray(200)));
                     ui.add_space(20.0);
                     ui.label(egui::RichText::new(format!("Slide {} of {}", cur + 1, doc.slides.len())).size(16.0).color(Color32::from_gray(200)));
+                    // MaluOS: timing hints (docs/maluos-slides/plan.md step 4.4).
+                    {
+                        let timing = maluos_slides_assist::timing::DeckTiming::of(doc);
+                        if let Some(t) = timing.slide(cur) {
+                            ui.add_space(20.0);
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "≈ {} · deck {}",
+                                    maluos_slides_assist::timing::clock(t.seconds),
+                                    maluos_slides_assist::timing::clock(timing.total_seconds)
+                                ))
+                                .size(16.0)
+                                .color(Color32::from_gray(170)),
+                            )
+                            .on_hover_text("Estimated from the words in the notes and on the slide");
+                        }
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if button(ui, "End Show").clicked() {
                             *keep = false;
@@ -2073,6 +2090,13 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
                 let notes_rect = Rect::from_min_max(pos2(right.min.x, notes_head.max.y + 4.0), right.max);
                 let mut child = ui.new_child(egui::UiBuilder::new().max_rect(notes_rect));
                 egui::ScrollArea::vertical().show(&mut child, |ui| {
+                    // MaluOS: the cue line, the notes' first sentences, before the full notes.
+                    if let Some(cue) = maluos_slides_assist::timing::cue(&notes.text(), 30)
+                        && maluos_slides_assist::timing::words(&notes.text()) > 30
+                    {
+                        ui.label(egui::RichText::new(cue).size(show.notes_px * 1.1).color(Color32::from_rgb(255, 214, 102)).strong());
+                        ui.add_space(6.0);
+                    }
                     presenter_notes(ui, notes, show.notes_px);
                 });
             });

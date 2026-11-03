@@ -261,3 +261,41 @@ fn a_quick_action_sends_its_request_for_the_current_slide() {
     assert!(sent.starts_with("Write speaker notes for this slide"), "{sent}");
     assert!(matches!(&mock.requests()[0].messages[0].content[0], ContentBlock::Text { text } if text == &sent));
 }
+
+/// MaluOS step 4.4: presenter view shows the timing hint and the cue line.
+#[test]
+fn presenter_view_shows_timing_and_a_cue_line() {
+    let mut s = Session::new();
+    maluos_slides_engine::sample::open_sample(&mut s).unwrap();
+    s.execute("slide.go", &json!({"index": 1})).unwrap();
+    let long_notes = "Welcome to the science part. Start with the Sun: the solar wind is a stream of charged particles that reaches Earth in two to three days. Then the magnetosphere, which guides them to the poles. Keep the physics light; the pictures carry it. Mention the colours only after the collision slide.";
+    s.execute("slide.notes", &json!({"text": long_notes})).unwrap();
+    let timing = maluos_slides_assist::timing::DeckTiming::of(&s.active().unwrap().doc);
+    let expected = format!(
+        "≈ {} · deck {}",
+        maluos_slides_assist::timing::clock(timing.slide(1).unwrap().seconds),
+        maluos_slides_assist::timing::clock(timing.total_seconds)
+    );
+    let cue = maluos_slides_assist::timing::cue(long_notes, 30).unwrap();
+    let mut app = SlideApp::new(s, Services::default());
+    app.ui.pane = None;
+    let mut h = Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).with_step_dt(1.0 / 60.0).build_ui_state(
+        |ui, app: &mut SlideApp| {
+            app.logic(ui.ctx());
+            app.ui(ui);
+        },
+        app,
+    );
+    h.run_steps(3);
+    h.state_mut().run("show.presenter", json!({"on": true})).unwrap();
+    h.state_mut().run("show.start", json!({"from": 1})).unwrap();
+    h.run_steps(6);
+    h.get_by_label(expected.as_str());
+    h.get_by_label(cue.as_str());
+    if let Some(dir) = std::env::var_os("MALUOS_SLIDES_SHOT_DIR")
+        && let Ok(img) = h.render()
+    {
+        img.save(std::path::Path::new(&dir).join("4.4-presenter.png")).unwrap();
+    }
+    h.state_mut().run("show.end", json!({})).unwrap();
+}

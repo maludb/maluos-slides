@@ -58,7 +58,8 @@ fn table_mirrors_the_mcp_server() {
     let all = ToolTable::all();
     let mcp = maluos_slides_mcp::tool_definitions();
     assert_eq!(all.defs().len(), mcp.len() + ToolTable::extra_definitions().len());
-    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("build_deck"), "the fork's tools come last");
+    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("deck_timing"), "the fork's tools come last");
+    assert!(all.get("build_deck").is_some());
     for (t, m) in all.defs().iter().zip(&mcp) {
         assert_eq!(t.name, m["name"]);
         assert_eq!(t.description, m["description"]);
@@ -1106,4 +1107,84 @@ fn slide_help_recipes_run_through_the_usual_tools() {
     // The inspect result the model read listed every cell.
     let ContentBlock::ToolResult { content, .. } = &mock.requests()[1].messages[2].content[0] else { panic!() };
     assert!(content.contains("North") && content.contains("\"9\""), "{content}");
+}
+
+// ---------- presenter assistant (step 4.4) ----------
+
+use crate::timing::{DeckTiming, clock, cue, estimate, words};
+
+#[test]
+fn timing_estimates_from_known_word_counts() {
+    assert_eq!(words("one two  three\n- four"), 4);
+    assert_eq!(words("•  …  "), 0);
+    assert_eq!(estimate(0, 0), 15.0, "the minimum");
+    assert_eq!(estimate(0, 130), 8.0 + 60.0);
+    assert_eq!(estimate(60, 0), 8.0 + 60.0);
+    assert_eq!(estimate(30, 65), 8.0 + 30.0 + 30.0);
+    assert_eq!(clock(68.0), "1:08");
+    assert_eq!(clock(3725.0), "1:02:05");
+    assert_eq!(cue("", 30), None);
+    assert_eq!(cue("First point. Second point! Third?", 4).as_deref(), Some("First point. Second point!"));
+    assert_eq!(cue("One very long sentence that never ends and goes on and on", 4).as_deref(), Some("One very long sentence…"));
+    assert_eq!(cue("  Spaced   out.  ", 10).as_deref(), Some("Spaced out."));
+
+    let mut s = Session::with_new();
+    let title = s.doc().unwrap().current_slide().unwrap().shapes[0].id;
+    run(&mut s, "text.set", json!({"id": title, "text": "Five words in this title"}));
+    run(&mut s, "slide.notes", json!({"text": "A note of exactly eight words right here now."}));
+    run(&mut s, "slide.new", json!({"layout": "titleAndContent", "title": "Second", "body": "a b c\nd e f"}));
+    run(&mut s, "slide.hide", json!({"hidden": true}));
+    let t = DeckTiming::of(&s.active().unwrap().doc);
+    assert_eq!(t.slides.len(), 2);
+    assert_eq!((t.slides[0].slide_words, t.slides[0].notes_words), (5, 9));
+    assert_eq!(t.slides[0].seconds, estimate(5, 9));
+    assert_eq!(t.slides[1].slide_words, 7);
+    assert!(t.slides[1].hidden);
+    assert_eq!(t.total_seconds, t.slides[0].seconds, "hidden slides do not count");
+    assert_eq!(t.longest().map(|x| x.index), Some(0));
+    let j = t.to_json();
+    assert_eq!(j["slides"][1]["hidden"], true);
+    assert_eq!(j["total"], clock(t.total_seconds));
+
+    // The tool agrees with the direct computation.
+    let mut h = Headless::new();
+    h.session = s;
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::from_session(&h.session);
+    let out = run_tool(&mut h, &table, &catalog, "t", "deck_timing", &json!({}));
+    assert!(!out.is_error, "{}", out.text);
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["totalSeconds"], t.total_seconds.round());
+    assert_eq!(v["slides"][0]["notesWords"], 9);
+    assert!(table.is_read_only("deck_timing"));
+}
+
+#[test]
+fn qa_prep_ends_in_a_hidden_slide() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("d", "inspect_document", json!({}))]));
+    mock.push(calls(vec![tool_use(
+        "a",
+        "add_slide",
+        json!({"layout": "titleAndContent", "title": "Q&A prep", "body": "Why Inter?\nWhat does it cost?"}),
+    )]));
+    mock.push(calls(vec![
+        tool_use(
+            "n",
+            "run_command",
+            json!({"command": "slide.notes", "params": {"text": "Why Inter? It ships with the app. What does it cost? Not in the deck."}}),
+        ),
+        tool_use("h", "run_command", json!({"command": "slide.hide", "params": {"hidden": true}})),
+    ]));
+    mock.push(answer("Added a hidden Q&A prep slide with two questions."));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "prepare me for questions", &mut ApproveAll, &mut no_events());
+    assert_eq!(report.commands, vec!["slide.new", "slide.notes", "slide.hide"]);
+    let st = host.session.active().unwrap();
+    assert_eq!(st.doc.slides.len(), 2);
+    assert_eq!(st.doc.slides[1].title(), "Q&A prep");
+    assert!(st.doc.slides[1].hidden);
+    assert!(st.doc.slides[1].notes_text().contains("Not in the deck"));
+    assert!(mock.requests()[0].system.as_deref().unwrap().contains("Q&A prep"));
 }

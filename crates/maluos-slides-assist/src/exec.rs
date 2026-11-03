@@ -113,7 +113,53 @@ pub fn call_tool(backend: &mut dyn Backend, name: &str, args: &Value) -> ToolRes
     if name == crate::tools::BUILD_DECK {
         return build_deck(backend, args);
     }
+    if name == crate::tools::DECK_TIMING {
+        return deck_timing(backend);
+    }
     maluos_slides_mcp::call_tool(backend, name, args)
+}
+
+/// The timing of the backend's presentation, read through `document.inspect` and `slide.inspect`
+/// when there is no session at hand (a remote app), from the model itself otherwise.
+fn deck_timing(backend: &mut dyn Backend) -> ToolResult {
+    let doc = match backend.call("document.inspect", json!({})) {
+        Ok(v) => v,
+        Err(e) => return ToolResult::error(format!("deck_timing: {e}")),
+    };
+    let Some(slides) = doc.get("slides").and_then(Value::as_array) else { return ToolResult::error("deck_timing: no presentation open") };
+    let mut out = Vec::with_capacity(slides.len());
+    let mut total = 0.0;
+    for (i, s) in slides.iter().enumerate() {
+        let notes = s.get("notes").and_then(Value::as_str).unwrap_or("");
+        let slide_words = match backend.call("engine.execute", json!({"command": "slide.inspect", "params": {"index": i}})) {
+            Ok(v) => v.get("shapes").and_then(Value::as_array).map(|shapes| shapes.iter().map(shape_words_json).sum()).unwrap_or(0),
+            Err(_) => 0,
+        };
+        let notes_words = crate::timing::words(notes);
+        let seconds = crate::timing::estimate(slide_words, notes_words);
+        let hidden = s.get("hidden").and_then(Value::as_bool).unwrap_or(false);
+        if !hidden {
+            total += seconds;
+        }
+        out.push(json!({"index": i, "title": s.get("title").and_then(Value::as_str).unwrap_or(""), "slideWords": slide_words, "notesWords": notes_words, "seconds": seconds.round(), "hidden": hidden}));
+    }
+    let longest = out
+        .iter()
+        .filter(|s| s["hidden"] == false)
+        .max_by(|a, b| a["seconds"].as_f64().unwrap_or(0.0).total_cmp(&b["seconds"].as_f64().unwrap_or(0.0)))
+        .cloned();
+    ToolResult::json(&json!({"totalSeconds": total.round(), "total": crate::timing::clock(total), "slides": out, "longest": longest}))
+}
+
+fn shape_words_json(s: &Value) -> usize {
+    let mut n = s.get("text").and_then(Value::as_str).map(crate::timing::words).unwrap_or(0);
+    if let Some(cells) = s.pointer("/table/cells").and_then(Value::as_array) {
+        n += cells.iter().flat_map(|r| r.as_array().into_iter().flatten()).filter_map(Value::as_str).map(crate::timing::words).sum::<usize>();
+    }
+    if let Some(children) = s.get("children").and_then(Value::as_array) {
+        n += children.iter().map(shape_words_json).sum::<usize>();
+    }
+    n
 }
 
 fn build_deck(backend: &mut dyn Backend, args: &Value) -> ToolResult {

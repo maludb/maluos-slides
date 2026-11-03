@@ -879,5 +879,14 @@
       "type": "object"
     },
     "name": "build_deck"
+  },
+  {
+    "description": "How long the presentation takes to present: seconds per slide from the words in its notes (130 wpm) and on the slide (60 wpm) plus 8 s each, the total for the shown slides, and the longest slide. Use it for timing questions and before trimming a deck to a time limit.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "deck_timing"
   }
 ]

@@ -10,41 +10,52 @@ pub const APP_ONLY_MARKER: &str = "Desktop app only";
 
 /// The fork's own tool: a whole deck from a document (step 4.1).
 pub const BUILD_DECK: &str = "build_deck";
+/// The fork's tool: how long the deck takes to present (step 4.4).
+pub const DECK_TIMING: &str = "deck_timing";
 
 /// The fork's tools, in the MCP definition shape, appended to upstream's table everywhere the
 /// table is served (the assistant, the HTTP API, the MCP server through `mcp_ext`).
 pub fn extra_definitions() -> Vec<Value> {
-    vec![serde_json::json!({
-        "name": BUILD_DECK,
-        "title": "Build a deck",
-        "description": "Build many slides at once from an outline: Markdown (# deck title, ## section, ### slide, - bullets with two spaces per level, Notes: lines, | pipe tables |) or a `slides` list. Slides go after the current one; `replace: true` starts a new presentation (asks the user). Prefer this over many add_slide calls when making a whole deck.",
-        "inputSchema": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "markdown": {"type": "string", "description": "The outline as Markdown"},
-                "slides": {"type": "array", "description": "Instead of markdown: slides in order", "items": {"type": "object", "properties": {
-                    "title": {"type": "string"},
-                    "body": {"description": "Body text, one paragraph per line, leading tabs indent; or a list of lines", "oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
-                    "notes": {"type": "string", "description": "Speaker notes"},
-                    "layout": {"type": "string", "description": "title, titleAndContent, sectionHeader, twoContent, comparison, titleOnly, blank, contentWithCaption, pictureWithCaption (default from the content)"},
-                    "section": {"type": "string", "description": "Starts a section with this name before the slide"},
-                    "table": {"type": "array", "description": "Rows of cells; the first row is the header", "items": {"type": "array", "items": {"type": "string"}}}
-                }, "required": ["title"]}},
-                "title": {"type": "string", "description": "Deck title (with `slides`): makes the title slide"},
-                "subtitle": {"type": "string", "description": "Subtitle of the title slide"},
-                "theme": {"type": "string", "enum": ["MaluOS Slides", "Harbor", "Ember", "Meadow", "Nocturne", "Paper", "Coral Reef", "Slate"], "description": "Theme for the deck"},
-                "replace": {"type": "boolean", "description": "Start a new presentation instead of adding to the open one (default false)"},
-                "after": {"type": "integer", "minimum": 0, "description": "Insert after this slide index (default: the last slide)"}
-            }
-        },
-        "annotations": {"title": "Build a deck", "readOnlyHint": false, "openWorldHint": false}
-    })]
+    vec![
+        serde_json::json!({
+            "name": BUILD_DECK,
+            "title": "Build a deck",
+            "description": "Build many slides at once from an outline: Markdown (# deck title, ## section, ### slide, - bullets with two spaces per level, Notes: lines, | pipe tables |) or a `slides` list. Slides go after the current one; `replace: true` starts a new presentation (asks the user). Prefer this over many add_slide calls when making a whole deck.",
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "markdown": {"type": "string", "description": "The outline as Markdown"},
+                    "slides": {"type": "array", "description": "Instead of markdown: slides in order", "items": {"type": "object", "properties": {
+                        "title": {"type": "string"},
+                        "body": {"description": "Body text, one paragraph per line, leading tabs indent; or a list of lines", "oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+                        "notes": {"type": "string", "description": "Speaker notes"},
+                        "layout": {"type": "string", "description": "title, titleAndContent, sectionHeader, twoContent, comparison, titleOnly, blank, contentWithCaption, pictureWithCaption (default from the content)"},
+                        "section": {"type": "string", "description": "Starts a section with this name before the slide"},
+                        "table": {"type": "array", "description": "Rows of cells; the first row is the header", "items": {"type": "array", "items": {"type": "string"}}}
+                    }, "required": ["title"]}},
+                    "title": {"type": "string", "description": "Deck title (with `slides`): makes the title slide"},
+                    "subtitle": {"type": "string", "description": "Subtitle of the title slide"},
+                    "theme": {"type": "string", "enum": ["MaluOS Slides", "Harbor", "Ember", "Meadow", "Nocturne", "Paper", "Coral Reef", "Slate"], "description": "Theme for the deck"},
+                    "replace": {"type": "boolean", "description": "Start a new presentation instead of adding to the open one (default false)"},
+                    "after": {"type": "integer", "minimum": 0, "description": "Insert after this slide index (default: the last slide)"}
+                }
+            },
+            "annotations": {"title": "Build a deck", "readOnlyHint": false, "openWorldHint": false}
+        }),
+        serde_json::json!({
+            "name": DECK_TIMING,
+            "title": "Deck timing",
+            "description": "How long the presentation takes to present: seconds per slide from the words in its notes (130 wpm) and on the slide (60 wpm) plus 8 s each, the total for the shown slides, and the longest slide. Use it for timing questions and before trimming a deck to a time limit.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+            "annotations": {"title": "Deck timing", "readOnlyHint": true, "openWorldHint": false}
+        }),
+    ]
 }
 
 /// Whether `name` is one of the fork's tools.
 pub fn is_extra(name: &str) -> bool {
-    name == BUILD_DECK
+    name == BUILD_DECK || name == DECK_TIMING
 }
 
 /// The tools a model may call. Built from [`maluos_slides_mcp::tool_definitions`], so the MCP

@@ -192,6 +192,18 @@ levels kept), notes through `slide.notes`, a chart from a table through `inspect
 `arrange.distribute`, `shape.move` / `shape.resize` and `format.autofit`, checked with
 `render_slide`. The pane offers them as one-click quick actions above the box ("This slide:").
 
+## The presenter assistant (step 4.4)
+
+`timing.rs` estimates how long a deck takes: for each slide the words on it (text, tables,
+groups) and in its notes, seconds = 8 + notes ÷ 130 wpm + slide text ÷ 60 wpm, at least 15;
+the total counts shown slides only. Presenter view shows "≈ 1:20 · deck 14:30" beside the slide
+counter and a cue line (the notes' first sentences, 30 words) above the full notes. The
+read-only tool `deck_timing` gives the model the same numbers, through `document.inspect` and
+`slide.inspect` so it also works on a running app. The instructions add two recipes: timing
+(trim the longest slides' notes and bullets first) and Q&A prep (six to ten questions with
+answers drawn only from the deck, on one hidden slide at the end, answers in its notes); the
+pane offers Q&A prep as a quick action.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -226,3 +238,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | minor | Step 3.7: `providers` module shared by the pane and the CLI; the example program gave way to `maluos-slides-cli ask` |
 | 2026-11-02 | major | Step 4.1: `outline`, `build_deck`, `call_tool` with extras, `mcp_ext::Server` |
 | 2026-11-02 | major | Step 4.2: images to the model, the five recipes, quick actions |
+| 2026-11-02 | major | Step 4.4: `timing`, `deck_timing`, presenter view hints, Q&A prep |
