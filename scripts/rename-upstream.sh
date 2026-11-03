@@ -22,8 +22,8 @@ SKIP='^(README\.md|LICENSE-MIT|LICENSE-APACHE|docs/maluos-slides/.*|scripts/rena
 # 1. what the fork drops
 # (`packaging/macos/Info.plist.in` and `packaging/windows/deckcraft.wxs` stay: the desktop app's test
 # `every_desktop_offers_the_same_file_types` reads them as fixtures; they are not built.)
-git ls-files packaging/macos packaging/windows | grep -vE '^packaging/(macos/Info\.plist\.in|windows/(deckcraft|maluos-slides)\.wxs)$' | xargs -r -d '\n' git rm -q
-git rm -rq --ignore-unmatch \
+git ls-files packaging/macos packaging/windows | grep -vE '^packaging/(macos/Info\.plist\.in|windows/(deckcraft|maluos-slides)\.wxs)$' | xargs -r -d '\n' git rm -qf
+git rm -rqf --ignore-unmatch \
   docs/brand \
   packaging/freebsd packaging/icons.sh \
   assets/app-icon/deckcraft.icns assets/app-icon/deckcraft.ico \
@@ -68,5 +68,5 @@ if command -v cargo >/dev/null; then
   cargo update --workspace --offline --quiet
 fi
 
-left=$(git ls-files | grep -Ev "$SKIP" | xargs -d '\n' grep -Il -i deckcraft 2>/dev/null | wc -l)
+left=$(git ls-files | grep -Ev "$SKIP" | xargs -d '\n' grep -Il -i deckcraft 2>/dev/null | wc -l || true)
 echo "rename-upstream.sh: done; $left file(s) still mention deckcraft (expected: the .deckcraft format, upstream credits and links)"
