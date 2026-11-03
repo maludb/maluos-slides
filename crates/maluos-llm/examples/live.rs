@@ -80,6 +80,7 @@ fn run(client: &dyn LlmClient, model: &str) -> Result<(), LlmError> {
                 tool_use_id: id,
                 content: if name == "slide_count" { "8".into() } else { format!("unknown tool {name}") },
                 is_error: name != "slide_count",
+                images: vec![],
             })
             .collect();
         messages.push(Message::tool_results(results));

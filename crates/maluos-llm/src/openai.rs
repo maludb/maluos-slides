@@ -117,26 +117,50 @@ fn messages_json(request: &Request) -> Vec<Value> {
     out
 }
 
-/// Text blocks become one `user` message; each tool result is its own `tool` message, in the
-/// order the blocks have.
+/// Text and image blocks become one `user` message (an array of parts when an image is in it);
+/// each tool result is its own `tool` message, in the order the blocks have. Images inside tool
+/// results cannot go in a `tool` message, so they follow the tool messages as one user message.
 fn user_json(message: &Message, out: &mut Vec<Value>) {
-    let mut text = String::new();
-    let flush = |text: &mut String, out: &mut Vec<Value>| {
-        if !text.is_empty() {
-            out.push(json!({"role": "user", "content": std::mem::take(text)}));
+    let mut parts: Vec<Value> = Vec::new();
+    let flush = |parts: &mut Vec<Value>, out: &mut Vec<Value>| {
+        if parts.is_empty() {
+            return;
         }
+        let only_text = parts.iter().all(|p| p.get("type").and_then(Value::as_str) == Some("text"));
+        let content = if only_text {
+            Value::String(parts.iter().filter_map(|p| p.get("text").and_then(Value::as_str)).collect::<Vec<_>>().concat())
+        } else {
+            Value::Array(std::mem::take(parts))
+        };
+        parts.clear();
+        out.push(json!({"role": "user", "content": content}));
     };
+    let mut tool_images: Vec<Value> = Vec::new();
     for block in &message.content {
         match block {
-            ContentBlock::Text { text: t } => text.push_str(t),
-            ContentBlock::ToolResult { tool_use_id, content, .. } => {
-                flush(&mut text, out);
+            ContentBlock::Text { text: t } => parts.push(json!({"type": "text", "text": t})),
+            ContentBlock::Image { media_type, data } => parts.push(image_part(media_type, data)),
+            ContentBlock::ToolResult { tool_use_id, content, images, .. } => {
+                flush(&mut parts, out);
                 out.push(json!({"role": "tool", "tool_call_id": tool_use_id, "content": content}));
+                for img in images {
+                    if tool_images.is_empty() {
+                        tool_images.push(json!({"type": "text", "text": "Images from the tool results above:"}));
+                    }
+                    tool_images.push(image_part(&img.media_type, &img.data));
+                }
             }
             ContentBlock::Thinking { .. } | ContentBlock::ToolUse { .. } | ContentBlock::Raw { .. } => {}
         }
     }
-    flush(&mut text, out);
+    flush(&mut parts, out);
+    if !tool_images.is_empty() {
+        out.push(json!({"role": "user", "content": tool_images}));
+    }
+}
+
+fn image_part(media_type: &str, data: &str) -> Value {
+    json!({"type": "image_url", "image_url": {"url": format!("data:{media_type};base64,{data}")}})
 }
 
 fn assistant_json(message: &Message) -> Value {
@@ -148,7 +172,7 @@ fn assistant_json(message: &Message) -> Value {
             ContentBlock::ToolUse { id, name, input } => {
                 tool_calls.push(json!({"id": id, "type": "function", "function": {"name": name, "arguments": input.to_string()}}));
             }
-            ContentBlock::Thinking { .. } | ContentBlock::ToolResult { .. } | ContentBlock::Raw { .. } => {}
+            ContentBlock::Thinking { .. } | ContentBlock::ToolResult { .. } | ContentBlock::Raw { .. } | ContentBlock::Image { .. } => {}
         }
     }
     let mut v = Map::new();

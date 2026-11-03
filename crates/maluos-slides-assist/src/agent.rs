@@ -58,6 +58,10 @@ pub struct Limits {
     /// Messages kept in the conversation; older turns are dropped from the front (whole turns,
     /// never splitting a tool call from its result).
     pub max_messages: usize,
+    /// Images a tool returned (`render_slide`) go to the model, at most this many per turn; 0
+    /// sends none (a text-only model). Images from earlier turns are dropped from the history
+    /// when a new turn starts.
+    pub max_images: usize,
 }
 
 impl Default for Limits {
@@ -70,6 +74,7 @@ impl Default for Limits {
             retries: 3,
             retry_delay: Duration::from_secs(2),
             max_messages: 60,
+            max_images: 6,
         }
     }
 }
@@ -146,6 +151,7 @@ pub struct Turn {
     slide_mark: Vec<SlideMark>,
     report: TurnReport,
     tool_calls: usize,
+    images: usize,
     cancelled: bool,
     pending: Option<Pending>,
     done: bool,
@@ -241,7 +247,14 @@ How to work:
 - The deck outline below is the state right now: it is rebuilt after every tool call, so changes you made earlier in this turn already show in it (do not take them for pre-existing content). Slides are numbered from 1 in prose but tools take 0-based indexes and shape ids; both are in the outline.
 - When the user says \"this\", \"here\" or \"the title\", the selection is the target; without a selection, the current slide is.
 - To change text, use set_text with the shape id (it keeps the formatting). To add content, use add_slide, add_shape, add_text_box, insert_table or insert_chart. For a whole deck or several slides at once, write the outline and call build_deck once (Markdown: # title, ## section, ### slide, - bullets, Notes: lines, | tables |); it makes the title slide, sections, slides, notes and tables in one call. When the user gives a document, build the deck from its content: one idea per slide, five bullets at most, a title slide, sections for its parts, a closing slide. For anything else, run_command with a command id from the catalog; its params are documented there. Use batch for several commands.
-- Check the result of a tool before building on it: inspect_slide shows ids and boxes, render_slide shows the picture.
+- Check the result of a tool before building on it: inspect_slide shows ids and boxes, render_slide shows the picture (it is attached to the result when you can see images; look at it after a visual change).
+
+Slide help, the usual requests:
+- Tighten a title: set_text on the title placeholder (ctrTitle or title in the outline), at most six words, no trailing period.
+- Rewrite bullets: set_text on the body placeholder with the whole body: at most five bullets, parallel phrasing, each under twelve words, keep the levels with leading tabs, keep facts and numbers as they are.
+- Speaker notes: run_command slide.notes {text, index?} with three to six spoken sentences that add what the slide does not say; never repeat the bullets.
+- A chart from a table: inspect_slide for every cell; the first column is the categories, each numeric column a series; insert_chart with a matching type (column for comparisons over categories, line for a series over time, pie only for parts of one whole with at most six slices); keep the table unless asked to replace it.
+- Fix a layout: the outline gives each shape's box [x, y, w, h] on a 960×540 slide; align edges and spacing with shape.move / shape.resize through run_command (list_commands with the filter align shows arrange.align and arrange.distribute), use format.autofit {mode: shrink} for text that overflows, and render_slide to confirm.
 - Make the smallest change that does what was asked; keep the deck's theme, layouts and style unless asked otherwise.
 - Answer briefly: what changed, on which slides. Do not describe tool mechanics. If something cannot be done, say so.";
 
@@ -348,10 +361,12 @@ impl Assistant {
             slide_mark: slide_marks(host.session()),
             report: TurnReport::default(),
             tool_calls: 0,
+            images: 0,
             cancelled: false,
             pending: None,
             done: false,
         };
+        self.strip_old_images();
         self.messages.push(Message::user(text));
         self.trim_messages();
         let step = self.next_round(&mut turn, host, on_event);
@@ -513,7 +528,11 @@ impl Assistant {
                 }
             };
             turn.report.tool_calls.push(ToolCall { name: name.clone(), input, ok: !outcome.is_error, summary: summarize(&outcome.text) });
-            results.push(outcome.block());
+            let with_images = !outcome.images.is_empty() && turn.images + outcome.images.len() <= self.limits.max_images;
+            if with_images {
+                turn.images += outcome.images.len();
+            }
+            results.push(outcome.block_with_images(with_images));
         }
         self.messages.push(Message::tool_results(results));
         self.next_round(turn, host, on_event)
@@ -535,6 +554,20 @@ impl Assistant {
         Step::Done(turn.report.clone())
     }
 
+    /// Pictures from earlier turns are not worth their tokens: the text of each result stays.
+    fn strip_old_images(&mut self) {
+        for m in &mut self.messages {
+            for b in &mut m.content {
+                if let ContentBlock::ToolResult { images, .. } = b
+                    && !images.is_empty()
+                {
+                    images.clear();
+                }
+            }
+            m.content.retain(|b| !matches!(b, ContentBlock::Image { .. }));
+        }
+    }
+
     /// If the last assistant message asked for tools nobody answered, answer them as cancelled.
     fn close_open_tool_calls(&mut self) {
         let Some(Message { role: maluos_llm::Role::Assistant, content }) = self.messages.last() else { return };
@@ -543,7 +576,10 @@ impl Assistant {
         if ids.is_empty() {
             return;
         }
-        let results = ids.into_iter().map(|id| ContentBlock::ToolResult { tool_use_id: id, content: "cancelled".into(), is_error: true }).collect();
+        let results = ids
+            .into_iter()
+            .map(|id| ContentBlock::ToolResult { tool_use_id: id, content: "cancelled".into(), is_error: true, images: vec![] })
+            .collect();
         self.messages.push(Message::tool_results(results));
     }
 

@@ -174,6 +174,24 @@ starts a new presentation and is classed destructive. The instructions tell the 
 the outline and call `build_deck` once for a whole deck, with one idea per slide and a closing
 slide; the undo step for the turn then reverts the whole deck.
 
+## Slide-level help and pictures (step 4.2)
+
+`render_slide` now shows the model the picture: the tool outcome keeps the PNG, and the loop
+attaches it to the tool result (`ToolOutcome::block_with_images`) up to `Limits::max_images` per
+turn (six; zero for a text-only model). When the next turn starts, pictures from earlier turns
+are dropped from the history and their text stays, so a long conversation does not carry old
+screenshots. In `maluos-llm` an image is `Image {media_type, data}`: Anthropic takes it inside
+the `tool_result` content and as an `image` block in user messages; OpenAI-style APIs cannot
+put images in `tool` messages, so they follow the tool messages as one user message of
+`image_url` parts (Ollama's compatible endpoint accepts the same for vision models).
+
+The instructions carry the five everyday recipes, each tied to the tools that do it: a title
+through `set_text` (six words at most), bullets through `set_text` on the body (five, parallel,
+levels kept), notes through `slide.notes`, a chart from a table through `inspect_slide` then
+`insert_chart` with the first column as categories, a layout through `arrange.align`,
+`arrange.distribute`, `shape.move` / `shape.resize` and `format.autofit`, checked with
+`render_slide`. The pane offers them as one-click quick actions above the box ("This slide:").
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -207,3 +225,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Step 3.6: the loop as a step machine (`Turn`, `Step`, `ModelCall`), the pane in `ui-egui`, `assist.ask` / `assist.plan`, screenshots, 5 pane tests |
 | 2026-11-02 | minor | Step 3.7: `providers` module shared by the pane and the CLI; the example program gave way to `maluos-slides-cli ask` |
 | 2026-11-02 | major | Step 4.1: `outline`, `build_deck`, `call_tool` with extras, `mcp_ext::Server` |
+| 2026-11-02 | major | Step 4.2: images to the model, the five recipes, quick actions |

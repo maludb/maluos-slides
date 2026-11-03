@@ -648,7 +648,34 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
         },
     );
     ui.add_space(6.0);
+    quick_actions(app, ui, &ctx, &t);
     input_row(app, ui, &ctx, &t);
+}
+
+/// The usual slide requests as one click each (step 4.2): they fill the box and send.
+pub const QUICK_ACTIONS: &[(&str, &str)] = &[
+    ("Tighten title", "Tighten the title of this slide to six words at most."),
+    ("Rewrite bullets", "Rewrite the bullets on this slide: at most five, parallel phrasing, under twelve words each; keep the facts."),
+    ("Write notes", "Write speaker notes for this slide: three to six spoken sentences that add what the slide does not say."),
+    ("Chart from table", "Suggest a chart for the table on this slide and insert it next to the table."),
+    ("Fix layout", "Fix the layout of this slide: align the shapes, even out the spacing, and shrink any text that overflows."),
+];
+
+fn quick_actions(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) {
+    if app.session.active().is_none() || app.malu.busy() {
+        return;
+    }
+    ui.horizontal_wrapped(|ui| {
+        ui.label(RichText::new("This slide:").small().color(t.text_dim));
+        for (label, request) in QUICK_ACTIONS {
+            if ui.add(egui::Button::new(RichText::new(*label).small())).on_hover_text(*request).clicked() {
+                app.malu.input = (*request).to_string();
+                app.malu.send_requested = true;
+                ctx.request_repaint();
+            }
+        }
+    });
+    ui.add_space(4.0);
 }
 
 fn settings_row(app: &mut SlideApp, ui: &mut Ui, _t: &Tokens) {

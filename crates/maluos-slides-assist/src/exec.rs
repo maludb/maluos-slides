@@ -27,9 +27,22 @@ pub struct ToolOutcome {
 }
 
 impl ToolOutcome {
-    /// The block to append to the next request's user turn.
+    /// The block to append to the next request's user turn, text only.
     pub fn block(&self) -> ContentBlock {
-        ContentBlock::ToolResult { tool_use_id: self.tool_use_id.clone(), content: self.text.clone(), is_error: self.is_error }
+        self.block_with_images(false)
+    }
+
+    /// The block with the tool's images attached (a rendered slide the model asked for), so a
+    /// model that sees pictures can check its work.
+    pub fn block_with_images(&self, with_images: bool) -> ContentBlock {
+        let images = if with_images {
+            self.images.iter().map(|(data, mime)| maluos_llm::Image { media_type: mime.clone(), data: data.clone() }).collect()
+        } else {
+            vec![]
+        };
+        let content =
+            if with_images && !self.images.is_empty() { self.text.replace("bytes base64]", "bytes base64, attached]") } else { self.text.clone() };
+        ContentBlock::ToolResult { tool_use_id: self.tool_use_id.clone(), content, is_error: self.is_error, images }
     }
 
     fn from_result(tool_use_id: &str, name: &str, raw: ToolResult) -> Self {

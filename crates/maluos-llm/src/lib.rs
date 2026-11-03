@@ -91,12 +91,22 @@ pub enum ContentBlock {
         name: String,
         input: Value,
     },
-    /// The caller answers a [`ContentBlock::ToolUse`].
+    /// The caller answers a [`ContentBlock::ToolUse`]. `images` ride along with the text (a
+    /// rendered slide): Anthropic takes them inside the result, OpenAI-style APIs get them as a
+    /// user message after the tool messages.
     ToolResult {
         tool_use_id: String,
         content: String,
         #[serde(default)]
         is_error: bool,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        images: Vec<Image>,
+    },
+    /// A picture in a user message.
+    Image {
+        media_type: String,
+        /// Base64, no data-URL prefix.
+        data: String,
     },
     /// A provider-specific block kept verbatim (a redacted thinking block, a fallback marker). It
     /// goes back to the provider that produced it and is dropped for every other one.
@@ -104,6 +114,24 @@ pub enum ContentBlock {
         provider: String,
         value: Value,
     },
+}
+
+/// A picture for the model: PNG, JPEG, GIF or WebP as base64.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Image {
+    pub media_type: String,
+    pub data: String,
+}
+
+impl Image {
+    pub fn png(base64: impl Into<String>) -> Self {
+        Image { media_type: "image/png".into(), data: base64.into() }
+    }
+
+    /// `data:image/png;base64,…`
+    pub fn data_url(&self) -> String {
+        format!("data:{};base64,{}", self.media_type, self.data)
+    }
 }
 
 /// A tool the model may call, in JSON Schema.

@@ -235,3 +235,29 @@ fn a_model_error_is_shown_and_the_pane_recovers() {
     settle(&mut h);
     assert_eq!(last_assistant(&h).0, "fine");
 }
+
+#[test]
+fn a_quick_action_sends_its_request_for_the_current_slide() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("n", "run_command", json!({"command": "slide.notes", "params": {"text": "Start with the question."}}))]));
+    mock.push(answer("Notes written."));
+    let mut h = harness(mock.clone(), maluos_slides_assist::Mode::Autopilot);
+    h.get_by_label("Write notes").click();
+    h.run_steps(2);
+    assert!(
+        !h.state().malu.transcript.is_empty(),
+        "nothing sent: input={:?} requested={} busy={}",
+        h.state().malu.input,
+        h.state().malu.send_requested,
+        h.state().malu.busy()
+    );
+    settle(&mut h);
+    assert_eq!(last_assistant(&h).0, "Notes written.");
+    assert_eq!(h.state().session.active().unwrap().doc.slides[0].notes_text(), "Start with the question.");
+    let sent = match &h.state().malu.transcript[0] {
+        Entry::User(t) => t.clone(),
+        other => panic!("{other:?}"),
+    };
+    assert!(sent.starts_with("Write speaker notes for this slide"), "{sent}");
+    assert!(matches!(&mock.requests()[0].messages[0].content[0], ContentBlock::Text { text } if text == &sent));
+}

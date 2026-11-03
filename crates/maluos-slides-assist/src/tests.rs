@@ -1022,3 +1022,88 @@ fn the_model_builds_a_deck_from_a_document_in_one_call() {
     assert_eq!(host.session.active().unwrap().history.undo.len(), 1, "one undo step for the whole deck");
     assert!(report.commands.iter().filter(|c| *c == "slide.new").count() == 6, "{:?}", report.commands);
 }
+
+// ---------- slide help and images (step 4.2) ----------
+
+#[test]
+fn rendered_slides_reach_the_model_as_images_once() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("r", "render_slide", json!({"scale": 0.25}))]));
+    mock.push(answer("Looks fine."));
+    mock.push(answer("Still fine."));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "check the slide", &mut ApproveAll, &mut no_events());
+    assert_eq!(report.answer, "Looks fine.");
+    let reqs = mock.requests();
+    // The second request carries the picture inside the tool result.
+    let result = &reqs[1].messages[2].content[0];
+    let ContentBlock::ToolResult { images, content, is_error, .. } = result else { panic!("{result:?}") };
+    assert!(!is_error);
+    assert_eq!(images.len(), 1);
+    assert_eq!(images[0].media_type, "image/png");
+    assert!(images[0].data.len() > 100);
+    assert!(content.contains("attached"), "{content}");
+    // The next turn drops the old picture but keeps the text.
+    a.ask(&mut host, "thanks", &mut ApproveAll, &mut no_events());
+    let reqs = mock.requests();
+    let ContentBlock::ToolResult { images, content, .. } = &reqs[2].messages[2].content[0] else { panic!() };
+    assert!(images.is_empty());
+    assert!(content.contains("[image image/png"));
+
+    // max_images 0: a text-only model never gets a picture.
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("r", "render_slide", json!({"scale": 0.25}))]));
+    mock.push(answer("ok"));
+    let mut a = assistant(&mock).with_limits(Limits { max_images: 0, ..quick_limits() });
+    a.ask(&mut host, "check", &mut ApproveAll, &mut no_events());
+    let ContentBlock::ToolResult { images, .. } = &mock.requests()[1].messages[2].content[0] else { panic!() };
+    assert!(images.is_empty());
+}
+
+#[test]
+fn slide_help_recipes_run_through_the_usual_tools() {
+    let mut host = Headless::with_document();
+    let title = host.session.doc().unwrap().current_slide().unwrap().shapes[0].id;
+    run(&mut host.session, "text.set", json!({"id": title, "text": "A very long and rambling title about our quarterly results"}));
+    let mock = Arc::new(MockClient::new());
+    // Tighten the title, write the notes: two calls in one round, then the answer.
+    mock.push(calls(vec![
+        tool_use("a", "set_text", json!({"id": title, "text": "Quarterly results"})),
+        tool_use("b", "run_command", json!({"command": "slide.notes", "params": {"text": "Open with the headline number. Then the two drivers."}})),
+    ]));
+    mock.push(answer("Tightened the title and added notes."));
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "tighten the title and write speaker notes", &mut ApproveAll, &mut no_events());
+    assert_eq!(report.commands, vec!["text.set", "slide.notes"]);
+    let st = host.session.active().unwrap();
+    assert_eq!(st.doc.slides[0].title(), "Quarterly results");
+    assert!(st.doc.slides[0].notes_text().starts_with("Open with"));
+    assert_eq!(report.touched_slides, vec![0]);
+    // The instructions carry the recipes.
+    let system = mock.requests()[0].system.clone().unwrap();
+    for needle in ["Tighten a title", "Rewrite bullets", "Speaker notes", "A chart from a table", "Fix a layout", "arrange.align"] {
+        assert!(system.contains(needle), "{needle}");
+    }
+
+    // A chart from a table: inspect, then insert_chart from the cells.
+    let mock = Arc::new(MockClient::new());
+    run(&mut host.session, "slide.new", json!({"layout": "titleOnly", "title": "Sales"}));
+    run(&mut host.session, "insert.table", json!({"rows": 3, "cols": 2, "data": [["Region", "Sales"], ["North", "12"], ["South", "9"]]}));
+    mock.push(calls(vec![tool_use("i", "inspect_slide", json!({}))]));
+    mock.push(calls(vec![tool_use(
+        "c",
+        "insert_chart",
+        json!({"type": "column", "title": "Sales by region", "categories": ["North", "South"], "series": [{"name": "Sales", "values": [12, 9]}]}),
+    )]));
+    mock.push(answer("Added a column chart next to the table."));
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "suggest a chart for this table", &mut ApproveAll, &mut no_events());
+    assert_eq!(report.commands, vec!["insert.chart"]);
+    let st = host.session.active().unwrap();
+    let kinds: Vec<&str> = st.doc.slides[1].shapes.iter().map(|s| s.kind_name()).collect();
+    assert!(kinds.contains(&"chart") && kinds.contains(&"table"), "{kinds:?}");
+    // The inspect result the model read listed every cell.
+    let ContentBlock::ToolResult { content, .. } = &mock.requests()[1].messages[2].content[0] else { panic!() };
+    assert!(content.contains("North") && content.contains("\"9\""), "{content}");
+}

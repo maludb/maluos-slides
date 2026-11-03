@@ -77,7 +77,7 @@ answer, usage on both turns.
 - Prompt caching breakpoints (`cache_control`) on the Anthropic request: step 3.2 decides where
   the stable prefix ends (system text and tools first, the deck outline after).
 - Retry with backoff on `retryable()` errors: the harness loop (step 3.4) owns the policy.
-- Images in requests (`render_slide` output back to the model): needed by step 4.2.
+- (done in step 4.2) Images in requests: `Image`, `ContentBlock::Image`, `images` on tool results, both backends.
 
 ## Revision history
 

@@ -130,7 +130,7 @@ impl LlmClient for MockClient {
                     }
                     on_event(Event::ToolInputDelta { index, partial_json: input.to_string() })
                 }
-                ContentBlock::ToolResult { .. } | ContentBlock::Raw { .. } => Flow::Continue,
+                ContentBlock::ToolResult { .. } | ContentBlock::Raw { .. } | ContentBlock::Image { .. } => Flow::Continue,
             };
             if flow == Flow::Stop {
                 return Err(LlmError::Cancelled);

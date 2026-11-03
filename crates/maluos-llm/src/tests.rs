@@ -175,8 +175,8 @@ fn anthropic_passes_thinking_and_tool_blocks_back_and_drops_foreign_ones() {
         ],
     };
     let results = Message::tool_results(vec![
-        ContentBlock::ToolResult { tool_use_id: "toolu_1".into(), content: "ok".into(), is_error: false },
-        ContentBlock::ToolResult { tool_use_id: "toolu_2".into(), content: "no such shape".into(), is_error: true },
+        ContentBlock::ToolResult { tool_use_id: "toolu_1".into(), content: "ok".into(), is_error: false, images: vec![] },
+        ContentBlock::ToolResult { tool_use_id: "toolu_2".into(), content: "no such shape".into(), is_error: true, images: vec![] },
     ]);
     let request = Request::new("claude-opus-5-5", vec![Message::user("hi"), assistant, results]);
     client.complete_blocking(&request).unwrap();
@@ -414,7 +414,7 @@ fn openai_maps_tool_results_to_tool_messages_and_assistant_calls_to_tool_calls()
     let results = Message {
         role: Role::User,
         content: vec![
-            ContentBlock::ToolResult { tool_use_id: "call_1".into(), content: "ok".into(), is_error: false },
+            ContentBlock::ToolResult { tool_use_id: "call_1".into(), content: "ok".into(), is_error: false, images: vec![] },
             ContentBlock::Text { text: "Now the notes.".into() },
         ],
     };
@@ -526,7 +526,7 @@ fn request_and_completion_round_trip_through_json() {
         model: "m".into(),
         content: vec![
             ContentBlock::Thinking { text: "t".into(), signature: None },
-            ContentBlock::ToolResult { tool_use_id: "x".into(), content: "c".into(), is_error: true },
+            ContentBlock::ToolResult { tool_use_id: "x".into(), content: "c".into(), is_error: true, images: vec![] },
         ],
         stop_reason: StopReason::Other("pause_turn".into()),
         usage: Usage::default(),
@@ -548,4 +548,63 @@ fn error_messages_come_from_the_body_or_a_shortened_raw_text() {
     assert!(short.len() <= 300 && short.chars().all(|c| c == 'é'));
     assert_eq!(LlmError::from_status(418, "teapot".into()), LlmError::BadRequest("teapot".into()));
     assert_eq!(LlmError::from_status(302, "moved".into()), LlmError::Http { status: 302, message: "moved".into() });
+}
+
+#[test]
+fn images_ride_in_tool_results_and_user_messages() {
+    let img = crate::Image::png("AAAA");
+    let messages = vec![
+        Message {
+            role: Role::User,
+            content: vec![ContentBlock::Text { text: "look".into() }, ContentBlock::Image { media_type: "image/png".into(), data: "BBBB".into() }],
+        },
+        Message { role: Role::Assistant, content: vec![ContentBlock::ToolUse { id: "t1".into(), name: "render_slide".into(), input: json!({}) }] },
+        Message {
+            role: Role::User,
+            content: vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(),
+                content: "rendered".into(),
+                is_error: false,
+                images: vec![img.clone()],
+            }],
+        },
+    ];
+    let request = Request::new("m", messages);
+
+    // Anthropic: image blocks inside the tool result's content array, and in the user message.
+    let a = AnthropicClient::new(Arc::new(MockTransport::new()), "k").build_request(&request);
+    let body: Value = serde_json::from_str(&a.body).unwrap();
+    let msgs = body["messages"].as_array().unwrap();
+    assert_eq!(msgs[0]["content"][1]["type"], "image");
+    assert_eq!(msgs[0]["content"][1]["source"]["data"], "BBBB");
+    let result = &msgs[2]["content"][0];
+    assert_eq!(result["type"], "tool_result");
+    assert_eq!(result["content"][0]["text"], "rendered");
+    assert_eq!(result["content"][1]["source"]["media_type"], "image/png");
+    assert_eq!(result["content"][1]["source"]["data"], "AAAA");
+
+    // OpenAI: a parts array for the user message, the tool message as text, the image after it.
+    let o = OpenAiClient::openai(Arc::new(MockTransport::new()), "k").build_request(&request);
+    let body: Value = serde_json::from_str(&o.body).unwrap();
+    let msgs = body["messages"].as_array().unwrap();
+    assert_eq!(msgs[0]["role"], "user");
+    assert_eq!(msgs[0]["content"][0]["text"], "look");
+    assert_eq!(msgs[0]["content"][1]["image_url"]["url"], "data:image/png;base64,BBBB");
+    assert_eq!(msgs[1]["role"], "assistant");
+    assert_eq!(msgs[2]["role"], "tool");
+    assert_eq!(msgs[2]["content"], "rendered");
+    assert_eq!(msgs[3]["role"], "user");
+    assert_eq!(msgs[3]["content"][1]["image_url"]["url"], "data:image/png;base64,AAAA");
+    // Without images a tool result is only the tool message, and text stays a plain string.
+    let plain = Request::new(
+        "m",
+        vec![
+            Message::user("hi"),
+            Message::tool_results(vec![ContentBlock::ToolResult { tool_use_id: "t".into(), content: "r".into(), is_error: true, images: vec![] }]),
+        ],
+    );
+    let body: Value = serde_json::from_str(&OpenAiClient::openai(Arc::new(MockTransport::new()), "k").build_request(&plain).body).unwrap();
+    assert_eq!(body["messages"][0]["content"], "hi");
+    assert_eq!(body["messages"].as_array().unwrap().len(), 2);
+    assert_eq!(img.data_url(), "data:image/png;base64,AAAA");
 }

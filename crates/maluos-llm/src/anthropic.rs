@@ -132,16 +132,28 @@ fn block_json(block: &ContentBlock) -> Option<Value> {
         ContentBlock::Thinking { signature: None, .. } => return None,
         ContentBlock::Thinking { text, signature: Some(signature) } => json!({"type": "thinking", "thinking": text, "signature": signature}),
         ContentBlock::ToolUse { id, name, input } => json!({"type": "tool_use", "id": id, "name": name, "input": input}),
-        ContentBlock::ToolResult { tool_use_id, content, is_error } => {
-            let mut v = json!({"type": "tool_result", "tool_use_id": tool_use_id, "content": content});
+        ContentBlock::ToolResult { tool_use_id, content, is_error, images } => {
+            let content_json = if images.is_empty() {
+                json!(content)
+            } else {
+                let mut parts = vec![json!({"type": "text", "text": content})];
+                parts.extend(images.iter().map(image_json));
+                Value::Array(parts)
+            };
+            let mut v = json!({"type": "tool_result", "tool_use_id": tool_use_id, "content": content_json});
             if *is_error && let Some(map) = v.as_object_mut() {
                 map.insert("is_error".into(), Value::Bool(true));
             }
             v
         }
+        ContentBlock::Image { media_type, data } => image_json(&crate::Image { media_type: media_type.clone(), data: data.clone() }),
         ContentBlock::Raw { provider, value } if provider == PROVIDER => value.clone(),
         ContentBlock::Raw { .. } => return None,
     })
+}
+
+fn image_json(img: &crate::Image) -> Value {
+    json!({"type": "image", "source": {"type": "base64", "media_type": img.media_type, "data": img.data}})
 }
 
 impl LlmClient for AnthropicClient {
