@@ -130,10 +130,13 @@ with tools and streaming. What Slides builds and what it asks of the MaluOS buil
 The owner asked whether `maludb/maludb-os-docker` is needed to continue. It is the office-side
 installer (Business OS kernel + Help Desk + Spaces for a MaluDB hosting VM) and refuses this
 desk, so it was not installed; Slides needs an office only as a URL to enrol with
-(`sudo maluctl office enroll`). This desk is **not enrolled** with any office yet. The shipped
-mock office runs here as the user unit `maluos-mock-office` (port 18080, enrolment code
-`slides-dev`) for the 4.5 work; its agents answer text without artifacts, so 4.5's tests bring
-their own mock image agent. Details and the new ask 7 are in
+(`sudo maluctl office enroll`). The shipped mock office runs here as the user unit
+`maluos-mock-office` (port 18080) and the owner enrolled this desk with it on 2026-11-03 as desk
+#42 "Ed's desk": the desk token sits in the vault as `user:maludb/office-desk-token`, the
+heartbeat is ok, `maluctl office agents` lists `helpdesk` and `research`, a task to `research`
+answers, and the gateway's `office` rung (`--model office`, `office-7b`) chats through the token
+from the vault. The mock's agents answer text without artifacts, so 4.5's tests bring their own
+mock image agent. Details and the new ask 7 are in
 [maluos-integration.md](maluos-integration.md). Also noted: `maluctl status` reports the vault
 "unhealthy" from the provisioning run of 2026-10-25; the live socket answers (`/v1/whoami`).
 
