@@ -54,6 +54,44 @@ direct providers with the key from the vault, the env var still winning when set
   `…/value?mode=read&purpose=maluos-slides%20assistant`; the env var overrides; a 403 with a
   pending request id becomes "waiting for the owner's approval" in the pane.
 
+## The office and its agents (for step 4.5; found 2026-11-03)
+
+Step 4.5 ("pictures from the office's image agent") needs no image library and no web fetch on
+the Slides side. It needs an **office**: a MaluDB Business OS install whose agents this desk may
+use. What is installed here (`maluos-desk` 0.4.0, Phase 12 slices 6–9):
+
+- **Enrolment**: `sudo maluctl office enroll URL --code CODE` (root once; the owner must be an
+  enrolled vault principal, which `user:maludb` is). The desk token goes into the owner's vault
+  compartment as `office-desk-token` (never a file); `/etc/maluos/office.yaml` and
+  `/etc/maluos/office.env` (`MALUOS_OFFICE_*`) name the endpoints; the office's models become a
+  gateway rung (`--model office`). Status: `maluctl office status`; leave: `sudo maluctl office leave`.
+- **The agents directory**: `GET <endpoints.agents>` with the desk token, answered as
+  `{agents: [{id, name, description, capabilities: [...], tasks: URL, activity: URL, page: URL}]}`,
+  cached per user by `maluctl office agents`. Slides picks an agent **by capability** (an
+  `image.*` / `picture` capability when the office publishes one), never by a hard-coded id.
+- **The task interface** (`/usr/lib/maluos/maluos_agent_tasks.py`, protocol `maluos-tasks/0.1`):
+  JSON-RPC 2.0 over HTTP at the agent's `tasks` URL, Bearer desk token. `agent/card`,
+  `tasks/send {message: {parts: [{text}]}}` → `{id, state, output: {text, artifacts: [...]}}`,
+  `tasks/get {id}` to poll while `state` is `submitted`/`working`, `tasks/list`. A picture comes
+  back as an artifact of the answer. Local agents serve the same methods on
+  `/run/maluos/agents/NAME/tasks.sock` (peer credentials, no token).
+- **The delegation envelope** (Phase 13 slice 2) is referenced by the installed code but not
+  present yet: today the desk token itself authorises the task. Slides sends through the task
+  interface as it exists and adopts the envelope when it lands.
+- **A mock office ships with the desk package**: `PYTHONPATH=/usr/lib/maluos python3 -m
+  maluos_desk.mock_office --port 18080 --code CODE` serves the whole contract (enrol, heartbeat,
+  two agents `helpdesk` and `research`, tasks, models, MCP stubs, `/mock/state`). Its agents
+  answer text only with `artifacts: []` and none claims an image capability, so the 4.5 tests
+  will carry their own mock agent (same protocol, one artifact) in the assist crate's test code.
+
+The owner's `maludb/maludb-os-docker` repository is the **office-side** installer (the Business
+OS kernel plus Help Desk and Spaces in one container on a MaluDB hosting VM). Evaluated
+2026-11-03 and not installed here: its `host-install.sh` refuses any host that is not a hosting
+VM (Ubuntu 24.04, PostgreSQL 17, the MaluDB API on :8000, `/var/www/config/database.php`, a
+public FQDN; this desk is MaluOS 26.04 with PostgreSQL 18 and none of the rest), it stops the
+host's Apache and edits `pg_hba.conf`, and Slides needs the office only as a URL to enrol with.
+Its Claude Code plugin covers Business OS application development, not this app.
+
 ## Asks of the MaluOS build (the gap)
 
 1. **Vault read contract for desktop apps**: confirm an owner's process may read its own
@@ -80,8 +118,15 @@ direct providers with the key from the vault, the env var still winning when set
 6. **Dev mode**: a way to run both services in CI headless (`--kind mock` backend exists for the
    gateway); env overrides for both sockets; a non-root way to enrol a test principal.
 
+7. **An image agent for desks** (step 4.5): an office agent that publishes an `image.generate`
+   (or similar, named here so Slides can match it) capability in `endpoints.agents`, answers a
+   `tasks/send` with the picture as an artifact (`{kind: "image", media_type, data | url}`;
+   state the shape), and the Phase 13 delegation envelope once it exists. Until an office is
+   reachable from this desk, 4.5 is verified against a mock agent only.
+
 ## Revision history
 
 | Date | Change | Summary |
 |---|---|---|
 | 2026-11-02 | major | Created from the installed sources: what exists, two integration paths, six asks |
+| 2026-11-03 | minor | The office, its agents directory and task protocol, the shipped mock office; `maludb-os-docker` evaluated (office-side, not for this desk); ask 7 (an image agent for desks) |

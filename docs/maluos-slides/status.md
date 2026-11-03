@@ -125,6 +125,18 @@ identifies callers by `SO_PEERCRED` and the owner (`user:maludb`) is enrolled; t
 with tools and streaming. What Slides builds and what it asks of the MaluOS build is in
 [maluos-integration.md](maluos-integration.md).
 
+### The office for step 4.5 (2026-11-03)
+
+The owner asked whether `maludb/maludb-os-docker` is needed to continue. It is the office-side
+installer (Business OS kernel + Help Desk + Spaces for a MaluDB hosting VM) and refuses this
+desk, so it was not installed; Slides needs an office only as a URL to enrol with
+(`sudo maluctl office enroll`). This desk is **not enrolled** with any office yet. The shipped
+mock office runs here as the user unit `maluos-mock-office` (port 18080, enrolment code
+`slides-dev`) for the 4.5 work; its agents answer text without artifacts, so 4.5's tests bring
+their own mock image agent. Details and the new ask 7 are in
+[maluos-integration.md](maluos-integration.md). Also noted: `maluctl status` reports the vault
+"unhealthy" from the provisioning run of 2026-10-25; the live socket answers (`/v1/whoami`).
+
 ## Phase 4: slides-specific depth
 
 | Step | State | Notes |
