@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/app-icon/hicolor/256x256/apps/org.maluos.slides.png" width="128" height="128" alt="App icon: a presentation screen with a bar chart">
+  <img src="assets/app-icon/hicolor/256x256/apps/org.maluos.slides.png" width="128" height="128" alt="MaluOS Slides icon: a slide with a bar chart in an orange ring">
 </p>
 
 <h1 align="center">MaluOS Slides</h1>

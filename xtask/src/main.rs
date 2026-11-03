@@ -6,6 +6,7 @@
 mod assets;
 mod bench;
 mod ico;
+mod icons;
 mod layers;
 mod parity;
 mod pdf_deps;
@@ -33,6 +34,8 @@ commands:
   parity          recompute the PowerPoint feature-parity summary in docs/parity-checklist.md
   ico <out.ico> <in.png>...
                   pack square PNGs (<= 256 px) into a Windows .ico (see packaging/icons.sh)
+  icons <source.png>
+                  derive the hicolor sizes, the scalable SVG, the 1024 px copy and the .ico from one square PNG
 ";
 
 fn main() -> ExitCode {
@@ -49,6 +52,7 @@ fn main() -> ExitCode {
         Some("parity") => parity::run(&root()),
         Some("bench") => bench::run(&root(), &rest),
         Some("ico") => ico::run(&rest),
+        Some("icons") => icons::run(&root(), &rest),
         Some("version") => version::run(&root(), &rest),
         Some("-h" | "--help" | "help") | None => {
             print!("{USAGE}");

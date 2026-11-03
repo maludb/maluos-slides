@@ -49,8 +49,30 @@ pub fn version_line() -> String {
     s
 }
 
-/// MaluOS Slides' mark, drawn in code: a slide card with a play triangle in our orange.
+// MaluOS: the mark is the owner's icon (assets/app-icon, `cargo xtask icons`), drawn from the
+// 256 px PNG as a texture; the painted card below is the fallback should the PNG not decode.
+/// MaluOS Slides' mark: the app icon, square in `r`.
 pub fn paint_logo(p: &egui::Painter, r: Rect) {
+    let id = egui::Id::unique("maluos-slides-logo-texture");
+    let ctx = p.ctx();
+    let tex: Option<egui::TextureHandle> = ctx.data_mut(|d| d.get_temp(id)).or_else(|| {
+        let png: &[u8] = include_bytes!("../../../../assets/app-icon/hicolor/256x256/apps/org.maluos.slides.png");
+        let img = maluos_slides_render::decode_image(png)?;
+        let (w, h) = img.dimensions();
+        let color = egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], img.as_raw());
+        let tex = ctx.load_texture("maluos-slides-logo", color, egui::TextureOptions::LINEAR);
+        ctx.data_mut(|d| d.insert_temp(id, tex.clone()));
+        Some(tex)
+    });
+    if let Some(tex) = tex {
+        p.image(tex.id(), r, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        return;
+    }
+    paint_fallback_mark(p, r);
+}
+
+/// The former mark, drawn in code: a slide card with a play triangle in our orange.
+fn paint_fallback_mark(p: &egui::Painter, r: Rect) {
     let orange = Color32::from_rgb(0xF2, 0x6B, 0x1D);
     let deep = Color32::from_rgb(0xC2, 0x4E, 0x14);
     let card = r.shrink(r.width() * 0.08);
