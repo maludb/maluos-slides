@@ -343,12 +343,12 @@ fn outlines_and_metrics() {
 #[test]
 fn craft_fonts_latin_when_present() {
     let required = option_env!("CRAFT_FONTS_REQUIRED").is_some();
-    if !CRAFT_FONTS.iter().any(|f| f.family == "Inter") {
+    if !craft_fonts().iter().any(|f| f.family == "Inter") {
         assert!(!required, "CRAFT_FONTS_REQUIRED must embed Inter rather than skip the optional Latin manifest");
         eprintln!("skipped: built without craft-fonts' Latin manifest (set CRAFT_FONTS_DIR)");
         return;
     }
-    let inter = |style: &str| CRAFT_FONTS.iter().find(|f| f.family == "Inter" && f.style == style);
+    let inter = |style: &str| craft_fonts().iter().find(|f| f.family == "Inter" && f.style == style);
     let (regular, bold, variable) = (inter("Regular"), inter("Bold"), inter("Variable"));
     if required {
         assert!(
@@ -370,7 +370,7 @@ fn craft_fonts_latin_when_present() {
         assert_ne!(r.id(), b.id(), "Inter Bold must load as its own face");
         assert!(b.weight > r.weight, "Inter Bold weight {} is not above Regular {}", b.weight, r.weight);
     }
-    if CRAFT_FONTS.iter().any(|f| f.family == "Carlito") {
+    if craft_fonts().iter().any(|f| f.family == "Carlito") {
         assert_eq!(db.face("Calibri", "Bold").family, "Carlito");
     }
 }
@@ -423,5 +423,35 @@ fn the_font_scan_skips_fifos_folders_and_link_loops() {
     let n = rx.recv_timeout(std::time::Duration::from_secs(30)).expect("the font scan hung");
     assert!(n >= 1, "the real font was found");
     assert!(fifo || n >= 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// MaluOS: the installed catalogue (plan step 2.8).
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn an_installed_catalogue_is_read_in_order_and_checked() {
+    let dir = std::env::temp_dir().join(format!("maluos-fonts-catalogue-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("ubuntu")).unwrap();
+    assert!(installed_fonts(&dir).unwrap().is_empty(), "no manifest is an empty catalogue");
+    std::fs::write(dir.join("ubuntu/Ubuntu-Light.ttf"), epaint_default_fonts::UBUNTU_LIGHT).unwrap();
+    std::fs::write(
+        dir.join("manifest.txt"),
+        "# comment\nUbuntu | Light | ubuntu/Ubuntu-Light.ttf | Latn,Grek\n\nUbuntu | Light Copy | ubuntu/Ubuntu-Light.ttf | Latn\n",
+    )
+    .unwrap();
+    let v = installed_fonts(&dir).unwrap();
+    assert_eq!(v.iter().map(|f| (f.family, f.style)).collect::<Vec<_>>(), [("Ubuntu", "Light"), ("Ubuntu", "Light Copy")]);
+    assert_eq!(v[0].scripts, ["Latn", "Grek"]);
+    assert_eq!(v[0].bytes, epaint_default_fonts::UBUNTU_LIGHT);
+    // The faces parse and land in a database like embedded ones would.
+    let db = FontDb::with_font_dirs(Vec::new());
+    assert!(db.families().iter().any(|f| f == "Ubuntu"));
+    std::fs::write(dir.join("manifest.txt"), "Ubuntu | Light | ubuntu/missing.ttf | Latn\n").unwrap();
+    assert!(installed_fonts(&dir).unwrap_err().contains("missing.ttf"));
+    std::fs::write(dir.join("manifest.txt"), "Ubuntu | Light | ../../etc/passwd | Latn\n").unwrap();
+    assert!(installed_fonts(&dir).unwrap_err().contains("outside"));
+    std::fs::write(dir.join("manifest.txt"), "Ubuntu | Light\n").unwrap();
+    assert!(installed_fonts(&dir).unwrap_err().contains("malformed"));
     let _ = std::fs::remove_dir_all(&dir);
 }

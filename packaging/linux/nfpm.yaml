@@ -39,6 +39,9 @@ overrides:
       - libasound2 | libasound2t64
       - libvulkan1 | libegl1
     recommends:
+      # The presentation fonts, shared with Malu123 and MaluDocs (fonts-package.sh); without the
+      # package the app renders with the system fonts it finds.
+      - maluos-fonts
       - libwayland-client0
       - libx11-6
       - libx11-xcb1

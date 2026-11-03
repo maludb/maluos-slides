@@ -22,7 +22,7 @@ pub const LAST_RESORT_FAMILY: &str = "Ubuntu";
 /// Compiled-in font files: the craft-fonts faces (Latin presentation fonts, then Japanese;
 /// empty without `CRAFT_FONTS_DIR`), then the last-resort face.
 pub fn bundled() -> Vec<&'static [u8]> {
-    let mut v: Vec<&'static [u8]> = crate::CRAFT_FONTS.iter().map(|f| f.bytes).collect();
+    let mut v: Vec<&'static [u8]> = crate::craft_fonts().iter().map(|f| f.bytes).collect();
     v.push(epaint_default_fonts::UBUNTU_LIGHT);
     v
 }

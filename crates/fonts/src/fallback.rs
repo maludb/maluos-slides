@@ -15,7 +15,7 @@ use std::sync::Arc;
 use skrifa::raw::TableProvider;
 
 use crate::script::{ScriptTag, script_of};
-use crate::{CRAFT_FONTS, FontDb, FontFace};
+use crate::{FontDb, FontFace, craft_fonts};
 
 /// Variation selector 15: text presentation.
 const TEXT_SELECTOR: char = '\u{FE0E}';
@@ -118,7 +118,7 @@ fn os_families(script: ScriptTag) -> &'static [&'static str] {
 /// The craft-fonts families for a script (manifest order), e.g. Noto Naskh Arabic for `Arab`.
 pub fn bundled_families(script: ScriptTag) -> Vec<&'static str> {
     let tag = std::str::from_utf8(&script).unwrap_or("");
-    let mut v: Vec<&'static str> = CRAFT_FONTS.iter().filter(|f| f.scripts.contains(&tag)).map(|f| f.family).collect();
+    let mut v: Vec<&'static str> = craft_fonts().iter().filter(|f| f.scripts.contains(&tag)).map(|f| f.family).collect();
     v.dedup();
     v
 }
@@ -214,7 +214,7 @@ impl FontDb {
             let faces = db.read_faces();
             let mut v: Vec<&Arc<FontFace>> = faces
                 .iter()
-                .filter(|f| !bundled.iter().any(|b| f.family.eq_ignore_ascii_case(b)) && !CRAFT_FONTS.iter().any(|c| c.family == f.family))
+                .filter(|f| !bundled.iter().any(|b| f.family.eq_ignore_ascii_case(b)) && !craft_fonts().iter().any(|c| c.family == f.family))
                 .filter(|f| covers_cluster(f, cluster))
                 .collect();
             v.sort_by_key(|f| (f.italic, (f.weight - 400.0).abs() as i32));

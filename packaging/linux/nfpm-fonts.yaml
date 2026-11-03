@@ -1,0 +1,32 @@
+# The maluos-fonts .deb (nfpm). Run by fonts-package.sh, which stages the font tree from a
+# craft-fonts checkout, substitutes its path for ${STAGE} and exports VERSION.
+#
+#   nfpm package -f packaging/linux/nfpm-fonts.yaml -p deb -t dist/release/
+name: maluos-fonts
+arch: all
+platform: linux
+version: ${VERSION}
+version_schema: semver
+release: 1
+section: fonts
+priority: optional
+maintainer: ${MALUOS_SLIDES_MAINTAINER}
+vendor: MaluOS
+homepage: https://github.com/maludb/maluos-slides
+license: OFL-1.1
+description: |-
+  The presentation and document fonts the MaluOS office apps (MaluOS Slides,
+  Malu123, MaluDocs) render with: the Latin presentation faces (Inter, Lato,
+  Montserrat, Merriweather, ...), the Office-metric substitutes (Carlito,
+  Caladea, Liberation), Japanese, Simplified Chinese, Korean, Arabic, Hebrew,
+  Devanagari, Georgian and symbol faces. Every face is under the SIL Open
+  Font License; the set is storytold/craft-fonts' reviewed catalogue.
+
+# Fonts compress poorly, but xz still saves a fifth against gzip.
+deb:
+  compression: xz
+
+contents:
+  - src: ${STAGE}/usr/share/
+    dst: /usr/share/
+    type: tree

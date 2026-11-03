@@ -388,7 +388,7 @@ mod tests {
                 assert!(!ui.ctx().will_discard());
                 layouts += 1;
                 for (family, text) in [("Noto Sans Arabic", arabic), ("BIZ UDPGothic", japanese), ("NanumGothic", korean)] {
-                    if maluos_slides_fonts::CRAFT_FONTS.iter().any(|face| face.family == family) {
+                    if maluos_slides_fonts::craft_fonts().iter().any(|face| face.family == family) {
                         ui.ctx().fonts_mut(|fonts| {
                             for c in text.chars() {
                                 assert!(fonts.has_glyph(&egui::FontId::proportional(18.0), c), "missing bundled {family} glyph {c:?}");

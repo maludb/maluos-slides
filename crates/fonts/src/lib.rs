@@ -24,8 +24,8 @@ pub use kurbo::BezPath;
 pub use script::{FontSlot, ScriptTag};
 pub use shape::{ShapeParams, ShapedGlyph, shape_range};
 
-/// A font from the optional craft-fonts build input (https://github.com/storytold/craft-fonts;
-/// empty unless built with `CRAFT_FONTS_DIR`, see `build.rs`).
+/// A font from the craft-fonts catalogue (https://github.com/storytold/craft-fonts): embedded
+/// with `CRAFT_FONTS_DIR` (see `build.rs`) or read from the installed package ([`craft_fonts`]).
 pub struct CraftFont {
     pub family: &'static str,
     pub style: &'static str,
@@ -34,11 +34,92 @@ pub struct CraftFont {
     pub bytes: &'static [u8],
 }
 
+impl std::fmt::Debug for CraftFont {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {:?} ({} bytes)", self.family, self.style, self.scripts, self.bytes.len())
+    }
+}
+
 include!(concat!(env!("OUT_DIR"), "/craft_fonts.rs"));
+
+// MaluOS: the catalogue comes from the binary when it was embedded, else (natively) from the
+// installed `maluos-fonts` package, so a package without the 80 MB of fonts renders and draws
+// its interface with the same faces (docs/maluos-slides/plan.md step 2.8).
+/// Where the `maluos-fonts` package installs the catalogue; `MALUOS_FONTS_DIR` overrides it.
+pub const INSTALLED_FONTS_DIR: &str = "/usr/share/fonts/truetype/maluos-fonts";
+
+/// The craft-fonts faces in catalogue order: the ones embedded at build time (`CRAFT_FONTS_DIR`),
+/// or, natively when nothing was embedded, the installed package's (`manifest.txt` under
+/// `MALUOS_FONTS_DIR` or [`INSTALLED_FONTS_DIR`], read once). Empty when neither exists.
+pub fn craft_fonts() -> &'static [CraftFont] {
+    if !EMBEDDED_FONTS.is_empty() {
+        return EMBEDDED_FONTS;
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        EMBEDDED_FONTS
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        static INSTALLED: std::sync::OnceLock<Vec<CraftFont>> = std::sync::OnceLock::new();
+        INSTALLED.get_or_init(|| {
+            let dir = std::env::var_os("MALUOS_FONTS_DIR").map_or_else(|| std::path::PathBuf::from(INSTALLED_FONTS_DIR), std::path::PathBuf::from);
+            match installed_fonts(&dir) {
+                Ok(v) if v.is_empty() => {
+                    log::info!("no font catalogue in {} and none embedded: system fonts only", dir.display());
+                    v
+                }
+                Ok(v) => {
+                    log::info!("{} faces from {}", v.len(), dir.display());
+                    v
+                }
+                Err(e) => {
+                    log::warn!("font catalogue in {} not loaded: {e}", dir.display());
+                    Vec::new()
+                }
+            }
+        })
+    }
+}
+
+/// Read an installed catalogue: `manifest.txt` in `dir` with one `family | style | file |
+/// scripts` row per face (`#` comments; `file` relative to `dir`, `scripts` comma-separated
+/// ISO 15924), in order. No directory or manifest is an empty catalogue; a malformed row or an
+/// unreadable file is an error. The data stays for the process (leaked, as embedded bytes would).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn installed_fonts(dir: &std::path::Path) -> Result<Vec<CraftFont>, String> {
+    let manifest = dir.join("manifest.txt");
+    let text = match std::fs::read_to_string(&manifest) {
+        Ok(t) => t,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(format!("{}: {e}", manifest.display())),
+    };
+    let leak = |s: &str| -> &'static str { Box::leak(s.to_owned().into_boxed_str()) };
+    let mut v = Vec::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+        let f: Vec<&str> = line.split('|').map(str::trim).collect();
+        let [family, style, file, scripts] = f.as_slice() else {
+            return Err(format!("{}: malformed row: {line}", manifest.display()));
+        };
+        if file.starts_with('/') || file.split('/').any(|part| part == "..") {
+            return Err(format!("{}: file outside the catalogue: {file}", manifest.display()));
+        }
+        let path = dir.join(file);
+        let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let scripts: Vec<&'static str> = scripts.split(',').map(str::trim).filter(|s| !s.is_empty()).map(leak).collect();
+        v.push(CraftFont {
+            family: leak(family),
+            style: leak(style),
+            scripts: Box::leak(scripts.into_boxed_slice()),
+            bytes: Box::leak(bytes.into_boxed_slice()),
+        });
+    }
+    Ok(v)
+}
 
 /// The craft-fonts faces for Japanese (`"Jpan"`), in manifest order. Empty without craft-fonts.
 pub fn japanese_fonts() -> impl Iterator<Item = &'static CraftFont> {
-    CRAFT_FONTS.iter().filter(|f| f.scripts.contains(&"Jpan"))
+    craft_fonts().iter().filter(|f| f.scripts.contains(&"Jpan"))
 }
 
 /// The TrueType or OpenType font inside a PresentationML embedded-font part

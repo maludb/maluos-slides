@@ -1,9 +1,11 @@
 //! Optional craft-fonts build input (https://github.com/storytold/craft-fonts, recipe from its
 //! `docs/integration.md`). With `CRAFT_FONTS_DIR=<checkout>` the fonts in its
 //! `fonts/latin-manifest.txt` (presentation fonts) and `fonts/manifest.txt` are embedded as
-//! `CRAFT_FONTS`, Latin first. Native builds additionally read
+//! `EMBEDDED_FONTS` (read through `craft_fonts()`), Latin first. Native builds additionally read
 //! `fonts/simplified-chinese-manifest.txt`; it is optional for ordinary local builds but a required
-//! native input (`CRAFT_FONTS_REQUIRED`) fails without it. Unset, `CRAFT_FONTS` is empty. Web
+//! native input (`CRAFT_FONTS_REQUIRED`) fails without it. Unset, or with `CRAFT_FONTS_EMBED=0`
+//! (MaluOS: the installed `maluos-fonts` package serves the catalogue at run time), the table is
+//! empty. Web
 //! (wasm32) builds embed only Inter Regular/Bold (or a supported Variable face) and BIZ UDPGothic
 //! Regular, to stay within the web size budget; native builds also carry BIZ UDPGothic Bold.
 //! Required builds verify the faces they promise survive exclusion (and, on wasm, the web filter),
@@ -48,9 +50,17 @@ impl FontInput {
 fn main() {
     println!("cargo::rerun-if-env-changed=CRAFT_FONTS_DIR");
     println!("cargo::rerun-if-env-changed=CRAFT_FONTS_REQUIRED");
-    let mut src = String::from("pub static CRAFT_FONTS: &[CraftFont] = &[\n");
-    let dir = std::env::var_os("CRAFT_FONTS_DIR").map(PathBuf::from);
-    let required = std::env::var_os("CRAFT_FONTS_REQUIRED").is_some();
+    println!("cargo::rerun-if-env-changed=CRAFT_FONTS_EMBED");
+    let mut src = String::from("pub static EMBEDDED_FONTS: &[CraftFont] = &[\n");
+    // MaluOS: `CRAFT_FONTS_EMBED=0` builds a native binary that embeds nothing and reads the
+    // same catalogue from the installed `maluos-fonts` package at run time (`craft_fonts()`;
+    // docs/maluos-slides/plan.md step 2.8). The web build always embeds.
+    let embed = std::env::var("CRAFT_FONTS_EMBED").map_or(true, |v| !matches!(v.trim(), "0" | "false" | "no" | "off"));
+    let dir = if embed { std::env::var_os("CRAFT_FONTS_DIR").map(PathBuf::from) } else { None };
+    let required = embed && std::env::var_os("CRAFT_FONTS_REQUIRED").is_some();
+    if !embed {
+        println!("cargo::warning=CRAFT_FONTS_EMBED=0: no fonts embedded; the binary reads the maluos-fonts package at run time");
+    }
     let wasm = std::env::var("CARGO_CFG_TARGET_ARCH").is_ok_and(|a| a == "wasm32");
     match input_fonts(dir.as_deref(), wasm, required) {
         Ok(entries) => src.push_str(&entries),

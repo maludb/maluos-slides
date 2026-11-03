@@ -77,7 +77,9 @@ sudo apt install build-essential pkg-config cmake libasound2-dev libxkbcommon-de
 
 Fonts come from [craft-fonts](https://github.com/storytold/craft-fonts): clone it next to this
 repository (`../craft-fonts`) and the build embeds its presentation fonts; without it the app uses
-the system fonts. PDF export uses the shared `craft-pdf` writer; see
+the system fonts. On MaluOS the same faces are the `maluos-fonts` package
+(`packaging/linux/fonts-package.sh` builds it from the checkout) and the app is built with
+`CRAFT_FONTS_EMBED=0`, reading the installed catalogue at start. PDF export uses the shared `craft-pdf` writer; see
 [`crates/pdf/README.md`](crates/pdf/README.md).
 
 ```sh
