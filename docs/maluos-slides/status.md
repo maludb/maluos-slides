@@ -146,6 +146,15 @@ mock image agent. Details and the new ask 7 are in
 [maluos-integration.md](maluos-integration.md). Also noted: `maluctl status` reports the vault
 "unhealthy" from the provisioning run of 2026-10-25; the live socket answers (`/v1/whoami`).
 
+## Phase 5: parity through upstream
+
+| Sync | Date | Upstream | Summary |
+|---|---|---|---|
+| 1 | 2026-11-03 | `9aef21e` → `aa13eeb4`, 761 commits | Vendor branch: 102 conflicts, all upstream's side, then the script (four script fixes). `main`: 8 conflicts; every fenced hook re-placed in upstream's new module layout (`panels.rs`, `ribbon/title_bar.rs`, `show/presenter.rs`, `icons/draw.rs`, `app/commands.rs`, `app.rs`); fork code moved to egui 0.37 / `craft-ui` (the disallowed `egui::ComboBox`, `Id::unique`, accessible names on the pane's combos), the CLI's automation roots, two snapshots regenerated. Gates green; one upstream test wants a Korean font this host lacks. Procedure and cost in [rename.md](rename.md). Candidates to send upstream: the stale-id `slide.delete` fix (79d82c13) and `document.tags` (77ea5c12) |
+
+Upstream's gates we track (real-deck PPTX corpus, round-trip losses, EMF/SVG, printing,
+localization) arrive through these merges; the fork's trim never touches upstream crates.
+
 ## Phase 4: slides-specific depth
 
 | Step | State | Notes |

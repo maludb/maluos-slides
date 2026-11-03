@@ -1,5 +1,5 @@
 //! The API driven over a real socket and through `handle` directly.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::cognitive_complexity)]
 
 use std::io::{Read, Write};
 use std::net::TcpStream;

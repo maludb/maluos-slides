@@ -37,9 +37,9 @@ are never rewritten.
 **Dropped by the script** (decision D1, Linux and MaluOS only): `docs/brand/` (ArtCraft
 trademarks; their licence requires forks to remove them, and `ATTRIBUTION.md`, `AGENTS.md` and
 `NOTICE` say so), `packaging/macos`, `packaging/windows`, `packaging/freebsd`,
-`packaging/icons.sh` with the `.icns` and `.ico` icons (only `packaging/macos/Info.plist.in` and
-`packaging/windows/maluos-slides.wxs` stay, as fixtures of the desktop app's test
-`every_desktop_offers_the_same_file_types`; nothing builds them), upstream's workflows (they call
+`packaging/icons.sh` with the `.icns` and `.ico` icons (only `packaging/macos/Info.plist.in`,
+`packaging/windows/maluos-slides.wxs` and `packaging/windows/package.ps1` stay, as fixtures of the
+desktop app's tests; nothing builds them), upstream's workflows (they call
 storytold's shared gate and release workflows, which build for every platform), `.coderabbit.yaml`,
 `sonar-project.properties` and `omastore.toml`. The fork's own CI, release and packaging-lint
 workflows live in `.github/workflows/maluos-*.yml`.
@@ -70,3 +70,32 @@ cargo xtask ci
 If a merge conflict remains after the script, resolve it by hand keeping the MaluOS Slides names,
 and add a rule to the script if the same pattern will come back. Upstream lands ~40 commits a day,
 so sync weekly (decision D7); step 2.9 measures the first one.
+
+## The first sync, measured (2026-11-03, step 2.9 / Phase 5)
+
+Upstream `9aef21e` → `aa13eeb4`: 761 commits, 497 files, +79k/−45k lines, including a split of
+the window crate's big files into modules (`app/`, `ribbon/`, `show/`, `icons/`, `panels/`) and
+the move to egui 0.37 (storytold's fork) with `craft-ui`.
+
+- **Vendor branch** (`upstream-renamed`): 102 conflicts (88 content, 11 "deleted by us" on
+  files the fork drops, 1 deleted by them, 2 added by them). Every one is resolved toward
+  upstream (the branch holds nothing but the rename), the two files whose rename git did not
+  follow are copied to their renamed paths, then the script runs. Three script fixes came out
+  of it: `git rm -f` for dropped files a merge leaves staged, the final count no longer failing
+  under `pipefail`, `craft_update::suite::DECKCRAFT` (an external crate's constant) protected,
+  and `packaging/windows/package.ps1` kept as a test fixture. Wall time about 10 minutes.
+- **`main`**: 8 conflicts (`Cargo.lock`, `README.md`, the window crate's manifest and four
+  restructured files, `panes.rs` deleted). Every fenced hook moved to its new home: the pane
+  dispatch to `panels.rs`, the title-bar button to `ribbon/title_bar.rs`, the presenter hints to
+  `show/presenter.rs`, the icon to `icons.rs` + `icons/draw.rs`, the commands and the frame poll
+  to `app/commands.rs` and `app.rs`. API drift in fork code: the CLI's automation roots (now
+  vectors), `egui::Id::new` deprecated, `egui::ComboBox` disallowed in favour of
+  `craft_ui::ComboBox`, kittest's accessibility check (every combo needs a name), a
+  cognitive-complexity threshold on tests. Two snapshots regenerated (new upstream commands and
+  tool fields). Wall time about 25 minutes, then 10 minutes of gates.
+- **Result**: all gates green; one upstream test (`ime_tests::korean_composes_in_the_notes_pane`)
+  needs a Korean font this host lacks (environment, not code); the pdf font test that used to
+  fail here now passes.
+
+Cadence stays weekly (D7). The cost scales with how much upstream restructures, not with the
+commit count: hooks are few and fenced, so the merge is mostly reading.

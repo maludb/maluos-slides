@@ -176,7 +176,7 @@
     "id": "file.export",
     "journal": true,
     "label": "Export…",
-    "params": "{path, format?: png|jpeg|pptx|maluos-slides|outline|pdf|gif (else by path), slide?: index, all?: bool, scale?: px per pt, layout?: slides|notes|handouts (pdf), perPage?: 1|2|3|4|6|9, paper?: letter|a4|legal|a3 (pdf), orientation?: portrait|landscape (pdf), dpi?, slides?: [index]|range (\"1-3,5\"), includeHidden?, textLayer?, frame?, transparentBackground?: bool (png: leave the slide background out), width?: px 16-3840|small|medium|large|extraLarge (gif), secondsPerSlide?: 0.1-600 (gif; 5), loop?: bool (gif; true: forever)} → {path, bytes} or {files} (png, jpeg); gif adds frames, width, height, secondsPerSlide",
+    "params": "{path, format?: png|jpeg|pptx|maluos-slides|outline|rtf|pdf|gif (else by path), slide?: index, all?: bool, scale?: px per pt, layout?: slides|notes|handouts (pdf), perPage?: 1|2|3|4|6|9, paper?: letter|a4|legal|a3 (pdf), orientation?: portrait|landscape (pdf), dpi?, slides?: [index]|range (\"1-3,5\"), includeHidden?, textLayer?, frame?, transparentBackground?: bool (png: leave the slide background out), width?: px 16-3840|small|medium|large|extraLarge (gif), secondsPerSlide?: 0.1-600 (gif; 5), loop?: bool (gif; true: forever)} → {path, bytes} or {files} (png, jpeg); gif adds frames, width, height, secondsPerSlide",
     "schema": {
       "additionalProperties": false,
       "description": "Returns: {path, bytes} or {files} (png, jpeg); gif adds frames, width, height, secondsPerSlide",
@@ -189,7 +189,7 @@
           "description": "optional"
         },
         "format": {
-          "description": "png|jpeg|pptx|maluos-slides|outline|pdf|gif (else by path)"
+          "description": "png|jpeg|pptx|maluos-slides|outline|rtf|pdf|gif (else by path)"
         },
         "frame": {
           "description": "optional"
@@ -746,7 +746,7 @@
     "id": "slide.move",
     "journal": true,
     "label": "Move Slide",
-    "params": "{from?: index, to: index}",
+    "params": "{from?: index, ids?: [slide id], to: index (counted without the moved slides)}",
     "schema": {
       "additionalProperties": false,
       "properties": {
@@ -754,9 +754,12 @@
           "description": "index",
           "type": "integer"
         },
+        "ids": {
+          "description": "[slide id]",
+          "type": "array"
+        },
         "to": {
-          "description": "index",
-          "type": "integer"
+          "description": "index (counted without the moved slides)"
         }
       },
       "required": [
@@ -828,6 +831,33 @@
     "schema": {
       "additionalProperties": false,
       "properties": {},
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.selectRange",
+    "journal": true,
+    "label": "Select Slide Range",
+    "params": "{to: index, from?: index (default the current slide), add?: bool (keep the slides already selected)}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "add": {
+          "description": "bool (keep the slides already selected)",
+          "type": "boolean"
+        },
+        "from": {
+          "description": "index (default the current slide)"
+        },
+        "to": {
+          "description": "index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "to"
+      ],
       "type": "object"
     },
     "undoable": false
@@ -1078,6 +1108,27 @@
       "type": "object"
     },
     "undoable": true
+  },
+  {
+    "id": "slide.reuseList",
+    "journal": false,
+    "label": "List Slides to Reuse",
+    "params": "{path | data: base64, name?} → {name, slides: [{index, title, hidden}]}: the slides of another presentation, for choosing which ones `slide.reuse` brings in",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {name, slides: [{index, title, hidden}]}: the slides of another presentation, for choosing which ones `slide.reuse` brings in",
+      "properties": {
+        "data": {
+          "description": "base64"
+        },
+        "name": {
+          "description": "optional"
+        },
+        "path": {}
+      },
+      "type": "object"
+    },
+    "undoable": false
   },
   {
     "id": "slide.reuse",
@@ -1443,10 +1494,10 @@
     "id": "insert.dateTime",
     "journal": true,
     "label": "Date & Time",
-    "params": "{format?: datetime1..datetime13, update?: bool, language?: en-US|en-GB|fr-FR|ja-JP|sv-SE} — no keys opens the dialog",
+    "params": "{format?: datetime1..datetime13, update?: bool, language?: en-US|en-GB|fr-FR|ja-JP|sv-SE} — no keys opens the dialog; in the Handout or Notes Master view it fills the selected date placeholder (else the master's own) and answers where: \"master\"",
     "schema": {
       "additionalProperties": false,
-      "description": "no keys opens the dialog",
+      "description": "no keys opens the dialog; in the Handout or Notes Master view it fills the selected date placeholder (else the master's own) and answers where: \"master\"",
       "properties": {
         "format": {
           "description": "datetime1..datetime13"
@@ -1611,7 +1662,7 @@
     "id": "chart.options",
     "journal": true,
     "label": "Chart Elements",
-    "params": "{title?: string|null, legend?: b|t|l|r|null, dataLabels?: bool, gridlines?: bool, palette?, binCount?: n|null, binSize?: n|null, subtotals?: [point index], quartiles?: exclusive|inclusive, upDownBars?: bool, id?}",
+    "params": "{title?: string|null, legend?: b|t|l|r|null, dataLabels?: bool, gridlines?: bool, palette?, binCount?: n|null, binSize?: n|null, subtotals?: [point index], quartiles?: exclusive|inclusive, upDownBars?: bool, textColor?: #RRGGBB|accent1..6|tx1…|null (title, axes, legend and labels; null for PowerPoint's default: the theme's text colour at 65 % plus 35 %, 595959 on a light theme), id?}",
     "schema": {
       "additionalProperties": false,
       "properties": {
@@ -1644,6 +1695,9 @@
         "subtotals": {
           "description": "[point index]",
           "type": "array"
+        },
+        "textColor": {
+          "description": "#RRGGBB|accent1..6|tx1…|null (title, axes, legend and labels; null for PowerPoint's default: the theme's text colour at 65 % plus 35 %, 595959 on a light theme)"
         },
         "title": {
           "description": "string|null"
@@ -2348,19 +2402,22 @@
     "id": "shape.fill",
     "journal": true,
     "label": "Shape Fill",
-    "params": "{color? | none?: true | gradient?: {stops: [[pos, color]], angle?, kind?: linear|radial} | picture?: base64 | pattern?: {preset, fg, bg} | transparency?: 0..1 | reset?: true, ids?}; pictureProps?: {tile?: bool, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0..10, align?: tl|t|tr|l|ctr|r|bl|b|br, mirror?: none|x|y|xy, stretch?: [l, t, r, b] fractions, rotateWithShape?: bool} adjusts a picture fill; a group also formats its members",
+    "params": "{color? | none?: true | background?: true (the slide background shows through; shapes and text boxes only) | gradient?: {stops: [[pos 0..1, color]], kind?: linear|radial|rectangular|path, angle?: deg (linear), focus?: [l, t, r, b] fractions (radial, rectangular and path: where the first stop sits), rotateWithShape?: bool} | picture?: base64 | pattern?: {preset, fg, bg} | transparency?: 0..1 | reset?: true, ids?}; pictureProps?: {tile?: bool, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0..10, align?: tl|t|tr|l|ctr|r|bl|b|br, mirror?: none|x|y|xy, stretch?: [l, t, r, b] fractions, rotateWithShape?: bool} adjusts a picture fill; a group also formats its members",
     "schema": {
       "additionalProperties": false,
-      "description": "One of the alternative forms: {color? | none?: true | gradient?: {stops: [[pos, color]], angle?, kind?: linear|radial} | picture?: base64 | pattern?: {preset, fg, bg} | transparency?: 0..1 | reset?: true, ids?}; pictureProps?: {tile?: bool, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0..10, align?: tl|t|tr|l|ctr|r|bl|b|br, mirror?: none|x|y|xy, stretch?: [l, t, r, b] fractions, rotateWithShape?: bool} adjusts a picture fill; a group also formats its members. adjusts a picture fill; a group also formats its members",
+      "description": "One of the alternative forms: {color? | none?: true | background?: true (the slide background shows through; shapes and text boxes only) | gradient?: {stops: [[pos 0..1, color]], kind?: linear|radial|rectangular|path, angle?: deg (linear), focus?: [l, t, r, b] fractions (radial, rectangular and path: where the first stop sits), rotateWithShape?: bool} | picture?: base64 | pattern?: {preset, fg, bg} | transparency?: 0..1 | reset?: true, ids?}; pictureProps?: {tile?: bool, offsetX?, offsetY?: pt, scaleX?, scaleY?: 0..10, align?: tl|t|tr|l|ctr|r|bl|b|br, mirror?: none|x|y|xy, stretch?: [l, t, r, b] fractions, rotateWithShape?: bool} adjusts a picture fill; a group also formats its members. adjusts a picture fill; a group also formats its members",
       "properties": {
         "align": {
           "description": "tl|t|tr|l|ctr|r|bl|b|br"
+        },
+        "background": {
+          "description": "true (the slide background shows through; shapes and text boxes only)"
         },
         "color": {
           "description": "optional"
         },
         "gradient": {
-          "description": "{stops: [[pos, color]], angle?, kind?: linear|radial}"
+          "description": "{stops: [[pos 0..1, color]], kind?: linear|radial|rectangular|path, angle?: deg (linear), focus?: [l, t, r, b] fractions (radial, rectangular and path: where the first stop sits), rotateWithShape?: bool}"
         },
         "ids": {
           "description": "optional"
@@ -2469,7 +2526,7 @@
     "id": "shape.effects",
     "journal": true,
     "label": "Shape Effects",
-    "params": "{shadow?: none|outer|inner|perspective|{color, blur, dist, dir}, glow?: none|{color, radius}, softEdges?: pt, reflection?: none|tight|half|full, bevel?: none|circle|…, threeD?: {camera?: preset, rotX?, rotY?, rotZ?: deg, z?: pt, bevelTop?, bevelBottom?: none|circle|…, bevelTopW?, bevelTopH?, bevelBottomW?, bevelBottomH?, depth?, contour?: pt, material?, lighting?, reset?: true}, shadowProps?: {color?, transparency?: 0..1, blur?: pt, dist?: pt, dir?: deg}, glowProps?: {color?, transparency?, radius?: pt}, reflectionProps?: {transparency?, size?: 0..1, dist?: pt, blur?: pt}, reset?, ids?} (the *Props keys adjust the current effect, adding a default one when there is none)",
+    "params": "{shadow?: none|outer|inner|perspective|{color, blur, dist, dir}, glow?: none|{color, radius}, softEdges?: pt, reflection?: none|tight|half|full, bevel?: none|circle|…, threeD?: {camera?: preset, rotX?, rotY?, rotZ?: deg, z?: pt, bevelTop?, bevelBottom?: none|circle|…, bevelTopW?, bevelTopH?, bevelBottomW?, bevelBottomH?, depth?, contour?: pt, material?, lighting?, reset?: true}, shadowProps?: {color?, transparency?: 0..1, size?: 0.01..2 (1 = 100%), blur?: pt, dist?: pt, dir?: deg}, glowProps?: {color?, transparency?, radius?: pt}, reflectionProps?: {transparency?, size?: 0..1, dist?: pt, blur?: pt}, reset?, ids?} (the *Props keys adjust the current effect, adding a default one when there is none)",
     "schema": {
       "additionalProperties": false,
       "description": "the *Props keys adjust the current effect, adding a default one when there is none",
@@ -2499,7 +2556,7 @@
           "description": "none|outer|inner|perspective|{color, blur, dist, dir}"
         },
         "shadowProps": {
-          "description": "{color?, transparency?: 0..1, blur?: pt, dist?: pt, dir?: deg}"
+          "description": "{color?, transparency?: 0..1, size?: 0.01..2 (1 = 100%), blur?: pt, dist?: pt, dir?: deg}"
         },
         "softEdges": {
           "description": "pt"
@@ -2699,9 +2756,10 @@
     "id": "picture.reset",
     "journal": true,
     "label": "Reset Picture",
-    "params": "{ids?}",
+    "params": "{ids?} (discards the picture's formatting: adjustments, artistic effect, crop, transparency, picture-style effects and outline; the frame shape from Change Shape or Crop to Shape, the size and the position stay)",
     "schema": {
       "additionalProperties": false,
+      "description": "discards the picture's formatting: adjustments, artistic effect, crop, transparency, picture-style effects and outline; the frame shape from Change Shape or Crop to Shape, the size and the position stay",
       "properties": {
         "ids": {
           "description": "optional"
@@ -3345,10 +3403,10 @@
     "id": "shape.points",
     "journal": false,
     "label": "Points",
-    "params": "{id?} → {id, paths: [[[x, y] slide pt]], types: [[smooth|straight|corner]]} vertices of a freeform",
+    "params": "{id?} → {id, paths: [[[x, y] slide pt]], types: [[smooth|straight|corner]], segments: [[straight|curved|null]]} vertices of a freeform and the segment ending at each",
     "schema": {
       "additionalProperties": false,
-      "description": "Returns: {id, paths: [[[x, y] slide pt]], types: [[smooth|straight|corner]]} vertices of a freeform",
+      "description": "Returns: {id, paths: [[[x, y] slide pt]], types: [[smooth|straight|corner]], segments: [[straight|curved|null]]} vertices of a freeform and the segment ending at each",
       "properties": {
         "id": {
           "description": "optional"
@@ -3511,6 +3569,114 @@
     "undoable": true
   },
   {
+    "id": "shape.deleteSegment",
+    "journal": true,
+    "label": "Delete Segment",
+    "params": "{path?: 0, segment: index of the vertex ending it, id?}: removes a segment of a closed outline, which opens there; it starts at the segment's end and ends at its start",
+    "schema": {
+      "additionalProperties": false,
+      "description": ": removes a segment of a closed outline, which opens there; it starts at the segment's end and ends at its start",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "0"
+        },
+        "segment": {
+          "description": "index of the vertex ending it"
+        }
+      },
+      "required": [
+        "segment"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.segmentType",
+    "journal": true,
+    "label": "Segment Type",
+    "params": "{path?: 0, segment: index of the vertex ending it, type: straight|curved, id?} — straight drops the segment's handles; curved gives it handles at its thirds",
+    "schema": {
+      "additionalProperties": false,
+      "description": "straight drops the segment's handles; curved gives it handles at its thirds",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "path": {
+          "description": "0"
+        },
+        "segment": {
+          "description": "index of the vertex ending it"
+        },
+        "type": {
+          "description": "straight|curved"
+        }
+      },
+      "required": [
+        "segment",
+        "type"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.openPath",
+    "journal": true,
+    "label": "Open Path",
+    "params": "{path?: 0, index, id?} — break a closed outline at a point, which becomes its two ends",
+    "schema": {
+      "additionalProperties": false,
+      "description": "break a closed outline at a point, which becomes its two ends",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "description": "0"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
+    "id": "shape.closePath",
+    "journal": true,
+    "label": "Close Path",
+    "params": "{path?: 0, index: any point of the open outline, id?} — join its ends with a straight segment (one point when they meet)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "join its ends with a straight segment (one point when they meet",
+      "properties": {
+        "id": {
+          "description": "optional"
+        },
+        "index": {
+          "description": "any point of the open outline"
+        },
+        "path": {
+          "description": "0"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
     "id": "font.used",
     "journal": false,
     "label": "Fonts in Presentation",
@@ -3591,7 +3757,7 @@
     "id": "text.autocorrect",
     "journal": true,
     "label": "AutoCorrect Options",
-    "params": "{on?, twoInitials?, sentenceCaps?, days?, capsLock?, fractions?, ordinals?: bool, add?: [from, to], remove?: from} → the options and the replacement list",
+    "params": "{on?, twoInitials?, sentenceCaps?, days?, capsLock?, fractions?, ordinals?, lists?: bool, add?: [from, to], remove?: from} → the options and the replacement list",
     "schema": {
       "additionalProperties": false,
       "description": "Returns: the options and the replacement list",
@@ -3609,12 +3775,15 @@
         "fractions": {
           "description": "optional"
         },
+        "lists": {
+          "description": "bool",
+          "type": "boolean"
+        },
         "on": {
           "description": "optional"
         },
         "ordinals": {
-          "description": "bool",
-          "type": "boolean"
+          "description": "optional"
         },
         "remove": {
           "description": "from"
@@ -3704,6 +3873,29 @@
       "type": "object"
     },
     "undoable": true
+  },
+  {
+    "id": "text.deleteSurrounding",
+    "journal": false,
+    "label": "Delete Surrounding Text",
+    "params": "{before, after, bytes?: bool}",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {},
+        "before": {},
+        "bytes": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "type": "object"
+    },
+    "undoable": false
   },
   {
     "id": "text.move",
@@ -4105,6 +4297,27 @@
     "undoable": true
   },
   {
+    "id": "format.languageAll",
+    "journal": true,
+    "label": "Language for All Text",
+    "params": "{lang?, noProof?: bool} (proofing language of every text in the presentation: slides, tables, notes, masters and layouts, and the default for new text; one undo step)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "proofing language of every text in the presentation: slides, tables, notes, masters and layouts, and the default for new text; one undo step",
+      "properties": {
+        "lang": {
+          "description": "optional"
+        },
+        "noProof": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
     "id": "format.highlight",
     "journal": true,
     "label": "Text Highlight Color",
@@ -4408,7 +4621,7 @@
     "id": "format.numbering",
     "journal": true,
     "label": "Numbering",
-    "params": "{on?: bool, scheme?: arabicPeriod|arabicParenR|romanUcPeriod|romanLcPeriod|alphaUcPeriod|alphaLcParenR|alphaLcPeriod, start?: n, color?, size?: % of text}",
+    "params": "{on?: bool, scheme?: arabicPeriod|arabicParenR|romanUcPeriod|romanLcPeriod|alphaUcPeriod|alphaLcParenR|alphaLcPeriod, start?: n (a numbered paragraph whose start differs from that of the last numbered paragraph at its level begins a new run of numbers at n, as PowerPoint's Start at does), color?, size?: % of text}",
     "schema": {
       "additionalProperties": false,
       "properties": {
@@ -4426,7 +4639,7 @@
           "description": "% of text"
         },
         "start": {
-          "description": "n"
+          "description": "n (a numbered paragraph whose start differs from that of the last numbered paragraph at its level begins a new run of numbers at n, as PowerPoint's Start at does)"
         }
       },
       "type": "object"
@@ -4646,18 +4859,18 @@
     "id": "format.columns",
     "journal": true,
     "label": "Columns",
-    "params": "{count, spacing?: pt}",
+    "params": "{count?: 1-16, spacing?: pt between columns}; a key left out keeps the shape's value, and with neither the Columns dialog opens",
     "schema": {
       "additionalProperties": false,
+      "description": "; a key left out keeps the shape's value, and with neither the Columns dialog opens",
       "properties": {
-        "count": {},
+        "count": {
+          "description": "1-16"
+        },
         "spacing": {
-          "description": "pt"
+          "description": "pt between columns"
         }
       },
-      "required": [
-        "count"
-      ],
       "type": "object"
     },
     "undoable": true
@@ -4794,10 +5007,10 @@
     "id": "design.browseTheme",
     "journal": true,
     "label": "Browse for Themes…",
-    "params": "{path} | {name, data: base64} — apply the theme of a .thmx, .pptx or .potx file",
+    "params": "{path} | {name, data: base64} — apply a .pptx or .potx's slide master and layouts (slides move to the matching layouts), or a .thmx's theme",
     "schema": {
       "additionalProperties": false,
-      "description": "One of the alternative forms: {path} | {name, data: base64} — apply the theme of a .thmx, .pptx or .potx file. apply the theme of a .thmx, .pptx or .potx file",
+      "description": "One of the alternative forms: {path} | {name, data: base64} — apply a .pptx or .potx's slide master and layouts (slides move to the matching layouts), or a .thmx's theme. apply a .pptx or .potx's slide master and layouts (slides move to the matching layouts), or a .thmx's theme",
       "properties": {
         "data": {
           "description": "base64"
@@ -5467,13 +5680,17 @@
     "id": "animation.set",
     "journal": true,
     "label": "Animation Styles",
-    "params": "{effect: fade|fly|zoom|wipe|appear|spin|pulse|fadeOut|lines|… (animation.list), class?: entrance|emphasis|exit|path, option?, ids?} — replaces the shapes' animations",
+    "params": "{effect: fade|fly|zoom|wipe|appear|spin|pulse|fadeOut|lines|… (animation.list), class?: entrance|emphasis|exit|path, option?, path?: [[x,y],…] or OOXML string, closed?: bool, ids?} — replaces the shapes' animations. path (motion paths): points in slide points, as offsets from where the shape sits, or the OOXML path string (slide fractions) animation.get answers",
     "schema": {
       "additionalProperties": false,
-      "description": "replaces the shapes' animations",
+      "description": "replaces the shapes' animations. path (motion paths): points in slide points, as offsets from where the shape sits, or the OOXML path string (slide fractions) animation.get answers",
       "properties": {
         "class": {
           "description": "entrance|emphasis|exit|path"
+        },
+        "closed": {
+          "description": "bool",
+          "type": "boolean"
         },
         "effect": {
           "description": "fade|fly|zoom|wipe|appear|spin|pulse|fadeOut|lines|… (animation.list)"
@@ -5483,6 +5700,10 @@
         },
         "option": {
           "description": "optional"
+        },
+        "path": {
+          "description": "[[x,y],…] or OOXML string",
+          "type": "array"
         }
       },
       "required": [
@@ -5496,12 +5717,17 @@
     "id": "animation.add",
     "journal": true,
     "label": "Add Animation",
-    "params": "{effect, class?, option?, start?: onClick|withPrevious|afterPrevious, duration?: ms, delay?: ms, ids?}",
+    "params": "{effect, class?, option?, path?: [[x,y],…] or OOXML string, closed?: bool, start?: onClick|withPrevious|afterPrevious, duration?: ms, delay?: ms, ids?} → {count, path?}",
     "schema": {
       "additionalProperties": false,
+      "description": "Returns: {count, path?}",
       "properties": {
         "class": {
           "description": "optional"
+        },
+        "closed": {
+          "description": "bool",
+          "type": "boolean"
         },
         "delay": {
           "description": "ms"
@@ -5515,6 +5741,10 @@
         },
         "option": {
           "description": "optional"
+        },
+        "path": {
+          "description": "[[x,y],…] or OOXML string",
+          "type": "array"
         },
         "start": {
           "description": "onClick|withPrevious|afterPrevious"
@@ -5608,16 +5838,24 @@
     "id": "animation.options",
     "journal": true,
     "label": "Effect Options",
-    "params": "{option?, textBuild?: asOne|byParagraph|byWord|byLetter, index?}",
+    "params": "{option?, textBuild?: asOne|byParagraph|byWord|byLetter, path?: [[x,y],…] or OOXML string, closed?: bool, index?}",
     "schema": {
       "additionalProperties": false,
       "properties": {
+        "closed": {
+          "description": "bool",
+          "type": "boolean"
+        },
         "index": {
           "description": "optional",
           "type": "integer"
         },
         "option": {
           "description": "optional"
+        },
+        "path": {
+          "description": "[[x,y],…] or OOXML string",
+          "type": "array"
         },
         "textBuild": {
           "description": "asOne|byParagraph|byWord|byLetter"
@@ -6041,12 +6279,15 @@
     "id": "table.cellAlign",
     "journal": true,
     "label": "Align Cell Text",
-    "params": "{anchor: top|middle|bottom, cells?, id?}",
+    "params": "{anchor?: top|middle|bottom (vertical; top when neither anchor nor align is given), align?: left|center|right|justify (horizontal, applied to every paragraph of the cells), cells?, id?}",
     "schema": {
       "additionalProperties": false,
       "properties": {
+        "align": {
+          "description": "left|center|right|justify (horizontal, applied to every paragraph of the cells)"
+        },
         "anchor": {
-          "description": "top|middle|bottom"
+          "description": "top|middle|bottom (vertical; top when neither anchor nor align is given)"
         },
         "cells": {
           "description": "optional"
@@ -6055,9 +6296,6 @@
           "description": "optional"
         }
       },
-      "required": [
-        "anchor"
-      ],
       "type": "object"
     },
     "undoable": true
@@ -6580,10 +6818,10 @@
     "id": "review.compare",
     "journal": true,
     "label": "Compare",
-    "params": "{path} | {name, data: base64} — compare with a revised copy → {name, changes}",
+    "params": "{path} | {name, data: base64} — compare the open deck with another file → {name, changes: [{kind, slide, number, onlyIn?, revised, details}]}; each change is described from the open deck: `onlyIn: \"deck\"` is in the deck and not in the file, `onlyIn: \"file\"` is in the file and not in the deck, `changed` is in both and differs; `slide` is 0-based, `number` the editor's slide number; review.accept takes the FILE's side, so it deletes what is only in the deck (Accept All keeps the deck's last remaining slide rather than deleting it)",
     "schema": {
       "additionalProperties": false,
-      "description": "One of the alternative forms: {path} | {name, data: base64} — compare with a revised copy. compare with a revised copy. Returns: {name, changes}",
+      "description": "One of the alternative forms: {path} | {name, data: base64} — compare the open deck with another file. compare the open deck with another file. Returns: {name, changes: [{kind, slide, number, onlyIn?, revised, details}]}; each change is described from the open deck: `onlyIn: \"deck\"` is in the deck and not in the file, `onlyIn: \"file\"` is in the file and not in the deck, `changed` is in both and differs; `slide` is 0-based, `number` the editor's slide number; review.accept takes the FILE's side, so it deletes what is only in the deck (Accept All keeps the deck's last remaining slide rather than deleting it)",
       "properties": {
         "data": {
           "description": "base64"
@@ -6599,10 +6837,10 @@
     "id": "review.revisions",
     "journal": false,
     "label": "Revisions",
-    "params": "{} → {name, changes: [{kind: inserted|deleted|changed, slide, revised, details}]}",
+    "params": "{} → {name, changes: [{kind: inserted|deleted|changed, slide (0-based), number (editor's), onlyIn?: deck|file, revised, details}]}; `onlyIn: deck` = only in the open deck, `file` = only in the compared file; accepting takes the file's side",
     "schema": {
       "additionalProperties": false,
-      "description": "Returns: {name, changes: [{kind: inserted|deleted|changed, slide, revised, details}]}",
+      "description": "Returns: {name, changes: [{kind: inserted|deleted|changed, slide (0-based), number (editor's), onlyIn?: deck|file, revised, details}]}; `onlyIn: deck` = only in the open deck, `file` = only in the compared file; accepting takes the file's side",
       "properties": {},
       "type": "object"
     },
@@ -6612,10 +6850,10 @@
     "id": "review.accept",
     "journal": true,
     "label": "Accept Revision",
-    "params": "{index} | {all: true}",
+    "params": "{index} | {all: true} — accept the compared file's side of a change (or all): what is only in the file is added, what is only in the open deck is deleted (all: true leaves the deck's last remaining slide in place), a changed slide becomes the file's",
     "schema": {
       "additionalProperties": false,
-      "description": "One of the alternative forms: {index} | {all: true}",
+      "description": "One of the alternative forms: {index} | {all: true} — accept the compared file's side of a change (or all): what is only in the file is added, what is only in the open deck is deleted (all: true leaves the deck's last remaining slide in place), a changed slide becomes the file's. accept the compared file's side of a change (or all): what is only in the file is added, what is only in the open deck is deleted (all: true leaves the deck's last remaining slide in place), a changed slide becomes the file's",
       "properties": {
         "all": {
           "description": "true"
@@ -6627,6 +6865,26 @@
       "type": "object"
     },
     "undoable": true
+  },
+  {
+    "id": "review.reject",
+    "journal": true,
+    "label": "Reject Revision",
+    "params": "{index} | {all: true} → {rejected} (drop revisions without applying them: the open deck stays as it is; not an undo step)",
+    "schema": {
+      "additionalProperties": false,
+      "description": "One of the alternative forms: {index} | {all: true}. Returns: {rejected} (drop revisions without applying them: the open deck stays as it is; not an undo step)",
+      "properties": {
+        "all": {
+          "description": "true"
+        },
+        "index": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
   },
   {
     "id": "review.endCompare",
@@ -6749,6 +7007,24 @@
     "schema": {
       "additionalProperties": false,
       "description": "Returns: the slide's shapes with ids, kinds, boxes, text, fills, animations, transition, notes (text, and notesBody with its formatting)",
+      "properties": {
+        "index": {
+          "description": "optional",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": false
+  },
+  {
+    "id": "slide.actions",
+    "journal": false,
+    "label": "Inspect Slide Actions",
+    "params": "{index?} → {index, slideId, actions: [{owner, event, type, target, hyperlink}]}; lists shape click/hover actions and text-run links/hover actions (including table cells) without executing them",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {index, slideId, actions: [{owner, event, type, target, hyperlink}]}; lists shape click/hover actions and text-run links/hover actions (including table cells) without executing them",
       "properties": {
         "index": {
           "description": "optional",

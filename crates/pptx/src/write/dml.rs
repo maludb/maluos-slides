@@ -2,7 +2,7 @@
 
 use maluos_slides_geom::{Xfrm, pt_to_emu};
 use maluos_slides_model::style::{
-    ColorBase, ColorRef, Compound, Dash, Effects, Fill, GradientShape, Line, LineCap, LineJoin, PictureFill, PictureMode,
+    ColorBase, ColorRef, Compound, Dash, Effects, Fill, GradientFlip, GradientShape, Line, LineAlign, LineCap, LineJoin, PictureFill, PictureMode,
 };
 use maluos_slides_model::text::{
     Action, AutoFit, BodyProps, Bullet, Caps, Hyperlink, ListStyle, ParaProps, Paragraph, RunKind, RunProps, Spacing, Strike, TextBody,
@@ -38,9 +38,10 @@ pub fn color(w: &mut W, c: &ColorRef) {
     let (tag, a) = match &c.base {
         ColorBase::Rgb { rgb } => ("a:srgbClr", A::new().a("val", rgb.hex())),
         ColorBase::Scheme { slot } => ("a:schemeClr", A::new().a("val", slot.xml_name())),
-        ColorBase::Preset { name } => ("a:prstClr", A::new().a("val", if name.is_empty() { "black" } else { name })),
+        // The reader keeps any name a file has; only names the schema allows are written.
+        ColorBase::Preset { name } => ("a:prstClr", A::new().a("val", if maluos_slides_color::is_preset_name(name) { name } else { "black" })),
         ColorBase::System { name, last } => {
-            ("a:sysClr", A::new().a("val", if name.is_empty() { "windowText" } else { name }).a("lastClr", last.hex()))
+            ("a:sysClr", A::new().a("val", if maluos_slides_color::is_system_name(name) { name } else { "windowText" }).a("lastClr", last.hex()))
         }
     };
     let rgb_alpha = match &c.base {
@@ -209,6 +210,7 @@ pub fn line(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, l: &Line) {
                 LineCap::Flat => "flat",
             }),
         )
+        .o("algn", l.align.map(LineAlign::xml))
         .o("cmpd", l.compound.map(Compound::xml));
     w.open(tag, a);
     if let Some(f) = &l.fill {
@@ -234,7 +236,10 @@ pub fn line(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, l: &Line) {
     match l.join {
         Some(LineJoin::Round) => w.empty0("a:round"),
         Some(LineJoin::Bevel) => w.empty0("a:bevel"),
-        Some(LineJoin::Miter) => w.empty0("a:miter"),
+        Some(LineJoin::Miter) => {
+            let limit = l.miter_limit.filter(|limit| *limit <= i32::MAX as u32);
+            w.empty("a:miter", A::new().o("lim", limit));
+        }
         None => {}
     }
     for (t, e) in [("a:headEnd", &l.head), ("a:tailEnd", &l.tail)] {
@@ -280,7 +285,7 @@ fn shadow(w: &mut W, tag: &str, s: &maluos_slides_model::style::Shadow) {
 }
 
 fn gradient(w: &mut W, g: &maluos_slides_model::style::Gradient) {
-    w.open("a:gradFill", A::new().a("rotWithShape", if g.rotate_with_shape { "1" } else { "0" }));
+    w.open("a:gradFill", A::new().o("flip", g.flip.map(GradientFlip::xml)).a("rotWithShape", if g.rotate_with_shape { "1" } else { "0" }));
     // No stops: no `a:gsLst`, so the gradient keeps taking them from its style's fill.
     let mut stops = g.stops.clone();
     if stops.len() == 1 {
@@ -352,10 +357,18 @@ pub fn effects(w: &mut W, fx: &Effects) {
                 .a("endA", pct(r.end_alpha.clamp(0.0, 1.0)))
                 .a("endPos", pct(r.end_pos.clamp(0.0, 1.0)))
                 .a("dist", emu(r.dist).max(0))
-                .a("dir", 5_400_000)
-                .a("sy", -100_000)
-                .a("algn", "bl")
-                .a("rotWithShape", "0"),
+                // Kept from a file as read: held to the schema's ranges so a stray value can't
+                // make PowerPoint repair the file (ST_PositiveFixedAngle, ST_FixedAngle,
+                // ST_PositiveFixedPercentage).
+                .o("stPos", r.st_pos.map(|v| v.clamp(0, 100_000)))
+                .o("dir", r.dir.map(|v| v.rem_euclid(21_600_000)))
+                .o("fadeDir", r.fade_dir.map(|v| v.rem_euclid(21_600_000)))
+                .o("sx", r.sx)
+                .o("sy", r.sy)
+                .o("kx", r.kx.map(|v| v.clamp(-5_399_999, 5_399_999)))
+                .o("ky", r.ky.map(|v| v.clamp(-5_399_999, 5_399_999)))
+                .o("algn", r.align.as_deref())
+                .b("rotWithShape", r.rotate_with_shape),
         );
     }
     if let Some(r) = fx.soft_edge {
@@ -463,7 +476,10 @@ pub fn body_pr(w: &mut W, b: &BodyProps) {
         .o("anchor", b.anchor.map(|a| a.xml()))
         .b("anchorCtr", b.anchor_ctr)
         .b("upright", b.upright)
-        .b("spcFirstLastPara", b.space_first_last);
+        .b("spcFirstLastPara", b.space_first_last)
+        .b("compatLnSpc", b.compat_ln_spc)
+        .o("vertOverflow", b.vert_overflow.map(|v| v.xml()))
+        .o("horzOverflow", maluos_slides_model::text::TextOverflow::horz_xml(b.horz_overflow));
     let warp = b.warp.as_deref().filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric()));
     if warp.is_none() && b.autofit.is_none() {
         w.empty("a:bodyPr", a);
@@ -534,8 +550,12 @@ pub fn ppr(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, level: Option<u8>, p:
         || p.space_after.is_some()
         || p.bullet.is_some()
         || p.bullet_font.is_some()
+        || p.bullet_font_follow_text.is_some()
         || p.bullet_color.is_some()
+        || p.bullet_color_follow_text.is_some()
         || p.bullet_size.is_some()
+        || p.bullet_size_points.is_some()
+        || p.bullet_size_follow_text.is_some()
         || p.tabs.is_some()
         || def.is_some();
     if !has_kids {
@@ -552,15 +572,23 @@ pub fn ppr(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, level: Option<u8>, p:
     if let Some(s) = &p.space_after {
         spacing(w, "a:spcAft", s);
     }
-    if let Some(c) = &p.bullet_color {
+    if p.bullet_color.is_none() && p.bullet_color_follow_text == Some(true) {
+        w.empty0("a:buClrTx");
+    } else if let Some(c) = &p.bullet_color {
         w.open0("a:buClr");
         color(w, c);
         w.close("a:buClr");
     }
-    if let Some(s) = p.bullet_size {
+    if p.bullet_size.is_none() && p.bullet_size_points.is_none() && p.bullet_size_follow_text == Some(true) {
+        w.empty0("a:buSzTx");
+    } else if let Some(s) = p.bullet_size_points.filter(|s| s.is_finite() && (1.0..=4000.0).contains(s)) {
+        w.val("a:buSzPts", ((s * 100.0).round() as u32).to_string());
+    } else if let Some(s) = p.bullet_size {
         w.val("a:buSzPct", pct(s.clamp(0.25, 4.0)));
     }
-    if let Some(f) = &p.bullet_font {
+    if p.bullet_font.is_none() && p.bullet_font_follow_text == Some(true) {
+        w.empty0("a:buFontTx");
+    } else if let Some(f) = &p.bullet_font {
         w.empty("a:buFont", A::new().a("typeface", f));
     }
     match &p.bullet {
@@ -612,6 +640,7 @@ fn typeface(w: &mut W, tag: &str, f: &Option<String>) {
 pub fn rpr(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, r: &RunProps) {
     let a = A::new()
         .o("lang", r.lang.as_deref().filter(|l| !l.is_empty()))
+        .o("altLang", r.alt_lang.as_deref().filter(|l| !l.is_empty()))
         .o("sz", r.size.map(|s| (s.clamp(1.0, 4000.0) * 100.0).round() as i64))
         .b("b", r.bold)
         .b("i", r.italic)
@@ -635,7 +664,8 @@ pub fn rpr(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, r: &RunProps) {
         )
         .o("spc", r.spacing.map(|s| (s.clamp(-4000.0, 4000.0) * 100.0).round() as i64))
         .o("baseline", r.baseline.map(|b| pct(b.clamp(-10.0, 10.0))))
-        .b("noProof", r.no_proof);
+        .b("noProof", r.no_proof)
+        .b("normalizeH", r.normalize_height);
     let has_fx = r.shadow.is_some() || r.inner_shadow.is_some() || r.glow.is_some() || r.reflection.is_some() || r.soft_edge.is_some();
     let has_kids = r.outline.is_some()
         || r.fill.is_some()
@@ -789,4 +819,24 @@ pub fn paragraph(w: &mut W, x: &mut Exp, o: &mut Out, p: &Paragraph, math: bool,
 
 pub fn has_math(tb: &TextBody) -> bool {
     tb.paragraphs.iter().flat_map(|p| &p.runs).any(|r| matches!(&r.kind, RunKind::Math { omml } if !omml.is_empty()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use maluos_slides_color::Rgba;
+
+    #[test]
+    fn unknown_preset_and_system_names_save_as_black_and_window_text() {
+        let write = |base: ColorBase| {
+            let mut w = W::frag();
+            color(&mut w, &ColorRef { base, mods: vec![] });
+            w.s
+        };
+        assert_eq!(write(ColorBase::Preset { name: "notAColor".into() }), r#"<a:prstClr val="black"/>"#);
+        assert_eq!(write(ColorBase::Preset { name: "darkBlue".into() }), r#"<a:prstClr val="darkBlue"/>"#);
+        let last = Rgba::rgb(0x12, 0x34, 0x56);
+        assert_eq!(write(ColorBase::System { name: "notAColor".into(), last }), r#"<a:sysClr val="windowText" lastClr="123456"/>"#);
+        assert_eq!(write(ColorBase::System { name: "3dLight".into(), last }), r#"<a:sysClr val="3dLight" lastClr="123456"/>"#);
+    }
 }

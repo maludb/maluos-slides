@@ -1066,13 +1066,13 @@ impl Presentation {
         self.slides.iter().position(|s| s.id == id)
     }
     pub fn slide(&self, id: SlideId) -> Option<&Slide> {
-        self.slides.iter().find(|s| s.id == id).map(|s| s.as_ref())
+        self.slides.iter().find(|s| s.id == id).map(AsRef::as_ref)
     }
     pub fn slide_mut(&mut self, id: SlideId) -> Option<&mut Slide> {
         self.slides.iter_mut().find(|s| s.id == id).map(Arc::make_mut)
     }
     pub fn slide_at(&self, i: usize) -> Option<&Slide> {
-        self.slides.get(i).map(|s| s.as_ref())
+        self.slides.get(i).map(AsRef::as_ref)
     }
     /// Master and layout for a layout id.
     pub fn layout(&self, id: LayoutId) -> Option<(&Master, &Layout)> {
@@ -1086,7 +1086,7 @@ impl Presentation {
         self.masters.first().map(|m| (m.as_ref(), m.layouts.first()))
     }
     pub fn first_master(&self) -> Option<&Master> {
-        self.masters.first().map(|m| m.as_ref())
+        self.masters.first().map(AsRef::as_ref)
     }
     pub fn media(&self, id: MediaId) -> Option<&MediaItem> {
         self.media.iter().find(|m| m.id == id)
@@ -1112,11 +1112,13 @@ impl Presentation {
     pub fn validate(&self) -> Vec<String> {
         let mut out = vec![];
         let mut seen = std::collections::HashSet::new();
+        // Indexed once: a per-slide scan of every layout is slides × layouts work.
+        let layouts: std::collections::HashSet<_> = self.masters.iter().flat_map(|m| m.layouts.iter().map(|l| l.id)).collect();
         for s in &self.slides {
             if !seen.insert(s.id) {
                 out.push(format!("duplicate slide id {}", s.id));
             }
-            if self.layout(s.layout).is_none() {
+            if !layouts.contains(&s.layout) {
                 out.push(format!("slide {} uses missing layout {}", s.id, s.layout));
             }
             let mut ids = std::collections::HashSet::new();

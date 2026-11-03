@@ -1,5 +1,5 @@
 //! Tests run the tool table and the catalog against the headless engine; no model, no network.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::cognitive_complexity)]
 
 use std::path::PathBuf;
 

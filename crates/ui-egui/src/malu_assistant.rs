@@ -724,30 +724,32 @@ fn settings_row(app: &mut SlideApp, ui: &mut Ui, _t: &Tokens) {
     ui.horizontal_wrapped(|ui| {
         let mut provider = app.malu.provider;
         if provider != ProviderChoice::Custom {
-            egui::ComboBox::from_id_salt("malu_provider").selected_text(provider.label()).width(96.0).show_ui(ui, |ui| {
+            let r = craft_ui::ComboBox::from_id_salt("malu_provider").selected_text(provider.label()).width(96.0).show_ui(ui, |ui| {
                 for p in ProviderChoice::ALL {
                     ui.selectable_value(&mut provider, p, p.label());
                 }
             });
+            r.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Provider"));
             if !busy {
                 app.malu.set_provider(provider);
             }
         }
         let mut model = app.malu.model.clone();
         let suggestions = app.malu.provider.suggestions();
-        let r = egui::ComboBox::from_id_salt("malu_model").selected_text(model.clone()).width(150.0).show_ui(ui, |ui| {
+        let r = craft_ui::ComboBox::from_id_salt("malu_model").selected_text(model.clone()).width(150.0).show_ui(ui, |ui| {
             for m in suggestions {
                 ui.selectable_value(&mut model, m.to_string(), *m);
             }
             ui.separator();
             ui.add(egui::TextEdit::singleline(&mut model).hint_text("model name").desired_width(140.0));
         });
+        r.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Model"));
         r.response.on_hover_text("The model to ask; type any name your provider serves");
         if !busy {
             app.malu.set_model(model);
         }
         let mut mode = app.malu.mode;
-        egui::ComboBox::from_id_salt("malu_mode")
+        let r = craft_ui::ComboBox::from_id_salt("malu_mode")
             .selected_text(match mode {
                 Mode::AnswerOnly => "Answer only",
                 Mode::Confirm => "Confirm changes",
@@ -759,6 +761,7 @@ fn settings_row(app: &mut SlideApp, ui: &mut Ui, _t: &Tokens) {
                 ui.selectable_value(&mut mode, Mode::Confirm, "Confirm changes").on_hover_text("Shows each change as a plan to approve");
                 ui.selectable_value(&mut mode, Mode::Autopilot, "Autopilot").on_hover_text("Applies changes at once; deletions still ask");
             });
+        r.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Mode"));
         app.malu.set_mode(mode);
     });
 }
@@ -890,7 +893,7 @@ fn transcript(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) 
 }
 
 fn input_row(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) {
-    let id = egui::Id::new("malu_input");
+    let id = egui::Id::unique("malu_input");
     let busy = app.malu.busy();
     // Enter sends; Shift+Enter breaks the line. The key is taken before the box sees it.
     let had_focus = ctx.memory(|m| m.has_focus(id));
