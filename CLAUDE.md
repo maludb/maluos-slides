@@ -4,7 +4,9 @@ MaluOS Slides is the MaluOS presentation app, a fork of DeckCraft (`upstream` re
 below the rule is DeckCraft's own guidance, mechanically renamed, and still applies where it is
 not about macOS, Windows or the ArtCraft suite. MaluOS Slides-specific rules:
 
-- **The plan is `docs/maluos-slides/plan.md`; progress is `docs/maluos-slides/status.md`.** Start
+- **The plan is `docs/maluos-slides/plan.md`; progress is `docs/maluos-slides/status.md`;
+  design decisions shared with Malu123 and MaluDocs are `docs/maluos-slides/harness-design.md`
+  (owner, 2026-11-03: add a row there for every new decision).** Start
   there, not in `plan/` (upstream's local-only folder, which this fork does not have) and not in
   `../../craftrules` (not checked out here).
 - **Keep upstream mergeable.** Do not edit `crates/*` except for bug fixes you would send

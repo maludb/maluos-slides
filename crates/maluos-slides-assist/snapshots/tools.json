@@ -888,5 +888,36 @@
       "type": "object"
     },
     "name": "deck_timing"
+  },
+  {
+    "description": "Ask the office's image agent for a picture and insert it on a slide (the current slide unless `slide` is given). The prompt is sent to the office this desk is enrolled with; nothing is fetched from the public web. Fails with a clear message when the desk is not enrolled or the office publishes no image agent: then tell the user and look nowhere else.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "prompt": {
+          "description": "What the picture shows, its style and mood, in one or two sentences",
+          "type": "string"
+        },
+        "rect": {
+          "description": "[x, y, w, h] on the 960×540 slide (default: an empty picture placeholder, else fitted)",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "slide": {
+          "description": "Slide index to put it on (default: the current slide)",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "type": "object"
+    },
+    "name": "office_picture"
   }
 ]

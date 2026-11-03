@@ -48,6 +48,7 @@ direct providers with the key from the vault, the env var still winning when set
 
 ## What Slides builds on its side (no ask needed)
 
+- Built (step 4.5): the office client `maluos-slides-assist::office` (enrolment file, token from env or the vault over its Unix socket, agents by capability, the task protocol) and the `office_picture` tool. Shared with Malu123 and MaluDocs per [harness-design.md](harness-design.md) H28.
 - A Unix-socket `Transport` in `maluos-llm` (HTTP/1.1 over `AF_UNIX`, the same `post` seam).
 - A gateway provider in `maluos-slides-assist::providers` (Anthropic face; tier names as models).
 - A vault key source (`keys::api_key_with` lookup): `GET /v1/secrets`, pick by `provider`, then
@@ -82,7 +83,8 @@ use. What is installed here (`maluos-desk` 0.4.0, Phase 12 slices 6–9):
   maluos_desk.mock_office --port 18080 --code CODE` serves the whole contract (enrol, heartbeat,
   two agents `helpdesk` and `research`, tasks, models, MCP stubs, `/mock/state`). Its agents
   answer text only with `artifacts: []` and none claims an image capability, so the 4.5 tests
-  will carry their own mock agent (same protocol, one artifact) in the assist crate's test code.
+  carry their own mock agent (same protocol, one artifact), and the live check runs the shipped
+  mock with an `illustrator` agent patched in (`maluos-mock-image-office`, port 18081).
 
 The owner's `maludb/maludb-os-docker` repository is the **office-side** installer (the Business
 OS kernel plus Help Desk and Spaces in one container on a MaluDB hosting VM). Evaluated
@@ -130,3 +132,4 @@ Its Claude Code plugin covers Business OS application development, not this app.
 |---|---|---|
 | 2026-11-02 | major | Created from the installed sources: what exists, two integration paths, six asks |
 | 2026-11-03 | minor | The office, its agents directory and task protocol, the shipped mock office; `maludb-os-docker` evaluated (office-side, not for this desk); ask 7 (an image agent for desks) |
+| 2026-11-03 | minor | Step 4.5 built against the office contract; the mock with an image agent for the live check |

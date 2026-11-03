@@ -292,6 +292,7 @@ pub fn tool_command(tool: &str) -> Option<&'static str> {
         "select" => "edit.select",
         "build_deck" => "slide.new",
         "deck_timing" => "document.inspect",
+        "office_picture" => "insert.picture",
         _ => return None,
     })
 }

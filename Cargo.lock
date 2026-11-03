@@ -2333,6 +2333,7 @@ dependencies = [
  "maluos-slides-mcp",
  "serde",
  "serde_json",
+ "ureq",
 ]
 
 [[package]]

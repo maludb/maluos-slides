@@ -58,7 +58,7 @@ fn table_mirrors_the_mcp_server() {
     let all = ToolTable::all();
     let mcp = maluos_slides_mcp::tool_definitions();
     assert_eq!(all.defs().len(), mcp.len() + ToolTable::extra_definitions().len());
-    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("deck_timing"), "the fork's tools come last");
+    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("office_picture"), "the fork's tools come last");
     assert!(all.get("build_deck").is_some());
     for (t, m) in all.defs().iter().zip(&mcp) {
         assert_eq!(t.name, m["name"]);
@@ -1187,4 +1187,309 @@ fn qa_prep_ends_in_a_hidden_slide() {
     assert!(st.doc.slides[1].hidden);
     assert!(st.doc.slides[1].notes_text().contains("Not in the deck"));
     assert!(mock.requests()[0].system.as_deref().unwrap().contains("Q&A prep"));
+}
+
+// ---------- the office and its image agent (step 4.5) ----------
+
+use std::io::{BufRead, BufReader, Read as _};
+use std::net::TcpListener;
+use std::os::unix::net::UnixListener;
+
+use crate::office::{Office, OfficeError, vault_value};
+
+/// Tests that install an office override take this lock, so they never see each other's office.
+static OFFICE_LOCK: Mutex<()> = Mutex::new(());
+
+const PNG: &[u8] = &[
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0xa9, 0xf1, 0x9e, 0x7e, 0x00, 0x00, 0x00, 0x12, 0x49, 0x44, 0x41, 0x54, 0x78, 0xda, 0x63, 0x90, 0xab, 0x38, 0xf1,
+    0x1f, 0x19, 0x33, 0x90, 0x2e, 0x00, 0x00, 0xee, 0x88, 0x25, 0xd1, 0xc9, 0x9c, 0xb2, 0xb0, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+    0x42, 0x60, 0x82,
+];
+
+/// One HTTP request as the mock servers see it.
+#[derive(Debug, Clone)]
+struct Seen {
+    method: String,
+    path: String,
+    authorization: Option<String>,
+    body: Value,
+}
+
+fn read_http<R: std::io::Read>(stream: &mut BufReader<R>) -> Option<Seen> {
+    let mut line = String::new();
+    stream.read_line(&mut line).ok()?;
+    let mut parts = line.split_whitespace();
+    let method = parts.next()?.to_string();
+    let path = parts.next()?.to_string();
+    let mut len = 0usize;
+    let mut authorization = None;
+    loop {
+        let mut h = String::new();
+        stream.read_line(&mut h).ok()?;
+        let h = h.trim_end().to_string();
+        if h.is_empty() {
+            break;
+        }
+        let (k, v) = h.split_once(':')?;
+        if k.eq_ignore_ascii_case("content-length") {
+            len = v.trim().parse().ok()?;
+        } else if k.eq_ignore_ascii_case("authorization") {
+            authorization = Some(v.trim().to_string());
+        }
+    }
+    let mut body = vec![0u8; len];
+    stream.read_exact(&mut body).ok()?;
+    Some(Seen { method, path, authorization, body: serde_json::from_slice(&body).unwrap_or(Value::Null) })
+}
+
+fn write_http<W: std::io::Write>(w: &mut W, status: u16, body: &[u8], content_type: &str) {
+    let _ = write!(w, "HTTP/1.1 {status} X\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+    let _ = w.write_all(body);
+    let _ = w.flush();
+}
+
+/// A mock office: the agents directory and each agent's task interface, one request per
+/// connection. `image` decides whether an image agent is listed; `artifact` is what its task
+/// answers with (after one `working` poll).
+struct MockOffice {
+    url: String,
+    seen: Arc<Mutex<Vec<Seen>>>,
+}
+
+fn mock_office(image: bool, artifact: Value) -> MockOffice {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = seen.clone();
+    let base = url.clone();
+    std::thread::spawn(move || {
+        let polls = Arc::new(Mutex::new(0usize));
+        for stream in listener.incoming() {
+            let Ok(stream) = stream else { break };
+            let mut reader = BufReader::new(stream);
+            let Some(req) = read_http(&mut reader) else { continue };
+            let mut out = reader.into_inner();
+            log.lock().unwrap().push(req.clone());
+            if req.authorization.as_deref() != Some("Bearer desk-token") {
+                write_http(&mut out, 401, br#"{"error":"unauthorized","message":"bad desk token"}"#, "application/json");
+                continue;
+            }
+            let reply = match req.path.as_str() {
+                "/api/v1/desks/agents" => {
+                    let mut agents = vec![
+                        json!({"id": "research", "name": "Research agent", "capabilities": ["research", "summarise"], "tasks": format!("{base}/api/v1/desks/agents/research/tasks")}),
+                    ];
+                    if image {
+                        agents.push(json!({"id": "illustrator", "name": "Illustrator", "description": "Pictures for documents and slides", "capabilities": ["image.generate", "image.edit"], "tasks": format!("{base}/api/v1/desks/agents/illustrator/tasks")}));
+                    }
+                    json!({"ok": true, "surface": 1, "agents": agents})
+                }
+                "/api/v1/desks/agents/illustrator/tasks" => match req.body["method"].as_str() {
+                    Some("tasks/send") => {
+                        let text = req.body["params"]["message"]["parts"][0]["text"].as_str().unwrap_or("").to_string();
+                        json!({"jsonrpc": "2.0", "id": req.body["id"], "result": {"id": "t1", "state": "working", "input": {"text": text}, "output": {"text": "", "artifacts": []}}})
+                    }
+                    Some("tasks/get") => {
+                        *polls.lock().unwrap() += 1;
+                        json!({"jsonrpc": "2.0", "id": req.body["id"], "result": {"id": "t1", "state": "completed", "output": {"text": "A lighthouse at dusk.", "artifacts": [artifact.clone()]}}})
+                    }
+                    _ => json!({"jsonrpc": "2.0", "id": req.body["id"], "error": {"code": -32601, "message": "no such method"}}),
+                },
+                "/files/lighthouse.png" => {
+                    write_http(&mut out, 200, PNG, "image/png");
+                    continue;
+                }
+                _ => {
+                    write_http(&mut out, 404, br#"{"error":"not_found"}"#, "application/json");
+                    continue;
+                }
+            };
+            write_http(&mut out, 200, reply.to_string().as_bytes(), "application/json");
+        }
+    });
+    MockOffice { url, seen }
+}
+
+fn office_at(m: &MockOffice) -> Office {
+    let mut o = Office::with_token("Test Office", &m.url, Some(&format!("{}/api/v1/desks/agents", m.url)), "desk-token");
+    o.poll_every = Duration::from_millis(5);
+    o
+}
+
+fn picture_count(h: &Headless, slide: usize) -> usize {
+    h.session.active().unwrap().doc.slides[slide]
+        .shapes
+        .iter()
+        .filter(|s| matches!(s.kind, maluos_slides_engine::model::ShapeKind::Picture { .. }))
+        .count()
+}
+
+#[test]
+fn office_agents_are_listed_and_chosen_by_capability() {
+    let m = mock_office(true, json!({}));
+    let office = office_at(&m);
+    let agents = office.agents().unwrap();
+    assert_eq!(agents.iter().map(|a| a.id.as_str()).collect::<Vec<_>>(), vec!["research", "illustrator"]);
+    assert_eq!(office.image_agent().unwrap().id, "illustrator");
+    assert_eq!(m.seen.lock().unwrap()[0].authorization.as_deref(), Some("Bearer desk-token"));
+
+    let none = mock_office(false, json!({}));
+    assert_eq!(office_at(&none).image_agent(), Err(OfficeError::NoImageAgent("Test Office".into())));
+    let bad = Office::with_token("Test Office", &m.url, Some(&format!("{}/api/v1/desks/agents", m.url)), "wrong");
+    assert!(matches!(bad.agents(), Err(OfficeError::Office(s)) if s.contains("401")));
+    let nowhere = Office::with_token("Nowhere", "http://127.0.0.1:1", Some("http://127.0.0.1:1/agents"), "t");
+    assert!(matches!(nowhere.agents(), Err(OfficeError::Office(_))));
+}
+
+#[test]
+fn office_picture_lands_on_the_slide_through_insert_picture() {
+    let _guard = OFFICE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let data = maluos_slides_engine::cmd::base64_encode(PNG);
+    let m = mock_office(true, json!({"kind": "image", "media_type": "image/png", "name": "lighthouse", "data": data}));
+    Office::set_override(Some(office_at(&m)));
+
+    let mut h = Headless::with_document();
+    run(&mut h.session, "slide.new", json!({"layout": "titleAndContent", "title": "Second"}));
+    assert_eq!(h.session.active().unwrap().selection.slide, 1, "the new slide is current");
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::from_session(&h.session);
+    assert!(!table.is_read_only("office_picture"));
+    let before = picture_count(&h, 0);
+    let out = run_tool(&mut h, &table, &catalog, "p", "office_picture", &json!({"prompt": "a lighthouse at dusk, flat illustration", "slide": 0}));
+    Office::set_override(None);
+    assert!(!out.is_error, "{}", out.text);
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["agent"], "illustrator");
+    assert_eq!(v["name"], "lighthouse.png");
+    assert_eq!(v["bytes"], PNG.len());
+    assert_eq!(v["agentSaid"], "A lighthouse at dusk.");
+    assert_eq!(picture_count(&h, 0), before + 1, "one picture on slide 1, the slide asked for");
+    assert_eq!(picture_count(&h, 1), 0);
+    assert_eq!(h.session.active().unwrap().selection.slide, 0, "slide.go moved there first");
+
+    let seen = m.seen.lock().unwrap();
+    let send = seen.iter().find(|s| s.body["method"] == "tasks/send").unwrap();
+    assert_eq!(send.body["params"]["message"]["parts"][0]["text"], "a lighthouse at dusk, flat illustration");
+    assert!(seen.iter().any(|s| s.body["method"] == "tasks/get"), "polled the working task");
+    assert!(seen.iter().all(|s| s.method == "GET" || s.method == "POST"));
+
+    // The policy shows it as a change through insert.picture, never as read-only.
+    let plan = Policy::new(Mode::Confirm).classify(&table, &catalog, "p", "office_picture", &json!({"prompt": "x"}));
+    assert_eq!(plan.class, Class::Change);
+    assert_eq!(plan.commands[0].0, "insert.picture");
+}
+
+#[test]
+fn office_picture_by_url_outside_the_office_is_refused() {
+    // `foreign` serves the file; the office is `office_srv`, so the URL points outside it.
+    let foreign = mock_office(true, Value::Null);
+    let office_srv = mock_office(
+        true,
+        json!({"type": "image", "mime": "image/png", "name": "lighthouse.png", "url": format!("{}/files/lighthouse.png", foreign.url)}),
+    );
+    let office = office_at(&office_srv);
+    let agent = office.image_agent().unwrap();
+    let err = office.picture(&agent, "x").unwrap_err();
+    assert!(matches!(&err, OfficeError::Task(s) if s.contains("outside the office") && s.contains("nothing is fetched from the web")), "{err}");
+    assert!(foreign.seen.lock().unwrap().iter().all(|s| s.path != "/files/lighthouse.png"), "the foreign file was never requested");
+
+    // A task that completes without any picture is an error too, with what the agent said.
+    let served = mock_office(true, Value::Null);
+    let o2 = office_at(&served);
+    let agent = o2.image_agent().unwrap();
+    assert!(
+        matches!(o2.picture(&agent, "x").unwrap_err(), OfficeError::Task(s) if s.contains("without a picture") && s.contains("A lighthouse at dusk."))
+    );
+}
+
+#[test]
+fn office_picture_by_url_under_the_office_is_read() {
+    let m = mock_office(true, Value::Null);
+    let url = format!("{}/files/lighthouse.png", m.url);
+    let served = mock_office(true, json!({"type": "image", "mime": "image/png", "name": "lighthouse.png", "url": url}));
+    let mut office = office_at(&served);
+    office.url = m.url.clone();
+    let agent = office.image_agent().unwrap();
+    let p = office.picture(&agent, "x").unwrap();
+    assert_eq!((p.bytes.as_slice(), p.media_type.as_str(), p.name.as_str()), (PNG, "image/png", "lighthouse.png"));
+    assert_eq!(m.seen.lock().unwrap().last().unwrap().authorization.as_deref(), Some("Bearer desk-token"), "the file is fetched with the desk token");
+}
+
+#[test]
+fn office_picture_without_an_office_says_so_and_fetches_nothing() {
+    let _guard = OFFICE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let none = mock_office(false, json!({}));
+    Office::set_override(Some(office_at(&none)));
+    let mut h = Headless::with_document();
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::from_session(&h.session);
+    let out = run_tool(&mut h, &table, &catalog, "p", "office_picture", &json!({"prompt": "a lighthouse"}));
+    Office::set_override(None);
+    assert!(out.is_error);
+    assert!(out.text.contains("publishes no image agent"), "{}", out.text);
+    assert_eq!(picture_count(&h, 0), 0);
+    let out = run_tool(&mut h, &table, &catalog, "p", "office_picture", &json!({}));
+    assert!(out.is_error && out.text.contains("`prompt` is required"));
+    let out = run_tool(&mut h, &table, &catalog, "p", "office_picture", &json!({"prompt": "x", "web": true}));
+    assert!(out.is_error && out.text.contains("unknown argument"));
+}
+
+#[test]
+fn desk_token_comes_from_a_vault_socket() {
+    let dir = std::env::temp_dir().join(format!("maluos-slides-vault-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let sock = dir.join("vault.sock");
+    let _ = std::fs::remove_file(&sock);
+    let listener = UnixListener::bind(&sock).unwrap();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = seen.clone();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(stream) = stream else { break };
+            let mut reader = BufReader::new(stream);
+            let Some(req) = read_http(&mut reader) else { continue };
+            let mut out = reader.into_inner();
+            let reply = if req.path.starts_with("/v1/secrets/office-desk-token/value?mode=read&purpose=") {
+                (200, json!({"ref": "user:test/office-desk-token", "value": "desk-token", "level": "read"}))
+            } else {
+                (404, json!({"error": "not_found", "message": "no such secret"}))
+            };
+            log.lock().unwrap().push(req);
+            write_http(&mut out, reply.0, reply.1.to_string().as_bytes(), "application/json");
+        }
+    });
+    let socket = sock.to_string_lossy().into_owned();
+    assert_eq!(vault_value(&socket, "office-desk-token", "MaluOS Slides test").unwrap(), "desk-token");
+    assert!(matches!(vault_value(&socket, "other", "x"), Err(OfficeError::Token(s)) if s.contains("not_found")));
+    assert!(matches!(vault_value("/nonexistent/vault.sock", "office-desk-token", "x"), Err(OfficeError::Token(_))));
+    assert!(seen.lock().unwrap()[0].path.contains("purpose=MaluOS%20Slides%20test"));
+
+    // The office reads its token through the socket and the mock office accepts it.
+    let m = mock_office(true, json!({}));
+    let office = Office::with_token("Test Office", &m.url, Some(&format!("{}/api/v1/desks/agents", m.url)), "ignored").with_vault(&socket);
+    assert_eq!(office.image_agent().unwrap().id, "illustrator");
+    let _ = std::fs::remove_file(&sock);
+}
+
+#[test]
+fn a_picture_request_is_one_turn_and_one_undo() {
+    let _guard = OFFICE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let data = maluos_slides_engine::cmd::base64_encode(PNG);
+    let m = mock_office(true, json!({"kind": "image", "media_type": "image/png", "name": "harbor", "data": data}));
+    Office::set_override(Some(office_at(&m)));
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("p", "office_picture", json!({"prompt": "a harbor at dawn, soft light, matching the Harbor theme"}))]));
+    mock.push(answer("Added a picture of a harbor at dawn to slide 1."));
+    let mut host = Headless::with_document();
+    let before = host.session.active().unwrap().history.undo.len();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "add a picture to this slide", &mut ApproveAll, &mut no_events());
+    Office::set_override(None);
+    assert!(report.error.is_none(), "{report:?}");
+    assert_eq!(report.commands, vec!["insert.picture"]);
+    assert_eq!(picture_count(&host, 0), 1);
+    assert_eq!(host.session.active().unwrap().history.undo.len(), before + 1, "one undo entry for the turn");
+    assert!(mock.requests()[0].system.as_deref().unwrap().contains("office_picture"));
+    assert!(mock.requests()[0].system.as_deref().unwrap().contains("never the web"));
 }

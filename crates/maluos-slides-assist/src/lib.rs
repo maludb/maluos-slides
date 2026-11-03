@@ -20,6 +20,8 @@
 //!   [`mcp_ext::Server`], the MCP server with the fork's tools added.
 //! - [`timing`] (step 4.4): how long a deck takes, per slide and in total, and the cue line
 //!   presenter view shows; the `deck_timing` tool.
+//! - [`office`] (step 4.5): the office this desk is enrolled with, its agents and the
+//!   `office_picture` tool: a picture from the office's image agent, nothing from the web.
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -33,6 +35,8 @@ pub mod catalog;
 pub mod context;
 pub mod exec;
 pub mod mcp_ext;
+#[cfg(all(feature = "native", unix))]
+pub mod office;
 pub mod outline;
 pub mod policy;
 pub mod providers;

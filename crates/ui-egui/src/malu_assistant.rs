@@ -660,6 +660,10 @@ pub const QUICK_ACTIONS: &[(&str, &str)] = &[
     ("Chart from table", "Suggest a chart for the table on this slide and insert it next to the table."),
     ("Fix layout", "Fix the layout of this slide: align the shapes, even out the spacing, and shrink any text that overflows."),
     (
+        "Add a picture",
+        "Add a picture that fits this slide from the office's image agent, placed where the slide has room; tell me if there is no image agent.",
+    ),
+    (
         "Q&A prep",
         "Prepare me for questions: six to ten likely audience questions with answers from the deck, on one hidden slide at the end titled Q&A prep.",
     ),

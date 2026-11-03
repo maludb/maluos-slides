@@ -204,6 +204,28 @@ read-only tool `deck_timing` gives the model the same numbers, through `document
 answers drawn only from the deck, on one hidden slide at the end, answers in its notes); the
 pane offers Q&A prep as a quick action.
 
+## Pictures from the office (step 4.5)
+
+`office.rs` reaches the office this desk is enrolled with: the enrolment file
+`/etc/maluos/office.yaml` (`MALUOS_OFFICE_CONF` overrides; no secret in it) gives the office's
+name, URL and `endpoints.agents`; the desk token comes from `MALUOS_OFFICE_TOKEN` when set, else
+from the vault over its Unix socket (`GET /v1/secrets/office-desk-token/value?mode=read&purpose=…`,
+identity by peer credentials, `MALUOS_VAULT_SOCKET` overrides). `Office::agents()` lists the
+agents the office publishes; `image_agent()` picks the first whose capabilities say `image*` or
+`picture*`, never a fixed id; `picture(agent, prompt)` runs the MaluOS task protocol
+(`tasks/send`, then `tasks/get` every half second while the task is `working`, up to the task
+timeout) and takes the first image artifact of the output (`{kind|type: image, media_type|mime,
+data (base64) | url, name}`). An artifact given by URL is read only when the URL is under the
+office's own URL; anything else is refused with "nothing is fetched from the web". The tool
+`office_picture {prompt, slide?, rect?}` in the shared table (so the API and MCP have it too)
+moves to the slide with `slide.go` when asked, then inserts the bytes with `insert.picture`;
+the policy shows it as a change through that command, so confirm mode makes a plan of it. When
+the desk is not enrolled or the office publishes no image agent, the tool fails with that
+sentence and the instructions tell the model to say so and look nowhere else. The pane offers
+"Add a picture" as a quick action. The Phase 13 delegation envelope is not shipped by the
+platform yet; it goes on the same requests when it is. `Office::set_override` installs an
+office for tests or a CLI pointed elsewhere.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -239,3 +261,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Step 4.1: `outline`, `build_deck`, `call_tool` with extras, `mcp_ext::Server` |
 | 2026-11-02 | major | Step 4.2: images to the model, the five recipes, quick actions |
 | 2026-11-02 | major | Step 4.4: `timing`, `deck_timing`, presenter view hints, Q&A prep |
+| 2026-11-03 | major | Step 4.5: `office`, the `office_picture` tool, the Add a picture quick action |

@@ -116,6 +116,9 @@ pub fn call_tool(backend: &mut dyn Backend, name: &str, args: &Value) -> ToolRes
     if name == crate::tools::DECK_TIMING {
         return deck_timing(backend);
     }
+    if name == crate::tools::OFFICE_PICTURE {
+        return office_picture(backend, args);
+    }
     maluos_slides_mcp::call_tool(backend, name, args)
 }
 
@@ -191,6 +194,59 @@ fn build_deck(backend: &mut dyn Backend, args: &Value) -> ToolResult {
         ),
         Err(e) => ToolResult::error(format!("build_deck: {e}")),
     }
+}
+
+/// A picture from the office's image agent, inserted with `insert.picture` (step 4.5). The
+/// office is found from the desk's enrolment; see [`crate::office`].
+#[cfg(all(feature = "native", unix))]
+fn office_picture(backend: &mut dyn Backend, args: &Value) -> ToolResult {
+    let allowed = ["prompt", "slide", "rect"];
+    if let Some(o) = args.as_object()
+        && let Some(k) = o.keys().find(|k| !allowed.contains(&k.as_str()))
+    {
+        return ToolResult::error(format!("office_picture: unknown argument {k:?} (expected: {})", allowed.join(", ")));
+    }
+    let Some(prompt) = args.get("prompt").and_then(Value::as_str).map(str::trim).filter(|p| !p.is_empty()) else {
+        return ToolResult::error("office_picture: `prompt` is required");
+    };
+    let office = match crate::office::Office::discover() {
+        Ok(o) => o,
+        Err(e) => return ToolResult::error(format!("office_picture: {e}")),
+    };
+    let agent = match office.image_agent() {
+        Ok(a) => a,
+        Err(e) => return ToolResult::error(format!("office_picture: {e}")),
+    };
+    let picture = match office.picture(&agent, prompt) {
+        Ok(p) => p,
+        Err(e) => return ToolResult::error(format!("office_picture: {agent}: {e}", agent = agent.id)),
+    };
+    if let Some(slide) = args.get("slide").and_then(Value::as_u64)
+        && let Err(e) = backend.call("engine.execute", json!({"command": "slide.go", "params": {"index": slide}}))
+    {
+        return ToolResult::error(format!("office_picture: slide {slide}: {e}"));
+    }
+    let name = if picture.name.contains('.') {
+        picture.name.clone()
+    } else {
+        format!("{}.{}", picture.name, picture.media_type.rsplit('/').next().unwrap_or("png"))
+    };
+    let mut params = json!({"data": maluos_slides_engine::cmd::base64_encode(&picture.bytes), "name": name});
+    if let Some(rect) = args.get("rect") {
+        params["rect"] = rect.clone();
+    }
+    match backend.call("engine.execute", json!({"command": "insert.picture", "params": params})) {
+        Ok(inserted) => ToolResult::json(&json!({
+            "agent": agent.id, "office": office.name, "task": picture.task_id, "name": name, "mediaType": picture.media_type,
+            "bytes": picture.bytes.len(), "agentSaid": picture.text, "inserted": inserted,
+        })),
+        Err(e) => ToolResult::error(format!("office_picture: insert.picture: {e}")),
+    }
+}
+
+#[cfg(not(all(feature = "native", unix)))]
+fn office_picture(_backend: &mut dyn Backend, _args: &Value) -> ToolResult {
+    ToolResult::error("office_picture: the office is reachable only in the native Linux build")
 }
 
 fn check_commands(catalog: &Catalog, name: &str, input: &Value) -> Result<(), String> {

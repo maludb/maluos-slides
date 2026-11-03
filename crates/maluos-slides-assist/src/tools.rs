@@ -12,6 +12,8 @@ pub const APP_ONLY_MARKER: &str = "Desktop app only";
 pub const BUILD_DECK: &str = "build_deck";
 /// The fork's tool: how long the deck takes to present (step 4.4).
 pub const DECK_TIMING: &str = "deck_timing";
+/// The fork's tool: a picture from the office's image agent (step 4.5).
+pub const OFFICE_PICTURE: &str = "office_picture";
 
 /// The fork's tools, in the MCP definition shape, appended to upstream's table everywhere the
 /// table is served (the assistant, the HTTP API, the MCP server through `mcp_ext`).
@@ -50,12 +52,28 @@ pub fn extra_definitions() -> Vec<Value> {
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
             "annotations": {"title": "Deck timing", "readOnlyHint": true, "openWorldHint": false}
         }),
+        serde_json::json!({
+            "name": OFFICE_PICTURE,
+            "title": "Picture from the office",
+            "description": "Ask the office's image agent for a picture and insert it on a slide (the current slide unless `slide` is given). The prompt is sent to the office this desk is enrolled with; nothing is fetched from the public web. Fails with a clear message when the desk is not enrolled or the office publishes no image agent: then tell the user and look nowhere else.",
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "prompt": {"type": "string", "description": "What the picture shows, its style and mood, in one or two sentences"},
+                    "slide": {"type": "integer", "minimum": 0, "description": "Slide index to put it on (default: the current slide)"},
+                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "[x, y, w, h] on the 960×540 slide (default: an empty picture placeholder, else fitted)"}
+                },
+                "required": ["prompt"]
+            },
+            "annotations": {"title": "Picture from the office", "readOnlyHint": false, "openWorldHint": true}
+        }),
     ]
 }
 
 /// Whether `name` is one of the fork's tools.
 pub fn is_extra(name: &str) -> bool {
-    name == BUILD_DECK || name == DECK_TIMING
+    name == BUILD_DECK || name == DECK_TIMING || name == OFFICE_PICTURE
 }
 
 /// The tools a model may call. Built from [`maluos_slides_mcp::tool_definitions`], so the MCP

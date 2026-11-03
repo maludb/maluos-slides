@@ -11,7 +11,7 @@ workspace = true
 [features]
 default = ["native"]
 # The real clients (ureq); off on wasm32, where the policy, catalog and loop still compile.
-native = ["maluos-llm/native"]
+native = ["maluos-llm/native", "dep:ureq"]
 
 [dependencies]
 maluos-slides-engine = { workspace = true }
@@ -20,3 +20,8 @@ maluos-llm = { workspace = true, default-features = false }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
+
+# The office's agents over HTTP (step 4.5); the vault is reached over its Unix socket with std.
+# Off on wasm32 like maluos-llm's transport: the `office` module is native-only.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "3.5", optional = true }
