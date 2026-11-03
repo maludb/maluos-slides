@@ -162,6 +162,7 @@ upstream issue, PR, release and file links (`storytold/deckcraft#123`, `/issues/
 | 3.5 | Safety rails: answer-only, confirm-before-change (shows the planned commands), autopilot (applies, shows the slides it touched); destructive commands (delete slide or section, replace all text, file.new) always confirm | tests per mode |
 | 3.6 | Assistant pane in the UI (a right-hand pane like Format Shape): conversation, streaming answer, the commands it ran with Undo per turn, mode selector, provider status; "Ask Malu" ribbon button and `Ctrl+Shift+A` | screenshots in status.md |
 | 3.7 | `maluos-slides-cli ask "…" --in deck.pptx --out deck.pptx` for scripts and tests | documented in `docs/maluos-slides/cli.md` |
+| 3.8 | HTTP/JSON API over the same table (D9): `maluos-slides-cli api [--listen ADDR] [--token T] [--connect PORT]`, a hand-written HTTP/1.1 server (no async runtime) in a new L6 crate `maluos-slides-api`; routes for the tool table (`GET /v1/tools`, `POST /v1/tools/{name}`), the command catalog (`GET /v1/commands`, `POST /v1/commands/{id}`), the document and slides (`GET /v1/document`, `GET /v1/slides/{i}`, `GET /v1/slides/{i}/render.png`) and one assistant turn (`POST /v1/ask`); loopback only unless a token is set | tests: the tool list equals MCP's, a POST adds a slide, render returns a PNG, ask runs with the mock model, a token is enforced; `docs/maluos-slides/api.md` |
 
 ### Phase 4: slides-specific depth
 

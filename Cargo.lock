@@ -2312,6 +2312,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "maluos-slides-api"
+version = "0.10.0"
+dependencies = [
+ "log",
+ "maluos-llm",
+ "maluos-slides-assist",
+ "maluos-slides-engine",
+ "maluos-slides-mcp",
+ "serde_json",
+]
+
+[[package]]
 name = "maluos-slides-assist"
 version = "0.10.0"
 dependencies = [
@@ -2344,6 +2356,7 @@ name = "maluos-slides-cli"
 version = "0.10.0"
 dependencies = [
  "maluos-llm",
+ "maluos-slides-api",
  "maluos-slides-assist",
  "maluos-slides-engine",
  "maluos-slides-mcp",

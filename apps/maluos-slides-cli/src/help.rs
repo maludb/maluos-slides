@@ -125,6 +125,36 @@ and prints its answer as JSON. COMMAND [PARAMS] runs a command, as run --cmd doe
   maluos-slides-cli app shape.insert '{\"preset\":\"star5\",\"rect\":[100,100,200,200]}'
   maluos-slides-cli app --method ui.screenshot '{\"path\":\"/tmp/shot.png\"}'",
     },
+    // MaluOS: the HTTP/JSON API (docs/maluos-slides/plan.md step 3.8).
+    Subcommand {
+        name: "api",
+        usage: "api [--listen ADDR:PORT] [--token T] [--in FILE | --sample] [--connect PORT] [--automation-read-root DIR] [--automation-write-root DIR]",
+        summary: "serve the commands and the assistant over HTTP/JSON",
+        details: "Serves MaluOS Slides as an HTTP/JSON API, on 127.0.0.1:7980 by default, over the same tool table the MCP
+server uses. Routes under /v1 (GET /v1 lists them):
+
+  GET  /v1/health                     the server and its backend
+  GET  /v1/tools                      the tool table (name, description, inputSchema), as MCP has it
+  POST /v1/tools/NAME                 call a tool; the body is its arguments
+  GET  /v1/commands?filter=S          the command catalog (id, label, params, enabled)
+  POST /v1/commands/ID                run an engine command; the body is its params
+  GET  /v1/document                   the presentation: slides, sections, theme, selection
+  GET  /v1/slides/N                   one slide's shapes with ids, boxes and text
+  GET  /v1/slides/N/render.png?scale=S   the slide as a PNG image
+  POST /v1/ask                        one assistant turn: {text, mode?, provider?, model?, yes?}
+
+Answers are JSON ({ok, result} or {ok: false, error: {code, message}}); render.png is image/png.
+The server works on its own presentation (--in FILE, --sample, or a new one) or drives a running
+app with --connect PORT (the app started with --control PORT; /v1/ask needs the in-process one).
+It listens on the loopback interface only; another --listen address needs --token (or
+MALUOS_SLIDES_API_TOKEN), sent as `Authorization: Bearer T`. The automation roots confine the files
+the in-process presentation reads and writes, as for mcp.
+
+  maluos-slides-cli api --sample
+  curl -s localhost:7980/v1/document | jq .slides
+  curl -s -X POST localhost:7980/v1/tools/add_slide -d '{\"layout\":\"titleOnly\",\"title\":\"Agenda\"}'
+  curl -s -X POST localhost:7980/v1/ask -d '{\"text\":\"add a closing slide\",\"yes\":true}'",
+    },
     // MaluOS: the assistant (docs/maluos-slides/plan.md step 3.7).
     Subcommand {
         name: "ask",

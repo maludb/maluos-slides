@@ -74,6 +74,8 @@ fn main() -> ExitCode {
         Some("describe") => report(describe(rest.first().map(String::as_str))),
         Some("app") => report(app(rest)),
         Some("mcp") => report(mcp(rest)),
+        // MaluOS: the HTTP/JSON API (step 3.8).
+        Some("api") => report(api(rest)),
         // MaluOS: one assistant turn, headless.
         Some("ask") => report(match ask::parse(rest) {
             Ok(Some(o)) => ask::run(&o),
@@ -516,6 +518,60 @@ fn run(args: &[String]) -> Result<(), String> {
     } else if export_params != json!({}) {
         return Err("--export-params needs --export OUT".into());
     }
+    Ok(())
+}
+
+/// MaluOS: `maluos-slides-cli api`: the HTTP/JSON API over the tool table (docs/maluos-slides/api.md).
+fn api(args: &[String]) -> Result<(), String> {
+    use maluos_slides_api::{DEFAULT_LISTEN, Options, Server, Target};
+    use maluos_slides_engine::file_access::{self, AutomationRoots};
+    use maluos_slides_mcp::{Headless, Remote, control_addr};
+    let mut listen = DEFAULT_LISTEN.to_string();
+    let mut token = std::env::var("MALUOS_SLIDES_API_TOKEN").ok().filter(|t| !t.trim().is_empty());
+    let mut connect: Option<String> = None;
+    let mut input: Option<String> = None;
+    let mut sample = false;
+    let mut roots_args = automation_args::AutomationArgs::new(None, None);
+    let mut it = args.iter().cloned();
+    while let Some(a) = it.next() {
+        if roots_args.consume(&a, &mut it)? {
+            continue;
+        }
+        match a.as_str() {
+            "--listen" => listen = it.next().ok_or("--listen needs ADDR:PORT")?,
+            "--token" => token = Some(it.next().ok_or("--token needs a value")?),
+            "--connect" => connect = Some(it.next().ok_or("--connect needs a port or host:port")?),
+            "--in" => input = Some(it.next().ok_or("--in needs a file")?),
+            "--sample" => sample = true,
+            "--help" | "-h" => {
+                outln!("{}", help_page("api"));
+                return Ok(());
+            }
+            other => return Err(format!("unknown api option `{other}`")),
+        }
+    }
+    let roots = AutomationRoots::new(roots_args.read_root.as_deref(), roots_args.write_root.as_deref())?;
+    if roots.is_some() && connect.is_some() {
+        return Err("the automation roots confine the in-process presentation; drop --connect to use them".into());
+    }
+    let target = match connect {
+        Some(c) => Target::Remote(Remote::connect(&control_addr(&c)).map_err(|e| format!("can't reach the app at {c}: {e}"))?),
+        None => {
+            let mut h = Headless::new();
+            open(&mut h.session, input.as_deref(), sample)?;
+            if let Some(roots) = roots {
+                file_access::confine_process(roots.clone());
+                h = h.with_automation_roots(Some(roots));
+            }
+            Target::Headless(h)
+        }
+    };
+    let options = Options { listen, token, client: None };
+    let mut server = Server::new(target, options);
+    let listener = server.bind()?;
+    let addr = listener.local_addr().map(|a| a.to_string()).unwrap_or_default();
+    eprintln!("maluos-slides-cli: API listening on http://{addr}/v1 (GET /v1 lists the routes; Ctrl+C stops)");
+    server.serve(listener);
     Ok(())
 }
 

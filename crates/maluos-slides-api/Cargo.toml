@@ -1,0 +1,17 @@
+[package]
+name = "maluos-slides-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "MaluOS Slides HTTP/JSON API: the MCP tool table, the command catalog, the document and one assistant turn over a loopback HTTP server"
+
+[lints]
+workspace = true
+
+[dependencies]
+maluos-slides-engine = { workspace = true }
+maluos-slides-mcp = { workspace = true }
+maluos-slides-assist = { workspace = true }
+maluos-llm = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
