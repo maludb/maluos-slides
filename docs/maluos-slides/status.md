@@ -1,12 +1,14 @@
 # MaluOS Slides status
 
-> **Updated:** 2026-11-02 (10:30 UTC)
+> **Updated:** 2026-11-03
 
 MaluOS Slides is the MaluOS presentation app, forked from
 [storytold/deckcraft](https://github.com/storytold/deckcraft) on 2026-10-24 at upstream
-`9aef21e` (v0.10.0 + 158 commits). Remotes: `origin` = github.com/maludb/maluos-slides,
-`upstream` = github.com/storytold/deckcraft. Upstream code is untouched so far; this file and the
-`docs/maluos-slides/` directory are the only additions.
+`9aef21e` (v0.10.0 + 158 commits), synced once to `aa13eeb4` (0.15.0) on 2026-11-03, and
+independent since that day (owner decision D12: the only remote is `origin` =
+github.com/maludb/maluos-slides; no merges or pull requests). The fork's own code is in
+`crates/maluos-slides-assist`, `crates/maluos-slides-api`, `crates/maluos-llm`, the `// MaluOS:`
+hooks in the inherited crates and `docs/maluos-slides/`.
 
 ## Phase 1: build and install on MaluOS (Ubuntu 26.04)
 
@@ -25,9 +27,11 @@ failed on the missing `alsa.pc`), `pkg-config`, `cmake`; for packaging `nfpm`
 (release binary in `~/.local/bin`), `desktop-file-utils`, `appstream`; for the headless GUI test
 `xvfb`.
 
-Fonts: `.cargo/config.toml` embeds `../craft-fonts` when it exists. The dev VM has
-`storytold/craft-fonts` checked out at `43913056` (the commit upstream's release.yml pins) in
-`~/craft-fonts`; without it the build warns and the app falls back to system fonts.
+Fonts: `.cargo/config.toml` embeds `../craft-fonts` when it exists. The dev host has
+`storytold/craft-fonts` checked out at `aced4137` (the commit `maluos-ci.yml` and
+`maluos-release.yml` pin since 2026-11-03; the fonts crate after sync 1 requires its
+simplified-Chinese manifest under `CRAFT_FONTS_REQUIRED=1`, which the earlier pin `43913056`
+lacked) in `~/craft-fonts`; without it the build warns and the app falls back to system fonts.
 
 ```sh
 systemd-run --user --scope -p MemoryHigh=4500M -p MemoryMax=6G -- \
@@ -60,7 +64,7 @@ files no longer referenced).
 | 2.2 fork hygiene | done 2026-10-24 | README rewritten (Linux only, DeckCraft credited); `CLAUDE.md` carries the MaluOS Slides preamble; the rename script removes `docs/brand/` and rewrites `ATTRIBUTION.md`, `AGENTS.md` and `NOTICE` to say so; `links.rs`, the About box and Backstage point at GitHub (`maludb/maluos-slides`, Discussions) and credit DeckCraft; `docs/claude-log/` ignored |
 | 2.3 Linux-only trim | done 2026-10-24 | the rename script drops `packaging/{macos,windows,freebsd}`, `icons.sh`, the `.icns`/`.ico` icons, upstream's seven workflows, `.coderabbit.yaml`, `sonar-project.properties`, `omastore.toml`; `packaging/macos/Info.plist.in` and `packaging/windows/maluos-slides.wxs` stay as fixtures of `every_desktop_offers_the_same_file_types`; the fork's own `maluos-ci.yml`, `maluos-release.yml`, `maluos-packaging-lint.yml` (Ubuntu only) |
 | 2.4 rename script, vendor branch | done 2026-10-24 | `scripts/rename-upstream.sh` + `.py` (see [rename.md](rename.md)) run on upstream `9aef21e` → branch `upstream-renamed`, merged into `main`: 39 paths moved, 348 files rewritten, 28 packages `maluos-slides-*`, app id `org.maluos.slides`, `Cargo.lock` re-sorted so `--locked` holds. Seven script rules came out of CI runs: struct-update paths (`..deckcraft_model::`), log targets (`maluos_slides`, underscore), the MCP server name, the plist's `<string>deckcraft</string>` extension, the spelling test's `hallo deckcraft` and `deckcraft\n`, the test fonts `DeckCraft Legacy` and `DeckCraft Colr Squares`. `cargo xtask ci` green on the renamed tree: 8 steps, 1,792 tests, 6 ignored. Release build 5m54s; `maluos-slides-0.10.0-linux-x86_64.deb` (79 MB) built, installed over the Phase 1 package and verified: `maluos-slides-cli --version`, MCP `serverInfo.name` = `maluos-slides`, GUI under Xvfb with `--control`, sample deck's note reads "made in MaluOS Slides", settings in `~/.config/maluos-slides/`, desktop entry `org.maluos.slides` registered |
-| 2.5 app identity | planned | |
+| 2.5 app identity | mostly done 2026-11-03 | The rename (2.4) delivered the app id `org.maluos.slides`, the desktop entry, MIME types, metainfo, `StartupWMClass`, the settings dir `~/.config/maluos-slides` and the log `maluos-slides.log`; the icon is a placeholder drawn in code (`assets/app-icon/icon-source.deckcraft`, see ATTRIBUTION.md) until a MaluOS icon is designed. Open: the designed icon |
 | 2.6 MaluOS packaging | planned | D8: vendored deb |
 | 2.7 boot test and release | planned | |
 | 2.8 fonts decision applied | planned | D5 |
@@ -86,7 +90,7 @@ the gap between today and "every function from an API".
 **Host tooling installed this session** (the toolchain had only rustc and cargo): rustup
 components `rustfmt` and `clippy`, target `wasm32-unknown-unknown`, `cargo-nextest` 0.9.150,
 `trunk` 0.22.1, `nfpm` 2.48.0 (`~/.local/bin`, checksum verified), `~/craft-fonts` cloned and
-checked out at `43913056` (the commit `maluos-ci.yml` pins). Still missing because they need sudo
+checked out at the commit `maluos-ci.yml` pins (`aced4137` since 2026-11-03). Still missing because they need sudo
 on this host: `xvfb` (headless GUI screenshots), `bc`, `gh`, and the optional CI dev packages
 `libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev` (the build does not need
 them). Note: `~/src/maluos-slides` and `~/src/craft-fonts` are stale checkouts from October; the
@@ -146,7 +150,7 @@ mock image agent. Details and the new ask 7 are in
 [maluos-integration.md](maluos-integration.md). Also noted: `maluctl status` reports the vault
 "unhealthy" from the provisioning run of 2026-10-25; the live socket answers (`/v1/whoami`).
 
-## Phase 5: parity through upstream
+## Phase 5: independent evolution (was: parity through upstream)
 
 | Sync | Date | Upstream | Summary |
 |---|---|---|---|

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/app-icon/hicolor/256x256/apps/ai.storyteller.deckcraft.png" width="128" height="128" alt="App icon: a presentation screen with a bar chart">
+  <img src="assets/app-icon/hicolor/256x256/apps/org.maluos.slides.png" width="128" height="128" alt="App icon: a presentation screen with a bar chart">
 </p>
 
 <h1 align="center">MaluOS Slides</h1>
@@ -21,17 +21,14 @@
   <img alt="Platform: Linux" src="https://img.shields.io/badge/platform-Linux%20%C2%B7%20MaluOS-555?style=flat-square">
 </p>
 
-MaluOS Slides is a fork of [DeckCraft](https://github.com/storytold/deckcraft), the open-source,
-clean-room presentation app by the ArtCraft team. It keeps DeckCraft's engine, renderer, PPTX
-support and agent surface, and adds the MaluOS fit: a MaluOS package, the MaluOS desktop, and, step
-by step, an LLM assistant that works through the MaluOS gateway. Since 2026-11-03 it is
+MaluOS Slides began as a fork of [DeckCraft](https://github.com/storytold/deckcraft), the
+open-source, clean-room presentation app by the ArtCraft team. It keeps DeckCraft's engine,
+renderer, PPTX support and agent surface, and adds the MaluOS fit: the MaluOS package and desktop
+entry, and Malu, the assistant that edits the open deck through the same commands people use,
+with a model from Anthropic, OpenAI, Ollama or the MaluOS gateway. Since 2026-11-03 it is
 developed independently (no upstream remote or merges); the plan is in
 [`docs/maluos-slides/plan.md`](docs/maluos-slides/plan.md) and progress in
 [`docs/maluos-slides/status.md`](docs/maluos-slides/status.md).
-
-> **Naming.** Until the rename step in the plan lands, the crates, binaries and app id still carry
-> DeckCraft's names (`deckcraft`, `deckcraft-cli`, `ai.storyteller.deckcraft`). The commands below
-> use the current names.
 
 <p align="center">
   <img alt="Editing a slide: ribbon, slide thumbnails with sections, a process diagram on the canvas, notes and status bar" src="docs/images/editor.png" width="900">
@@ -39,7 +36,7 @@ developed independently (no upstream remote or merges); the plan is in
 
 ## What works today
 
-The app is in alpha, heading for beta (see upstream's [roadmap](ROADMAP.md)). Today it can:
+The app is in alpha, heading for beta (see the [roadmap](ROADMAP.md)). Today it can:
 
 - **Make decks**: slide masters and eleven layouts with placeholders that inherit position and
   formatting, eight original themes with colour and font schemes, sections, notes, comments,
@@ -86,55 +83,61 @@ the system fonts. PDF export uses the shared `craft-pdf` writer; see
 ```sh
 git clone https://github.com/maludb/maluos-slides
 cd maluos-slides
-cargo build --release --locked -p deckcraft -p deckcraft-cli
-target/release/deckcraft-cli render --sample --all --scale 1 out/   # the sample deck as PNGs
-target/release/deckcraft                                            # the desktop app
+cargo build --release --locked -p maluos-slides -p maluos-slides-cli
+target/release/maluos-slides-cli render --sample --all --scale 1 out/   # the sample deck as PNGs
+target/release/maluos-slides                                            # the desktop app
 ```
 
-On the MaluOS dev VM, run cargo under a memory cap; the exact recipe is in
+On a MaluOS desktop, run cargo under a memory cap so a build never starves the desk; the recipe is in
 [`docs/maluos-slides/status.md`](docs/maluos-slides/status.md).
 
 ### The Debian package
 
 ```sh
 packaging/linux/package.sh --skip-build --formats "deb tar"   # needs nfpm on PATH
-sudo apt install ./dist/release/deckcraft-<ver>-linux-x86_64.deb
+sudo apt install ./dist/release/maluos-slides-<ver>-linux-x86_64.deb
 ```
 
 The package installs the desktop app and the CLI into `/usr/bin`, a desktop entry, the MIME types
 for `.pptx` and the native format, and the icons. It depends on `libxkbcommon0`, `libasound2` and
 `libvulkan1` or `libegl1`; the window-system and GPU libraries are opened at run time, so
 `packaging/linux/nfpm.yaml` lists them as dependencies and recommendations. In a VM or without a
-GPU, Mesa's software Vulkan driver (`mesa-vulkan-drivers`) is enough. Publishing through the MaluOS
-apt repository is a plan step.
+GPU, Mesa's software Vulkan driver (`mesa-vulkan-drivers`) is enough. MaluOS carries the package
+in its own archive (`vendor/maluos-slides` in [maludb/maluos](https://github.com/maludb/maluos)),
+so on MaluOS it is `sudo apt install maluos-slides`.
 
 ### Logs
 
-The desktop app writes its `log` records to standard error and to `logs/deckcraft.log` in the
-settings directory, beside `ui.json` and `prefs.json` (`~/.config/deckcraft/`, or
-`$XDG_CONFIG_HOME/deckcraft/`). A start from the desktop grid has no terminal, so this file is what
+The desktop app writes its `log` records to standard error and to `logs/maluos-slides.log` in the
+settings directory, beside `ui.json` and `prefs.json` (`~/.config/maluos-slides/`, or
+`$XDG_CONFIG_HOME/maluos-slides/`). A start from the desktop grid has no terminal, so this file is what
 to attach to a bug report: the crash guard's panic report, a failed crash-recovery save, parts
 skipped on import and audio output problems land there. Each launch moves the previous log to
-`deckcraft.1.log` (and that one to `deckcraft.2.log`). The file stops growing at 16 MiB.
+`maluos-slides.1.log` (and that one to `maluos-slides.2.log`). The file stops growing at 16 MiB.
 
 | Variable | Effect |
 |---|---|
-| `RUST_LOG` | Log levels for standard error and the log file. Default: `info` for the app's own crates, `warn` for everything else. env_logger-style directives replace that, e.g. `RUST_LOG=debug` or `RUST_LOG=warn,deckcraft_pptx=trace`. |
+| `RUST_LOG` | Log levels for standard error and the log file. Default: `info` for the app's own crates, `warn` for everything else. env_logger-style directives replace that, e.g. `RUST_LOG=debug` or `RUST_LOG=warn,maluos_slides_pptx=trace`. |
 
 ## Agents, CLI and MCP
 
 Every action is a command with a stable id, so people, scripts and AI agents use the same verbs:
 
 ```sh
-deckcraft-cli commands format.          # list commands
-deckcraft-cli run --sample --cmd 'slide.new={"layout":"titleOnly","title":"Hello"}' --save hello.deckcraft
-deckcraft-cli mcp                       # MCP server over stdio (headless)
-deckcraft-cli mcp --connect 7990        # drive the running app (deckcraft --control 7990)
-deckcraft-cli mcp --automation-read-root DIR --automation-write-root DIR   # confine the headless agent to folders
+maluos-slides-cli commands format.          # list commands
+maluos-slides-cli run --sample --cmd 'slide.new={"layout":"titleOnly","title":"Hello"}' --save hello.deckcraft
+maluos-slides-cli ask "tighten the titles" --in deck.pptx --out deck.pptx   # the assistant, headless
+maluos-slides-cli mcp                       # MCP server over stdio (headless)
+maluos-slides-cli mcp --connect 7990        # drive the running app (maluos-slides --control 7990)
+maluos-slides-cli api --sample              # the HTTP/JSON API on loopback
+maluos-slides-cli mcp --automation-read-root DIR --automation-write-root DIR   # confine the headless agent to folders
 ```
 
-The control channel is documented in [`docs/control-protocol.md`](docs/control-protocol.md) and
-the MCP server in [`docs/mcp.md`](docs/mcp.md).
+The control channel is documented in [`docs/control-protocol.md`](docs/control-protocol.md), the
+MCP server in [`docs/mcp.md`](docs/mcp.md), the assistant in
+[`docs/maluos-slides/assistant.md`](docs/maluos-slides/assistant.md), the CLI in
+[`docs/maluos-slides/cli.md`](docs/maluos-slides/cli.md) and the API in
+[`docs/maluos-slides/api.md`](docs/maluos-slides/api.md).
 
 ## Roadmap
 
