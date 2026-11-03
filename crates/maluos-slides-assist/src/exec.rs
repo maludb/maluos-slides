@@ -1,7 +1,7 @@
 //! One tool call, executed through an MCP backend and shaped for the model.
 
 use maluos_llm::ContentBlock;
-use maluos_slides_mcp::{Backend, ToolResult, call_tool};
+use maluos_slides_mcp::{Backend, ToolResult};
 use serde_json::{Value, json};
 
 use crate::catalog::Catalog;
@@ -92,6 +92,46 @@ pub fn run_tool(backend: &mut dyn Backend, table: &ToolTable, catalog: &Catalog,
     }
     let raw = call_tool(backend, name, &input);
     ToolOutcome::from_result(tool_use_id, name, raw)
+}
+
+/// One tool call on a backend: the fork's tools here, every other upstream's `call_tool`. The
+/// HTTP API and the MCP wrapper use this, so all three callers run the same code.
+pub fn call_tool(backend: &mut dyn Backend, name: &str, args: &Value) -> ToolResult {
+    if name == crate::tools::BUILD_DECK {
+        return build_deck(backend, args);
+    }
+    maluos_slides_mcp::call_tool(backend, name, args)
+}
+
+fn build_deck(backend: &mut dyn Backend, args: &Value) -> ToolResult {
+    let allowed = ["markdown", "slides", "title", "subtitle", "theme", "replace", "after"];
+    if let Some(o) = args.as_object()
+        && let Some(k) = o.keys().find(|k| !allowed.contains(&k.as_str()))
+    {
+        return ToolResult::error(format!("build_deck: unknown argument {k:?} (expected: {})", allowed.join(", ")));
+    }
+    let outline = match args.get("markdown").and_then(Value::as_str) {
+        Some(md) => {
+            let o = crate::outline::Outline::from_markdown(md);
+            if o.slide_count() == 0 {
+                return ToolResult::error("build_deck: the markdown has no headings or text to make slides from");
+            }
+            o
+        }
+        None => match crate::outline::Outline::from_json(args) {
+            Ok(o) => o,
+            Err(e) => return ToolResult::error(format!("build_deck: {e}")),
+        },
+    };
+    let theme = args.get("theme").and_then(Value::as_str);
+    let replace = args.get("replace").and_then(Value::as_bool).unwrap_or(false);
+    let after = args.get("after").and_then(Value::as_u64).map(|v| v as usize);
+    match crate::outline::apply(backend, &outline, theme, replace, after) {
+        Ok(a) => ToolResult::json(
+            &json!({"slides": a.slides, "count": a.slides.len(), "sections": a.sections, "tables": a.tables, "notes": a.notes, "replaced": replace}),
+        ),
+        Err(e) => ToolResult::error(format!("build_deck: {e}")),
+    }
 }
 
 fn check_commands(catalog: &Catalog, name: &str, input: &Value) -> Result<(), String> {

@@ -125,6 +125,12 @@ identifies callers by `SO_PEERCRED` and the owner (`user:maludb`) is enrolled; t
 with tools and streaming. What Slides builds and what it asks of the MaluOS build is in
 [maluos-integration.md](maluos-integration.md).
 
+## Phase 4: slides-specific depth
+
+| Step | State | Notes |
+|---|---|---|
+| 4.1 deck from a document | done 2026-11-02 | `maluos-slides-assist::outline`: Markdown (`#` title + subtitle, `##` sections, `###` slides, bullets with levels, `Notes:`, pipe tables; `##`-only documents are flat) or a JSON slide list → an `Outline` → built with engine commands through any `Backend` (`slide.new`, `section.add`, `slide.notes`, `insert.table`, `design.theme`, `file.new` when replacing). Tool `build_deck {markdown | slides, title?, subtitle?, theme?, replace?, after?}` in the shared table: the assistant offers it (instructions say to prefer it for whole decks), the HTTP API serves it, and `maluos-slides-cli mcp` now runs `assist::mcp_ext::Server`, a wrapper that appends the fork's tools to upstream's MCP server without editing it; `replace: true` is destructive (confirmed). CLI: `ask --from DOC` attaches a document (200 KiB cap), `outline DOC --out DECK [--theme] [--in BASE]` builds without a model. 4 tests in assist (parser, apply, the tool through run_tool/policy/MCP wrapper, the mock model building a 6-slide deck in one call with one undo step) + API and CLI tests. Live: `outline talk.md --theme Nocturne` made a 7-slide deck (2 sections, a table, notes); `ask --from talk.md` through Ollama `glm-5.3-flash:cloud` called `build_deck` once (with `replace`) and produced the same 7 slides in 2 rounds |
+
 ## Phase 3: the assistant
 
 | Step | State | Notes |

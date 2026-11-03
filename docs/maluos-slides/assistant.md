@@ -161,6 +161,19 @@ autopilot turn adds a slide, the Undo button reverts it and a second turn contin
 conversation; confirm mode shows the plan and Approve applies it; Decline keeps the deck and Stop
 ends the turn as cancelled; a model error is shown and the pane recovers.
 
+## A deck from a document (step 4.1)
+
+`outline.rs` turns Markdown or a JSON slide list into an `Outline` (title and subtitle, sections,
+slides with body lines, notes and tables) and `apply` builds it through any MCP `Backend` with
+engine commands only, so it works on the headless session, a running app and from the pane
+alike. The tool `build_deck` wraps it and sits in the shared table as the fork's first extra
+tool: `ToolTable` appends `extra_definitions()` to upstream's list, `call_tool` in `exec.rs`
+answers the extras and delegates the rest, the HTTP API uses that, and `mcp_ext::Server` wraps
+upstream's MCP server so `tools/list` and `tools/call` see the extras too. `replace: true`
+starts a new presentation and is classed destructive. The instructions tell the model to write
+the outline and call `build_deck` once for a whole deck, with one idea per slide and a closing
+slide; the undo step for the turn then reverts the whole deck.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -193,3 +206,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Step 3.5: `Policy`, `Mode`, `Plan`, `Confirm`, destructive lists, touched slides, `--mode`/`--yes` on the example, 6 more tests |
 | 2026-11-02 | major | Step 3.6: the loop as a step machine (`Turn`, `Step`, `ModelCall`), the pane in `ui-egui`, `assist.ask` / `assist.plan`, screenshots, 5 pane tests |
 | 2026-11-02 | minor | Step 3.7: `providers` module shared by the pane and the CLI; the example program gave way to `maluos-slides-cli ask` |
+| 2026-11-02 | major | Step 4.1: `outline`, `build_deck`, `call_tool` with extras, `mcp_ext::Server` |

@@ -57,7 +57,8 @@ fn slide_count(h: &Headless) -> usize {
 fn table_mirrors_the_mcp_server() {
     let all = ToolTable::all();
     let mcp = maluos_slides_mcp::tool_definitions();
-    assert_eq!(all.defs().len(), mcp.len());
+    assert_eq!(all.defs().len(), mcp.len() + ToolTable::extra_definitions().len());
+    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("build_deck"), "the fork's tools come last");
     for (t, m) in all.defs().iter().zip(&mcp) {
         assert_eq!(t.name, m["name"]);
         assert_eq!(t.description, m["description"]);
@@ -83,6 +84,7 @@ fn headless_table_leaves_out_app_only_tools() {
     assert!(headless.get("call_app").is_none());
     assert!(app.get("screenshot").is_some());
     assert_eq!(app.defs().len(), headless.defs().len() + 2);
+    assert!(headless.get("build_deck").is_some(), "the fork's tool is offered headless too");
     // The app-only names are still known, so a stray call gets a clear answer.
     assert!(headless.is_app_only("screenshot"));
 }
@@ -893,4 +895,130 @@ fn touched_slides_follow_edits() {
     let report = a.ask(&mut host, "retitle and add", &mut ApproveAll, &mut no_events());
     assert_eq!(report.touched_slides, vec![0, 1]);
     assert_eq!(report.removed_slides, 0);
+}
+
+// ---------- a deck from a document (step 4.1) ----------
+
+use crate::outline::{Outline, apply};
+
+const DOC: &str = "# Northern Lights\nA short tour of the aurora\n\n## Science\n\n### What causes it\n- Solar wind meets the magnetosphere\n- Charged particles collide with gases\n  - Oxygen glows green and red\n  - Nitrogen adds blue\nNotes: keep this one short\n\n### Best months\n| Month | Clear nights |\n|---|---|\n| Dec | 12 |\n| Jan | 14 |\n\n## In the field\n\n### Camera settings\n1. Wide lens\n2. ISO 1600\n3. 10 seconds\n\n### Thank you\n";
+
+#[test]
+fn markdown_becomes_an_outline() {
+    let o = Outline::from_markdown(DOC);
+    assert_eq!(o.title.as_deref(), Some("Northern Lights"));
+    assert_eq!(o.subtitle.as_deref(), Some("A short tour of the aurora"));
+    assert_eq!(o.sections.len(), 2);
+    assert_eq!(o.sections[0].name.as_deref(), Some("Science"));
+    let causes = &o.sections[0].slides[0];
+    assert_eq!(causes.title, "What causes it");
+    assert_eq!(
+        causes.body,
+        vec!["Solar wind meets the magnetosphere", "Charged particles collide with gases", "\tOxygen glows green and red", "\tNitrogen adds blue"]
+    );
+    assert_eq!(causes.notes.as_deref(), Some("keep this one short"));
+    let months = &o.sections[0].slides[1];
+    assert_eq!(months.table.as_ref().unwrap(), &vec![vec!["Month", "Clear nights"], vec!["Dec", "12"], vec!["Jan", "14"]]);
+    assert!(months.body.is_empty());
+    let camera = &o.sections[1].slides[0];
+    assert_eq!(camera.body, vec!["Wide lens", "ISO 1600", "10 seconds"]);
+    assert_eq!(o.sections[1].slides[1].title, "Thank you");
+    assert_eq!(o.slide_count(), 1 + 2 + 4);
+
+    // `##` only: slides, no sections.
+    let flat = Outline::from_markdown("# Deck\n\n## One\n- a\n\n## Two\n- b\n");
+    assert_eq!(flat.sections.len(), 1);
+    assert!(flat.sections[0].name.is_none());
+    assert_eq!(flat.sections[0].slides.iter().map(|s| s.title.as_str()).collect::<Vec<_>>(), vec!["One", "Two"]);
+    // Text with no headings: one slide.
+    let bare = Outline::from_markdown("Just a paragraph\n- and a bullet\n");
+    assert_eq!(bare.slide_count(), 1);
+    assert_eq!(bare.sections[0].slides[0].title, "Overview");
+    assert!(Outline::from_markdown("").slide_count() == 0);
+
+    let j = Outline::from_json(&json!({"title": "T", "slides": [{"title": "A", "body": "x\ny", "section": "S"}, {"title": "B", "bullets": ["p", "q"], "notes": "n", "layout": "twoContent", "table": [["h"], ["1"]]}]})).unwrap();
+    assert_eq!(j.sections[0].name.as_deref(), Some("S"));
+    assert_eq!(j.sections[0].slides[1].layout, "twoContent");
+    assert_eq!(j.sections[0].slides[1].body, vec!["p", "q"]);
+    assert!(Outline::from_json(&json!({"slides": [{"body": "no title"}]})).is_err());
+}
+
+#[test]
+fn apply_builds_the_deck_with_commands() {
+    let mut h = Headless::with_document();
+    let o = Outline::from_markdown(DOC);
+    let a = apply(&mut h, &o, Some("harbor"), false, None).unwrap();
+    assert_eq!(a.slides.len(), 7);
+    assert_eq!((a.sections, a.tables, a.notes), (2, 1, 1));
+    let st = h.session.active().unwrap();
+    assert_eq!(st.doc.slides.len(), 8, "the original slide plus seven");
+    assert_eq!(st.doc.slides[1].title(), "Northern Lights");
+    assert_eq!(st.doc.slides[2].title(), "Science");
+    assert_eq!(st.doc.slides[3].title(), "What causes it");
+    assert_eq!(st.doc.slides[3].notes_text(), "keep this one short");
+    assert!(st.doc.slides[4].shapes.iter().any(|s| matches!(s.kind, maluos_slides_engine::model::ShapeKind::Table(_))));
+    // The engine puts the slides before the first section into a default section.
+    assert_eq!(st.doc.sections.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(), vec!["Default Section", "Science", "In the field"]);
+    assert_eq!(st.doc.masters[0].theme.name, "Harbor");
+    assert!(st.doc.slides[3].shapes.iter().any(|s| s.text.as_ref().is_some_and(|t| t.text().contains("Oxygen glows"))));
+    assert!(apply(&mut h, &o, Some("nope"), false, None).unwrap_err().contains("unknown theme"));
+
+    // Replace: a fresh presentation with only the outline.
+    let mut h = Headless::with_document();
+    let a = apply(&mut h, &o, None, true, None).unwrap();
+    assert_eq!(a.slides, (0..7).collect::<Vec<_>>());
+    assert_eq!(h.session.active().unwrap().doc.slides.len(), 7);
+}
+
+#[test]
+fn build_deck_is_a_tool_everywhere() {
+    // Through run_tool with the policy: replace is destructive, plain is a change.
+    let mut h = Headless::with_document();
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::from_session(&h.session);
+    let out = run_tool(&mut h, &table, &catalog, "t1", "build_deck", &json!({"markdown": "## A\n- x\n## B\n- y"}));
+    assert!(!out.is_error, "{}", out.text);
+    assert!(out.text.contains("\"count\": 2"), "{}", out.text);
+    assert_eq!(h.session.active().unwrap().doc.slides.len(), 3);
+    let out = run_tool(&mut h, &table, &catalog, "t2", "build_deck", &json!({"markdown": "", "bogus": 1}));
+    assert!(out.is_error && out.text.contains("unknown argument"), "{}", out.text);
+    let out = run_tool(&mut h, &table, &catalog, "t3", "build_deck", &json!({}));
+    assert!(out.is_error, "{}", out.text);
+    let p = Policy::new(Mode::Autopilot);
+    assert_eq!(p.classify(&table, &catalog, "x", "build_deck", &json!({"markdown": "## A"})).class, Class::Change);
+    assert_eq!(p.classify(&table, &catalog, "x", "build_deck", &json!({"markdown": "## A", "replace": true})).class, Class::Destructive);
+
+    // Through the MCP wrapper: listed and callable; upstream methods untouched.
+    let mut s = crate::mcp_ext::Server::new(Box::new(Headless::with_document()));
+    let init = s.handle(json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}})).unwrap();
+    assert_eq!(init["result"]["serverInfo"]["name"], "maluos-slides");
+    let list = s.handle(json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})).unwrap();
+    let names: Vec<&str> = list["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
+    assert!(names.contains(&"build_deck") && names.contains(&"add_slide"));
+    let call = s.handle(json!({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "build_deck", "arguments": {"slides": [{"title": "Only"}]}}})).unwrap();
+    assert_eq!(call["id"], 3);
+    assert_eq!(call["result"]["isError"], false, "{call}");
+    let doc = s.handle(json!({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "inspect_document", "arguments": {}}})).unwrap();
+    assert!(doc["result"]["content"][0]["text"].as_str().unwrap().contains("Only"));
+    assert!(s.handle_line("not json").is_some());
+}
+
+#[test]
+fn the_model_builds_a_deck_from_a_document_in_one_call() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use(
+        "b",
+        "build_deck",
+        json!({"markdown": "# Aurora\nA tour\n## Science\n### Why\n- wind\n## Field\n### How\n- lens\n### Thanks", "theme": "Nocturne"}),
+    )]));
+    mock.push(answer("Built a 6-slide deck in two sections."));
+    let mut host = Headless::with_document();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "make a deck from this outline", &mut ApproveAll, &mut no_events());
+    assert_eq!(report.answer, "Built a 6-slide deck in two sections.");
+    assert_eq!(report.plans, 0, "no replace: autopilot applies it");
+    assert_eq!(host.session.active().unwrap().doc.slides.len(), 7);
+    assert_eq!(report.touched_slides, (1..7).collect::<Vec<_>>());
+    assert_eq!(host.session.active().unwrap().history.undo.len(), 1, "one undo step for the whole deck");
+    assert!(report.commands.iter().filter(|c| *c == "slide.new").count() == 6, "{:?}", report.commands);
 }

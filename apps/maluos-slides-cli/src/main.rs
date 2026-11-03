@@ -76,6 +76,8 @@ fn main() -> ExitCode {
         Some("mcp") => report(mcp(rest)),
         // MaluOS: the HTTP/JSON API (step 3.8).
         Some("api") => report(api(rest)),
+        // MaluOS: a deck from a Markdown outline, no model (step 4.1).
+        Some("outline") => report(outline(rest)),
         // MaluOS: one assistant turn, headless.
         Some("ask") => report(match ask::parse(rest) {
             Ok(Some(o)) => ask::run(&o),
@@ -521,6 +523,58 @@ fn run(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// MaluOS: `maluos-slides-cli outline FILE.md --out deck.pptx [--theme T] [--in BASE]`: the deck a
+/// Markdown outline describes, built with the same engine commands the assistant's `build_deck` uses.
+fn outline(args: &[String]) -> Result<(), String> {
+    let mut file: Option<String> = None;
+    let mut out: Option<String> = None;
+    let mut theme: Option<String> = None;
+    let mut base: Option<String> = None;
+    let mut print = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--out" | "--save" => out = Some(it.next().cloned().ok_or("--out needs a path")?),
+            "--theme" => theme = Some(it.next().cloned().ok_or("--theme needs a name")?),
+            "--in" => base = Some(it.next().cloned().ok_or("--in needs a file")?),
+            "--print" => print = true,
+            "--help" | "-h" => {
+                outln!("{}", help_page("outline"));
+                return Ok(());
+            }
+            other if other.starts_with("--") => return Err(format!("unknown outline option `{other}`")),
+            path if file.is_none() => file = Some(path.to_string()),
+            extra => return Err(format!("unexpected argument `{extra}`")),
+        }
+    }
+    let file = file.ok_or("outline needs a Markdown file: maluos-slides-cli outline notes.md --out deck.pptx")?;
+    let text = std::fs::read_to_string(&file).map_err(|e| format!("{file}: {e}"))?;
+    let o = maluos_slides_assist::outline::Outline::from_markdown(&text);
+    if o.slide_count() == 0 {
+        return Err(format!("{file}: no headings or text to make slides from"));
+    }
+    if let Some(p) = &out {
+        output_format(p)?;
+    }
+    let mut h = maluos_slides_mcp::Headless::new();
+    let replace = base.is_none();
+    if let Some(b) = &base {
+        open(&mut h.session, Some(b), false)?;
+    } else {
+        h.session.execute("file.new", &json!({"blank": true})).map_err(|e| e.to_string())?;
+    }
+    let a = maluos_slides_assist::outline::apply(&mut h, &o, theme.as_deref(), replace, None)?;
+    if print {
+        outln!("{}", json!({"slides": a.slides, "sections": a.sections, "tables": a.tables, "notes": a.notes}));
+    }
+    eprintln!("maluos-slides-cli: {} slides, {} sections, {} tables, {} notes", a.slides.len(), a.sections, a.tables, a.notes);
+    if let Some(p) = out {
+        h.session.execute("file.saveAs", &json!({"path": p})).map_err(|e| e.to_string())?;
+        eprintln!("[saved] {p}");
+    }
+    Ok(())
+}
+
 /// MaluOS: `maluos-slides-cli api`: the HTTP/JSON API over the tool table (docs/maluos-slides/api.md).
 fn api(args: &[String]) -> Result<(), String> {
     use maluos_slides_api::{DEFAULT_LISTEN, Options, Server, Target};
@@ -672,7 +726,9 @@ fn app(args: &[String]) -> Result<(), String> {
 
 fn mcp(args: &[String]) -> Result<(), String> {
     use maluos_slides_engine::file_access::{self, AutomationRoots};
-    use maluos_slides_mcp::{Backend, Headless, Remote, Server, control_addr};
+    // MaluOS: the server with the fork's tools (build_deck) added; everything else is upstream's.
+    use maluos_slides_assist::mcp_ext::Server;
+    use maluos_slides_mcp::{Backend, Headless, Remote, control_addr};
     let mut connect: Option<String> = None;
     let mut sample = false;
     let mut roots_args = automation_args::AutomationArgs::new(None, None);

@@ -783,5 +783,101 @@
       "type": "object"
     },
     "name": "call_app"
+  },
+  {
+    "description": "Build many slides at once from an outline: Markdown (# deck title, ## section, ### slide, - bullets with two spaces per level, Notes: lines, | pipe tables |) or a `slides` list. Slides go after the current one; `replace: true` starts a new presentation (asks the user). Prefer this over many add_slide calls when making a whole deck.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "description": "Insert after this slide index (default: the last slide)",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "markdown": {
+          "description": "The outline as Markdown",
+          "type": "string"
+        },
+        "replace": {
+          "description": "Start a new presentation instead of adding to the open one (default false)",
+          "type": "boolean"
+        },
+        "slides": {
+          "description": "Instead of markdown: slides in order",
+          "items": {
+            "properties": {
+              "body": {
+                "description": "Body text, one paragraph per line, leading tabs indent; or a list of lines",
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "layout": {
+                "description": "title, titleAndContent, sectionHeader, twoContent, comparison, titleOnly, blank, contentWithCaption, pictureWithCaption (default from the content)",
+                "type": "string"
+              },
+              "notes": {
+                "description": "Speaker notes",
+                "type": "string"
+              },
+              "section": {
+                "description": "Starts a section with this name before the slide",
+                "type": "string"
+              },
+              "table": {
+                "description": "Rows of cells; the first row is the header",
+                "items": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "subtitle": {
+          "description": "Subtitle of the title slide",
+          "type": "string"
+        },
+        "theme": {
+          "description": "Theme for the deck",
+          "enum": [
+            "MaluOS Slides",
+            "Harbor",
+            "Ember",
+            "Meadow",
+            "Nocturne",
+            "Paper",
+            "Coral Reef",
+            "Slate"
+          ],
+          "type": "string"
+        },
+        "title": {
+          "description": "Deck title (with `slides`): makes the title slide",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "build_deck"
   }
 ]

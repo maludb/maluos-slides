@@ -125,6 +125,25 @@ and prints its answer as JSON. COMMAND [PARAMS] runs a command, as run --cmd doe
   maluos-slides-cli app shape.insert '{\"preset\":\"star5\",\"rect\":[100,100,200,200]}'
   maluos-slides-cli app --method ui.screenshot '{\"path\":\"/tmp/shot.png\"}'",
     },
+    // MaluOS: a deck from an outline (docs/maluos-slides/plan.md step 4.1).
+    Subcommand {
+        name: "outline",
+        usage: "outline FILE.md --out DECK [--theme T] [--in BASE] [--print]",
+        summary: "build a presentation from a Markdown outline, no model needed",
+        details: "Builds the deck a Markdown outline describes and saves it to --out (.pptx or .deckcraft):
+
+  # Title            the deck title; the paragraph under it is the subtitle
+  ## Section         a section and its section-header slide (with ## only and no ###, each ## is a slide)
+  ### Slide          a slide; bullets (-, *, 1.) with two spaces or a tab per level are its body
+  Notes: text        the slide's speaker notes
+  | a | b |          a pipe table on the slide
+
+With --in BASE the slides are added after the last slide of BASE instead of a new presentation.
+--theme picks one of the built-in themes (MaluOS Slides, Harbor, Ember, Meadow, Nocturne, Paper,
+Coral Reef, Slate). The assistant's build_deck tool does the same from a request.
+
+  maluos-slides-cli outline talk.md --out talk.pptx --theme Harbor",
+    },
     // MaluOS: the HTTP/JSON API (docs/maluos-slides/plan.md step 3.8).
     Subcommand {
         name: "api",
@@ -158,7 +177,7 @@ the in-process presentation reads and writes, as for mcp.
     // MaluOS: the assistant (docs/maluos-slides/plan.md step 3.7).
     Subcommand {
         name: "ask",
-        usage: "ask \"REQUEST\" [--in FILE | --sample] [--out FILE] [--mode answer|confirm|autopilot] [--yes] [--provider P] [--model M] [--json]",
+        usage: "ask \"REQUEST\" [--in FILE | --sample] [--from DOC] [--out FILE] [--mode answer|confirm|autopilot] [--yes] [--provider P] [--model M] [--json]",
         summary: "ask the assistant for a change to a presentation, headless",
         details: "Runs one assistant turn on FILE (or the sample presentation, or a new one) and saves the result to
 --out. The request is one quoted argument, or comes from stdin with --stdin. The answer streams to
@@ -177,6 +196,8 @@ stdout; tool calls and plans go to stderr.
                     rounds, toolCalls, commands, touchedSlides, removedSlides, usage, undo, saved
   --quiet           no tool and plan lines on stderr
   --max-rounds N    model calls allowed for the turn (default 12)
+  --from DOC        attach a text or Markdown document to the request (up to 200 KiB), e.g. the
+                    notes a deck should be made from
 
   maluos-slides-cli ask \"add a closing slide that thanks the audience\" --sample --mode autopilot --out out.pptx
   maluos-slides-cli ask \"tighten every title\" --in deck.pptx --out deck.pptx --yes --json",

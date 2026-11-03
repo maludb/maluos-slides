@@ -14,9 +14,10 @@ use std::net::{SocketAddr, TcpListener, ToSocketAddrs};
 use std::sync::Arc;
 
 use maluos_llm::LlmClient;
+use maluos_slides_assist::call_tool;
 use maluos_slides_assist::providers::{Choice, default_choice};
 use maluos_slides_assist::{ApproveAll, Assistant, DeclineAll, Headless, Host, Mode, ToolTable};
-use maluos_slides_mcp::{Backend, Remote, ToolResult, call_tool};
+use maluos_slides_mcp::{Backend, Remote, ToolResult};
 use serde_json::{Value, json};
 
 use http::{Request, Response};

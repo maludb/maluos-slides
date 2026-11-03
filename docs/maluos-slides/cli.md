@@ -52,8 +52,20 @@ Tests: `cargo nextest run -p maluos-slides-cli ask` (argument parsing; a scripte
 mock model that edits the sample deck and saves a `.pptx` the engine reopens with nine slides;
 plans declined without `--yes` and approved with it; a model error reported).
 
+## `outline`: a deck from Markdown, no model
+
+```
+maluos-slides-cli outline talk.md --out talk.pptx [--theme Harbor] [--in base.pptx] [--print]
+```
+
+The same builder the assistant's `build_deck` tool uses: `#` title and subtitle, `##` sections,
+`###` slides, bullets with two spaces or a tab per level, `Notes:` lines, pipe tables. With
+`--in BASE` the slides are appended to an existing deck. `ask --from DOC` attaches a document to
+a request instead, for the model to turn into a deck.
+
 ## Revision history
 
 | Date | Change | Summary |
 |---|---|---|
 | 2026-11-02 | major | Created with step 3.7: the `ask` subcommand |
+| 2026-11-02 | minor | Step 4.1: `outline`, `ask --from` |

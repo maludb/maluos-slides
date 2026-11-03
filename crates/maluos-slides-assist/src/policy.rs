@@ -245,7 +245,9 @@ impl Policy {
                 }
             }
             _ => {
-                if self.destructive_tools.iter().any(|t| t == name) {
+                if self.destructive_tools.iter().any(|t| t == name)
+                    || (name == crate::tools::BUILD_DECK && input.get("replace").and_then(Value::as_bool).unwrap_or(false))
+                {
                     class = Class::Destructive;
                 }
                 if let Some(id) = tool_command(name) {
@@ -288,6 +290,7 @@ pub fn tool_command(tool: &str) -> Option<&'static str> {
         "insert_table" => "insert.table",
         "insert_chart" => "insert.chart",
         "select" => "edit.select",
+        "build_deck" => "slide.new",
         _ => return None,
     })
 }

@@ -16,6 +16,8 @@
 //!   undo entry per turn, limits on rounds, tool calls and tokens, retries on retryable errors.
 //! - [`Policy`] (step 3.5): the modes answer-only, confirm and autopilot; destructive commands
 //!   always confirmed; plans the user approves through [`Confirm`].
+//! - [`outline`] (step 4.1): a deck from Markdown or a slide list, the `build_deck` tool, and
+//!   [`mcp_ext::Server`], the MCP server with the fork's tools added.
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -28,6 +30,8 @@ pub mod agent;
 pub mod catalog;
 pub mod context;
 pub mod exec;
+pub mod mcp_ext;
+pub mod outline;
 pub mod policy;
 pub mod providers;
 pub mod tools;
@@ -35,7 +39,7 @@ pub mod tools;
 pub use agent::{Assistant, Host, INSTRUCTIONS, Limits, ModelCall, Step, Stop, ToolCall, Turn, TurnEvent, TurnReport, summarize};
 pub use catalog::{Catalog, CommandEntry, params_schema};
 pub use context::{Budget, Context, ContextCache};
-pub use exec::{MAX_RESULT_BYTES, ToolOutcome, run_tool};
+pub use exec::{MAX_RESULT_BYTES, ToolOutcome, call_tool, run_tool};
 pub use maluos_slides_mcp::{Backend, Headless, ToolResult};
 pub use policy::{ApproveAll, Class, Confirm, Decision, DeclineAll, Mode, Plan, PlannedCall, Policy, Verdict};
 pub use tools::ToolTable;

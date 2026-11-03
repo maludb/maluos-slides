@@ -168,7 +168,7 @@ upstream issue, PR, release and file links (`storytold/deckcraft#123`, `/issues/
 
 | Step | Work |
 |---|---|
-| 4.1 | Deck from a document: "make a 10-slide deck from this outline / Markdown / Malu123 sheet"; section and layout choice by the model, themes from the built-in eight |
+| 4.1 | Deck from a document: "make a 10-slide deck from this outline / Markdown / Malu123 sheet"; section and layout choice by the model, themes from the built-in eight. Done when: a `build_deck` tool (Markdown or a slide list → title slide, sections, slides, notes, tables, theme) is in the shared table and reachable from the assistant, MCP and the API; `maluos-slides-cli ask --from DOC` and `maluos-slides-cli outline DOC --out DECK`; the mock-model test builds a deck in one call with one undo step; a live run makes a deck from a document |
 | 4.2 | Slide-level help: rewrite bullets, tighten a title, generate speaker notes, suggest a chart for a table, fix a layout (align, distribute, autofit) |
 | 4.3 | Data slides from MaluDB: a chart or table slide bound to a MaluDB query through the gateway, refreshed on command |
 | 4.4 | Presenter assistant: notes summary and timing hints in presenter view; Q&A prep from the deck |

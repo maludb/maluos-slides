@@ -43,8 +43,9 @@ fn routes_cover_tools_commands_document_and_slides() {
 
     let tools = json_of(&s.handle(&request("GET", "/v1/tools", None)));
     let names: Vec<&str> = tools["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-    let mcp: Vec<String> = maluos_slides_mcp::tool_definitions().iter().map(|t| t["name"].as_str().unwrap().to_string()).collect();
-    assert_eq!(names, mcp, "the API serves the MCP table unchanged");
+    let mcp: Vec<String> = maluos_slides_assist::ToolTable::mcp_definitions().iter().map(|t| t["name"].as_str().unwrap().to_string()).collect();
+    assert_eq!(names, mcp, "the API serves the shared table unchanged");
+    assert!(names.contains(&"build_deck"));
 
     let r = s.handle(&request("POST", "/v1/tools/add_slide", Some(json!({"layout": "titleOnly", "title": "Agenda"}))));
     assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.body));
@@ -89,6 +90,12 @@ fn routes_cover_tools_commands_document_and_slides() {
     assert_eq!(s.handle(&request("GET", "/v1/nothing", None)).status, 404);
     assert_eq!(s.handle(&request("GET", "/", None)).status, 200, "the root lists the routes too");
     assert!(json_of(&s.handle(&request("GET", "/v1", None)))["routes"].is_array());
+
+    // The fork's tool goes through the same route.
+    let r = s.handle(&request("POST", "/v1/tools/build_deck", Some(json!({"slides": [{"title": "From the API"}]}))));
+    assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.body));
+    assert_eq!(json_of(&r)["result"]["count"], 1);
+    assert_eq!(json_of(&s.handle(&request("GET", "/v1/slides/2", None)))["title"], "From the API");
 }
 
 #[test]

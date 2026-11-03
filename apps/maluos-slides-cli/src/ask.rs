@@ -24,7 +24,12 @@ pub struct Options {
     pub json: bool,
     pub quiet: bool,
     pub max_rounds: Option<usize>,
+    /// A document appended to the request (`--from FILE`), capped.
+    pub document: Option<String>,
 }
+
+/// Most bytes of `--from` passed to the model.
+pub const MAX_DOCUMENT_BYTES: usize = 200 * 1024;
 
 /// Parses the arguments; `Ok(None)` when help was printed.
 pub fn parse(args: &[String]) -> Result<Option<Options>, String> {
@@ -40,6 +45,7 @@ pub fn parse(args: &[String]) -> Result<Option<Options>, String> {
         json: false,
         quiet: false,
         max_rounds: None,
+        document: None,
     };
     let mut stdin = false;
     let mut it = args.iter();
@@ -62,6 +68,11 @@ pub fn parse(args: &[String]) -> Result<Option<Options>, String> {
             "--json" => o.json = true,
             "--quiet" | "-q" => o.quiet = true,
             "--stdin" => stdin = true,
+            "--from" => {
+                let f = it.next().ok_or("--from needs a file")?;
+                let text = std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))?;
+                o.document = Some(cut_document(&text));
+            }
             "--max-rounds" => {
                 let n = it.next().ok_or("--max-rounds needs a number")?;
                 o.max_rounds = Some(n.parse().map_err(|_| format!("--max-rounds: not a number: {n}"))?);
@@ -89,6 +100,25 @@ pub fn parse(args: &[String]) -> Result<Option<Options>, String> {
         return Err("--in and --sample exclude each other".into());
     }
     Ok(Some(o))
+}
+
+/// The request with the document the user attached.
+pub fn request_text(o: &Options) -> String {
+    match &o.document {
+        Some(d) => format!("{}\n\nDocument:\n```\n{d}\n```", o.request),
+        None => o.request.clone(),
+    }
+}
+
+fn cut_document(text: &str) -> String {
+    if text.len() <= MAX_DOCUMENT_BYTES {
+        return text.to_string();
+    }
+    let mut cut = MAX_DOCUMENT_BYTES;
+    while !text.is_char_boundary(cut) {
+        cut -= 1;
+    }
+    format!("{}\n[document cut at {MAX_DOCUMENT_BYTES} bytes]", &text[..cut])
 }
 
 /// Runs the turn with the provider's client and prints as the options say.
@@ -158,7 +188,8 @@ pub fn run_with(o: &Options, client: Arc<dyn LlmClient>, model: &str, interactiv
     };
     let to_stdout = !o.json;
     let mut out = std::io::stdout();
-    let report = assistant.ask(&mut host, &o.request, &mut confirm, &mut |e| {
+    let text = request_text(o);
+    let report = assistant.ask(&mut host, &text, &mut confirm, &mut |e| {
         match e {
             TurnEvent::Text(t) if to_stdout => {
                 let _ = out.write_all(t.as_bytes());
@@ -315,6 +346,16 @@ mod tests {
         let (report, _) = run_with(&o, mock, "mock", false).unwrap();
         assert_eq!(report.declined, 0);
         assert_eq!(report.commands, vec!["slide.new"]);
+    }
+
+    #[test]
+    fn from_attaches_the_document() {
+        let f = tmp("notes.md");
+        std::fs::write(&f, "# Deck\n- point").unwrap();
+        let o = parse(&args(&["make a deck", "--from", &f])).unwrap().unwrap();
+        assert_eq!(request_text(&o), "make a deck\n\nDocument:\n```\n# Deck\n- point\n```");
+        assert!(parse(&args(&["x", "--from", "/nonexistent.md"])).is_err());
+        let _ = std::fs::remove_file(&f);
     }
 
     #[test]
