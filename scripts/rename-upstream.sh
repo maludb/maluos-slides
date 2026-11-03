@@ -22,7 +22,7 @@ SKIP='^(README\.md|LICENSE-MIT|LICENSE-APACHE|docs/maluos-slides/.*|scripts/rena
 # 1. what the fork drops
 # (`packaging/macos/Info.plist.in` and `packaging/windows/deckcraft.wxs` stay: the desktop app's test
 # `every_desktop_offers_the_same_file_types` reads them as fixtures; they are not built.)
-git ls-files packaging/macos packaging/windows | grep -vE '^packaging/(macos/Info\.plist\.in|windows/(deckcraft|maluos-slides)\.wxs)$' | xargs -r -d '\n' git rm -qf
+git ls-files packaging/macos packaging/windows | grep -vE '^packaging/(macos/Info\.plist\.in|windows/(deckcraft|maluos-slides)\.wxs|windows/package\.ps1)$' | xargs -r -d '\n' git rm -qf
 git rm -rqf --ignore-unmatch \
   docs/brand \
   packaging/freebsd packaging/icons.sh \

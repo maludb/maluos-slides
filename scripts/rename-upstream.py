@@ -84,6 +84,8 @@ PROTECT = [
 # the cases that are not (log targets, the MCP name, xtask's table) are handled by PRE above.
 PROTECT_RS = [
     '"deckcraft"',
+    # craft-libs' update suite names the app by upstream's constant
+    "craft_update::suite::DECKCRAFT",
     # test data: a word the spelling test flags and the user dictionary it lands in
     'hallo deckcraft"',
     '"deckcraft\\n"',

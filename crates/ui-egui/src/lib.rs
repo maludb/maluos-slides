@@ -12,7 +12,7 @@
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
     icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/org.maluos.slides.png")),
     accent: Some([0xf0, 0x7a, 0x1e]),
-    ..craft_update::suite::MALUOS_SLIDES
+    ..craft_update::suite::DECKCRAFT
 };
 
 pub mod backstage;
