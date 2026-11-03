@@ -13,25 +13,30 @@ tests (calibration in [target-app-parity.md](target-app-parity.md#calibration-ho
 When a gap closes, delete its entry, update the parity doc it points to, and add a line to the
 revision history.
 
-## Ranked: the top 15
+> **Scope (MaluOS Slides, decision D1):** Linux and MaluOS only. The Windows and macOS gaps
+> inherited from DeckCraft (Windows GPU start-up crashes #40 and #59, Windows image paste #1414,
+> the native macOS menu bar, macOS window chrome #71) were removed on 2026-11-03; the Linux halves
+> of those entries stay. The MaluOS steps picked from this list are Phase 6 in
+> [maluos-slides/plan.md](maluos-slides/plan.md).
+
+## Ranked: the top 14
 
 | # | Gap | Category | Beta | Hours | Doc |
 |---|---|---|:-:|---|---|
 | 1 | PPTX corpus is only decks we author (no PowerPoint reference renders) | File format | B | 20–35 | [file-format-parity.md](file-format-parity.md) |
-| 2 | Data loss and crashes on common paths (#60, #40, #59) | Stability | B | 6–12 | this file |
+| 2 | Data loss on a common path: Close discards an edited presentation (#60); soak budgets | Stability | B | 3–6 | this file |
 | 3 | PPTX round trip drops media playback options (#74) | File format | B | 2–4 | [file-format-parity.md](file-format-parity.md) |
 | 4 | SVG pictures don't render (EMF/WMF do) | File format | B | 4–8 | [file-format-parity.md](file-format-parity.md) |
 | 5 | No localization: English only | Localization | B (infra + 5 languages) | 55–90 | [localization-parity.md](localization-parity.md) |
 | 6 | No printing | Feature | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
 | 7 | Fonts: only Regular, Bold and Italic faces (#69) | Feature | B | 3–5 | [ui-parity.md](ui-parity.md) |
-| 8 | Image paste fails on Windows (#1414); Linux not re-checked | Feature | B | 2–4 | [ui-parity.md](ui-parity.md) |
+| 8 | Image paste on Linux (Wayland and X11) not re-checked since #53 closed | Feature | B | 1–2 | [ui-parity.md](ui-parity.md) |
 | 9 | Presenter view isn't placed on the second display | Hardware | B | 3–5 | [slideshow-parity.md](slideshow-parity.md) |
 | 10 | Animation Pane: 64 of ~190 effects, effect options (timeline and Play From done) | Feature | B (pane) | 7–13 | [animation-parity.md](animation-parity.md) |
 | 11 | Charts: data grid editing, elements, `chartex` types | Feature | B (data, elements) | 12–20 | [parity-checklist.md](parity-checklist.md) |
 | 12 | Format Shape pane thinner than PowerPoint's | UI/UX | B | 6–10 | [ui-parity.md](ui-parity.md) |
-| 13 | No native macOS menu bar | UI/UX | B | 3–5 | [ui-parity.md](ui-parity.md) |
-| 14 | PDF export rasterizes slide artwork | File format | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
-| 15 | Slides rasterize on the CPU; no performance baseline | Performance / hardware | | 15–30 | [hardware-parity.md](hardware-parity.md) |
+| 13 | PDF export rasterizes slide artwork | File format | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
+| 14 | Slides rasterize on the CPU; no performance baseline | Performance / hardware | | 15–30 | [hardware-parity.md](hardware-parity.md) |
 
 ## Stability
 
@@ -39,14 +44,6 @@ revision history.
 - **Evidence:** issue #60 is open; quitting prompts, `file.close` doesn't. PR #75 was closed without merging.
 - **Impact:** silent data loss on a common path. The worst kind of bug for a presentation app.
 - **Estimate:** 0.5–1 h (a new prompt and its tests, since #75 was not merged). **Beta blocker.**
-
-### Startup crashes on some Windows GPUs (#40, #59)
-- **Evidence:** #59 (Intel UHD, access violation in `igvk64.dll` during Vulkan enumeration), #40
-  (WordCraft, GridCraft and MaluOS Slides all fail on one Windows 11 PC). The DX12 default (#16) fixed
-  AMD's `atio6axx.dll` crash only.
-- **Impact:** the app never opens for those users.
-- **Estimate:** 4–8 h (backend probing outside the process or a safe-mode fallback, a software
-  renderer path). Needs a tester with the hardware. **Beta blocker.**
 
 ### Soak testing has no memory or timing budgets
 - **Evidence:** `crates/engine/src/soak_tests.rs` runs seeded random command sequences over a
@@ -160,10 +157,10 @@ Detail in [file-format-parity.md](file-format-parity.md).
 - **Impact:** Light, Medium and Semibold headings (common in modern templates) render wrong.
 - **Estimate:** 3–5 h. **Beta blocker.**
 
-### Image paste fails on Windows (#1414)
-- **Evidence:** #53 is closed (PR #88 pastes an image-only clipboard as a picture); #1414 (Ctrl+V fails to paste external images on Windows) is open. Linux was not re-checked after #53 closed.
+### Image paste on Linux not re-checked (after #53)
+- **Evidence:** #53 is closed (PR #88 pastes an image-only clipboard as a picture). Linux was not re-checked after #53 closed; a Wayland session (GNOME 50 on MaluOS) and an X11 session each need a pass with a screenshot in the clipboard.
 - **Impact:** copy-paste of screenshots is a core workflow.
-- **Estimate:** 2–4 h. **Beta blocker.**
+- **Estimate:** 1–2 h. **Beta blocker.**
 
 ### Charts: data grid, elements and the newer chart types
 - **Evidence:** checklist rows "Edit chart data" (P0, partial), "Chart elements" (partial), "Other
@@ -261,7 +258,7 @@ and starts at that effect. The pane has an advanced timeline with draggable bars
   whole presentation's (`format.languageAll`: every run, notes, masters, layouts and the default
   text style) (`lang`/`noProof` round-trip in PPTX). No grammar checking. The web build checks on the UI
   thread a few milliseconds per frame. No dictionaries ship with MaluOS Slides, so without one
-  installed (always on Windows and the web) only a short list of common misspellings is found.
+  installed (on the web) only a short list of common misspellings is found.
   `review.thesaurus` looks up the selected word (checklist row partial). AutoCorrect has
   PowerPoint's options (two initial capitals, sentence and day capitals, caps lock, fractions, an
   editable replace list), and AutoFormat superscripts ordinals (1st) and starts bulleted and
@@ -295,14 +292,11 @@ agile encryption), ink to text and math beyond Ink to Shape (6–10 h), 3-D mode
 
 Detail in [ui-parity.md](ui-parity.md).
 
-- **No native macOS menu bar.** `menus::menu_tree()` exists but nothing installs it. 3–5 h. **Beta
-  blocker.**
 - **Format Shape pane thinner than PowerPoint's** (Fill/Line/Effects/Size/Text Box pages, picture
   and texture options, 3-D). 6–10 h. **Beta blocker.**
 - **File tab depth** (#76 landed the Backstage): no online templates, cloud places, printer
   choice, video/GIF/CD exports or document protection. 4–8 h for the parts that need no cloud.
-- **Window chrome** (#71 macOS controls misaligned, #26 GNOME title bar, #41 system light/dark).
-  2–4 h.
+- **Window chrome** (#26 GNOME title bar, #41 system light/dark). 2–4 h.
 - **Icon consistency across Craft apps** (#73, #56). 2–4 h.
 - **Dialogs**: 42 dialogs vs PowerPoint's ~60. In since the d556ff9 count of 27: Font, Paragraph
   and Tabs, Columns, Bullets and Numbering, Find and Replace, Replace Fonts, Action Settings, Size and
@@ -368,6 +362,7 @@ Detail in [localization-parity.md](localization-parity.md).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-03 | minor | MaluOS Slides scope (D1): the Windows and macOS entries removed (GPU start-up crashes, Windows paste, macOS menu bar and chrome); the Linux paste re-check kept; top list is 14 rows; Phase 6 of the MaluOS plan picks from here |
 | 2026-11-02 | trivial | Run alternate-language metadata now survives native and PPTX saves; UI and proofing gaps remain; scores unchanged |
 | 2026-11-02 | trivial | PPTX reflection geometry is retained through native and PPTX resaves; no rendering parity claim |
 | 2026-11-02 | trivial | Reused slide geometry and content scale to the destination; picker thumbnails remain the reuse gap |

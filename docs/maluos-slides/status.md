@@ -165,6 +165,12 @@ and egui fork stay pinned by revision and keep building. The rules in CLAUDE.md 
 the layering" instead of "keep upstream mergeable": inherited crates may be edited directly
 when a feature needs it.
 
+**Phase 6 (2026-11-03):** the inherited `docs/gaps.md` and `ROADMAP.md` were pruned to Linux and
+MaluOS (the Windows GPU crashes, Windows paste, macOS menu bar and chrome entries removed, the
+duplicated roadmap header folded) and eight steps were picked into Phase 6 of the plan, in order:
+no data loss, SVG pictures, printing, presenter view on the second display, vector PDF, media
+options, font faces, a real-deck corpus.
+
 ## Phase 4: slides-specific depth
 
 | Step | State | Notes |

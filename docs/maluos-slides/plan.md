@@ -185,6 +185,26 @@ Remaining dependencies on storytold's other repositories (craft-fonts, craft-lib
 fork, pinned by revision in Cargo.lock) keep building as pinned; vendoring them is a later
 decision if they move or vanish.
 
+### Phase 6: parity for MaluOS (picked from the inherited work list, 2026-11-03)
+
+The inherited `docs/gaps.md` was pruned to Linux and MaluOS (D1). These are the steps worth
+doing for a MaluOS desk, in order; hours are the gaps list's estimates. Each lands as any other
+step: a command with tests, a status row, a screenshot where the eye is the judge.
+
+| Step | Work | Done when | Est. |
+|---|---|---|---|
+| 6.1 | **No data loss.** `file.close` prompts to save an edited presentation like quitting does (#60); the editor soak test gets memory and timing budgets; image paste re-checked on Wayland (GNOME 50) and X11 | the prompt in the window test and through the control channel; budgets enforced in CI; paste works in both sessions (status note) | 5–10 h |
+| 6.2 | **SVG pictures render** (EMF/WMF already do): a pure-Rust SVG rasteriser or a tiny-skia path, through the existing picture pipeline; PPTX keeps the SVG part beside its PNG fallback | an SVG icon deck renders and round-trips; the sample deck gets one | 4–8 h |
+| 6.3 | **Printing** through CUPS on MaluOS: a Print command that hands the vector PDF to `lp`/the GTK portal, with the slides / notes / handout choice the PDF export already has | prints from the File tab and from `maluos-slides-cli`; a `print.*` command in the catalog so Malu can do it | 5–8 h |
+| 6.4 | **Presenter view on the second display** under Wayland (GNOME): the show on the external output, presenter view on the laptop panel, by the window-placement means egui/winit offers | both windows on the right outputs on the owner's desk; a status note with the limits | 3–5 h |
+| 6.5 | **PDF export keeps vectors** (shapes, text as text) instead of rasterised artwork | the sample deck's PDF has selectable text and vector shapes (checked with a PDF parser in a test) | 5–8 h |
+| 6.6 | **Media playback options round-trip** in PPTX (#74) | the owned corpus round-trips them | 2–4 h |
+| 6.7 | **Font faces beyond Regular, Bold and Italic** (#69): Light, Medium, SemiBold from `maluos-fonts` and the system | headings in modern templates render with the right weight; a test on Inter's weights | 3–5 h |
+| 6.8 | **A corpus of real PowerPoint decks** (owner's decks, consented) with reference renders for the round-trip tests | the corpus runs in CI with the renders compared | 20–35 h |
+
+Later, when MaluOS has a locale policy: localization (catalog, system language, the first five
+languages; 27–46 h) and the Animation Pane and chart depth (gaps rows 10 and 11).
+
 ## Repository conventions
 
 - `docs/maluos-slides/` holds everything fork-specific: this plan, `status.md`, `rename.md`,
