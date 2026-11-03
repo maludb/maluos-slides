@@ -29,7 +29,9 @@ jobs:
     timeout-minutes: 90
     env:
       CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
-      CRAFT_FONTS_REQUIRED: "1"
+      # The app package embeds no fonts (plan step 2.8): the maluos-fonts package built below
+      # carries the catalogue, and the binaries read it at run time.
+      CRAFT_FONTS_EMBED: "0"
       MALUOS_SLIDES_VERSION: ${{ inputs.version }}
       CARGO_TERM_COLOR: always
     steps:
@@ -37,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: storytold/craft-fonts
-          ref: 43913056ce82a3fdad0ef69f6b88d1dc922a8104
+          ref: aced4137c022f1f587624d48e81ec77e1914a9cc
           path: craft-fonts
       - name: Linux build dependencies and packaging tools
         run: |
@@ -53,6 +55,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build and package
         run: packaging/linux/package.sh --formats "deb tar"
+      - name: Fonts package
+        run: packaging/linux/fonts-package.sh
       - name: Checksums
         run: cd dist/release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
