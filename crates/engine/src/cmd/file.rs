@@ -67,6 +67,7 @@ pub fn specs() -> Vec<CommandSpec> {
             has_doc,
             properties
         ),
+        cmd!("document.tags", "Tags", [], None, "{set?: {name: value}, remove?: [name]} → {tags: {name: value}}", has_doc, tags),
         cmd!(noundo "file.recovery.save", "Save AutoRecover Information", [], None, "{} → {written}", has_doc, recovery_save),
         cmd!(query "file.recovery.list", "Recovered Presentations", [], None, "{} → [{uid, path, title, saved}]", always, recovery_list),
         cmd!(noundo "file.recovery.open", "Open Recovered Presentations", [], None, "{} → {opened: [document index]}", always, recovery_open),
@@ -684,6 +685,43 @@ fn properties(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(serde_json::to_value(&s.doc()?.doc.props).unwrap_or_default())
 }
 
+/// The presentation's add-in tags (`p:custDataLst` → `ppt/tags/tagN.xml`, kept in both
+/// formats): set or replace name/value pairs, remove names, and read them all back. Values are
+/// strings; an empty name is refused. With no `set` and no `remove` it only reads.
+fn tags(s: &mut Session, p: &Value) -> Result<Value> {
+    let set: Vec<(String, String)> = match p.get("set") {
+        None | Some(Value::Null) => vec![],
+        Some(Value::Object(m)) => {
+            let mut out = Vec::with_capacity(m.len());
+            for (k, v) in m {
+                let Some(v) = v.as_str() else { return Err(bad("document.tags", format!("tag {k:?} needs a string value"))) };
+                if k.trim().is_empty() {
+                    return Err(bad("document.tags", "a tag needs a name"));
+                }
+                out.push((k.clone(), v.to_string()));
+            }
+            out
+        }
+        Some(_) => return Err(bad("document.tags", "`set` must be an object of name: value")),
+    };
+    let remove: Vec<String> =
+        p.get("remove").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect()).unwrap_or_default();
+    if !set.is_empty() || !remove.is_empty() {
+        s.edit(|doc, _| {
+            for (k, v) in &set {
+                match doc.tags.iter_mut().find(|(n, _)| n == k) {
+                    Some(t) => t.1 = v.clone(),
+                    None => doc.tags.push((k.clone(), v.clone())),
+                }
+            }
+            doc.tags.retain(|(n, _)| !remove.contains(n));
+            Ok(())
+        })?;
+    }
+    let tags: serde_json::Map<String, Value> = s.doc()?.doc.tags.iter().map(|(k, v)| (k.clone(), Value::String(v.clone()))).collect();
+    Ok(json!({"tags": tags}))
+}
+
 fn revert(s: &mut Session, _p: &Value) -> Result<Value> {
     let st = s.doc_mut()?;
     st.doc = st.saved_doc.clone();
@@ -774,6 +812,38 @@ mod tests {
         let names: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name()).collect();
         assert_eq!(names.len(), 2, "no temporary file may be left behind: {names:?}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn document_tags_set_remove_undo_and_round_trip() {
+        use crate::Session;
+        use serde_json::json;
+        let mut s = Session::with_new();
+        let r = s.execute("document.tags", &json!({})).unwrap();
+        assert_eq!(r, json!({"tags": {}}));
+        let undo = s.active().unwrap().history.undo.len();
+        let r = s.execute("document.tags", &json!({"set": {"maluos.assistant.memory": "{\"v\":1}", "vendor.x": "1"}})).unwrap();
+        assert_eq!(r["tags"]["vendor.x"], "1");
+        assert_eq!(s.active().unwrap().history.undo.len(), undo + 1, "one undo step");
+        assert!(s.active().unwrap().is_dirty());
+        let r = s.execute("document.tags", &json!({"set": {"vendor.x": "2"}, "remove": ["maluos.assistant.memory"]})).unwrap();
+        assert_eq!(r, json!({"tags": {"vendor.x": "2"}}));
+        assert!(s.execute("document.tags", &json!({"set": {"": "x"}})).is_err());
+        assert!(s.execute("document.tags", &json!({"set": {"n": 1}})).is_err());
+        assert!(s.execute("document.tags", &json!({"set": "x"})).is_err());
+        s.execute("edit.undo", &json!({})).unwrap();
+        assert_eq!(
+            s.active().unwrap().doc.tags,
+            vec![("maluos.assistant.memory".to_string(), "{\"v\":1}".to_string()), ("vendor.x".to_string(), "1".to_string())]
+        );
+        for format in ["pptx", "deckcraft"] {
+            let data = s.execute("file.saveBytes", &json!({"format": format})).unwrap()["data"].as_str().unwrap().to_string();
+            let mut t = Session::new();
+            t.execute("file.openBytes", &json!({"name": format!("d.{format}"), "data": data})).unwrap();
+            let r = t.execute("document.tags", &json!({})).unwrap();
+            assert_eq!(r["tags"]["vendor.x"], "1", "{format}");
+            assert_eq!(r["tags"]["maluos.assistant.memory"], "{\"v\":1}", "{format}");
+        }
     }
 
     #[test]

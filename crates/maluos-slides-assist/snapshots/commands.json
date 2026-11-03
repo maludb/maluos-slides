@@ -365,6 +365,27 @@
     "undoable": true
   },
   {
+    "id": "document.tags",
+    "journal": true,
+    "label": "Tags",
+    "params": "{set?: {name: value}, remove?: [name]} → {tags: {name: value}}",
+    "schema": {
+      "additionalProperties": false,
+      "description": "Returns: {tags: {name: value}}",
+      "properties": {
+        "remove": {
+          "description": "[name]",
+          "type": "array"
+        },
+        "set": {
+          "description": "{name: value}"
+        }
+      },
+      "type": "object"
+    },
+    "undoable": true
+  },
+  {
     "id": "file.recovery.save",
     "journal": true,
     "label": "Save AutoRecover Information",

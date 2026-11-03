@@ -87,8 +87,16 @@ Numbering: `H<n>` (harness). Owner decisions from the plan keep their `D<n>` ids
 | H31 | **Snapshots** of the tool table, the command catalog and a sample context are committed; a deliberate change rewrites them with an env flag; an upstream merge shows up as a diff to read. | Drift is visible. | Same three snapshots. |
 | H32 | **Owner decisions are recorded, not asked**: deferrals and choices go into plan.md/status.md with the date. | The owner is not in the loop mid-step. | Same. |
 
+## 10. Added at step 4.6
+
+| Id | Decision | Why | Mirror |
+|---|---|---|---|
+| H33 | **One engine addition is allowed when it is upstream-shaped and unavoidable.** Slides added `document.tags` to `crates/engine` (the add-in tags the model already keeps for round trip, with no model or format change) because the assistant may only write through commands and none existed for the field. It is written as upstream would (a `cmd!` entry, params doc, test) and offered upstream. | Rule H1 forbids fork code in upstream crates; a command the format already supports is the smallest honest exception, recorded here and in status.md. | Prefer an existing command; if one must be added, make it the generic one upstream would want (not "assistant memory") and record it. |
+| H34 | **Per-document memory lives in the document**, as one add-in/custom property the format round-trips, as a small versioned JSON of dated notes; capped (24 notes, 240 chars), de-duplicated, undoable through the engine, shown to the model as "Remembered about this <document>" with indexes, and to the user in the pane with Forget. Tools `remember`, `forget`, `recall`. Nothing is written outside the file; secrets never. | The user's facts about a deck belong to the deck, travel with it, and are visible and removable. | Malu123: the workbook's custom document property (`docProps/custom.xml`) or an equivalent the format keeps; MaluDocs: the document's custom property. Same tag name pattern `maluos.assistant.memory`, same JSON, same tools and pane section. |
+
 ## Revision history
 
 | Date | Change | Summary |
 |---|---|---|
 | 2026-11-03 | major | Created at the owner's request with every decision from Phases 1–4.5 of Slides, each with its mirror for Malu123 and MaluDocs |
+| 2026-11-03 | minor | H33 (an upstream-shaped engine addition) and H34 (memory in the document) from step 4.6 |

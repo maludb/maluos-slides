@@ -14,6 +14,10 @@ pub const BUILD_DECK: &str = "build_deck";
 pub const DECK_TIMING: &str = "deck_timing";
 /// The fork's tool: a picture from the office's image agent (step 4.5).
 pub const OFFICE_PICTURE: &str = "office_picture";
+/// The fork's tools: memory kept in the deck (step 4.6).
+pub const REMEMBER: &str = "remember";
+pub const FORGET: &str = "forget";
+pub const RECALL: &str = "recall";
 
 /// The fork's tools, in the MCP definition shape, appended to upstream's table everywhere the
 /// table is served (the assistant, the HTTP API, the MCP server through `mcp_ext`).
@@ -68,12 +72,33 @@ pub fn extra_definitions() -> Vec<Value> {
             },
             "annotations": {"title": "Picture from the office", "readOnlyHint": false, "openWorldHint": true}
         }),
+        serde_json::json!({
+            "name": REMEMBER,
+            "title": "Remember",
+            "description": "Keep one short note about this presentation for later sessions: the audience, the tone, the time limit, what must not change, a decision. It is stored inside the presentation file (nowhere else) and shown to you under 'Remembered about this deck' next time. Never store secrets or anything not about this deck.",
+            "inputSchema": {"type": "object", "additionalProperties": false, "properties": {"text": {"type": "string", "description": "One sentence"}}, "required": ["text"]},
+            "annotations": {"title": "Remember", "readOnlyHint": false, "openWorldHint": false}
+        }),
+        serde_json::json!({
+            "name": FORGET,
+            "title": "Forget",
+            "description": "Drop a remembered note by its index (as listed under 'Remembered about this deck'), or all of them.",
+            "inputSchema": {"type": "object", "additionalProperties": false, "properties": {"index": {"type": "integer", "minimum": 0}, "all": {"type": "boolean"}}},
+            "annotations": {"title": "Forget", "readOnlyHint": false, "openWorldHint": false}
+        }),
+        serde_json::json!({
+            "name": RECALL,
+            "title": "Recall",
+            "description": "The notes remembered about this presentation, with their indexes and dates.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+            "annotations": {"title": "Recall", "readOnlyHint": true, "openWorldHint": false}
+        }),
     ]
 }
 
 /// Whether `name` is one of the fork's tools.
 pub fn is_extra(name: &str) -> bool {
-    name == BUILD_DECK || name == DECK_TIMING || name == OFFICE_PICTURE
+    name == BUILD_DECK || name == DECK_TIMING || name == OFFICE_PICTURE || name == REMEMBER || name == FORGET || name == RECALL
 }
 
 /// The tools a model may call. Built from [`maluos_slides_mcp::tool_definitions`], so the MCP

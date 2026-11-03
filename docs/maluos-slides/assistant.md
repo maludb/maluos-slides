@@ -226,6 +226,25 @@ sentence and the instructions tell the model to say so and look nowhere else. Th
 platform yet; it goes on the same requests when it is. `Office::set_override` installs an
 office for tests or a CLI pointed elsewhere.
 
+## Memory across sessions (step 4.6)
+
+`memory.rs` keeps what the assistant remembers about one deck inside the deck and nowhere else:
+one presentation-level add-in tag (`maluos.assistant.memory`, a small JSON document of notes
+with the day each was written). Add-in tags are `p:custDataLst` → `ppt/tags/tagN.xml` in PPTX
+and `tags` in `presentation.json` in the native package; both formats already round-trip them,
+so the notes travel with the file, survive a save as PPTX and come back on any desk. The engine
+gains one upstream-shaped command, `document.tags {set?: {name: value}, remove?: [name]} →
+{tags}` (undoable; the only fork addition inside `crates/engine`, recorded as H33 in
+[harness-design.md](harness-design.md)), and the tools `remember {text}`, `forget {index | all}`
+and `recall` in the shared table read and write the tag through it: a remembered note is one
+undoable change that marks the deck dirty until saved. Notes are trimmed, cut at 240
+characters, never stored twice, and capped at 24 (the oldest goes). The context shows them
+under "Remembered about this deck" with their indexes, so the model acts on them in every later
+session without being told again; the instructions say what belongs there (audience, tone, time
+limit, what must not change, decisions) and what never does (secrets, keys, anything not about
+this deck). The pane shows "Remembered (N)" under the status line with a Forget button per
+note that runs `document.tags` like the tool does.
+
 ## Snapshots
 
 `snapshots/tools.json` is the tool table (every tool, app-only included),
@@ -262,3 +281,4 @@ long-result shaping. For the context: the sample-deck snapshot, no document, the
 | 2026-11-02 | major | Step 4.2: images to the model, the five recipes, quick actions |
 | 2026-11-02 | major | Step 4.4: `timing`, `deck_timing`, presenter view hints, Q&A prep |
 | 2026-11-03 | major | Step 4.5: `office`, the `office_picture` tool, the Add a picture quick action |
+| 2026-11-03 | major | Step 4.6: `memory`, `document.tags`, the remember / forget / recall tools, the Remembered section |

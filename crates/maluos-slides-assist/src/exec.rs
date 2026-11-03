@@ -119,6 +119,9 @@ pub fn call_tool(backend: &mut dyn Backend, name: &str, args: &Value) -> ToolRes
     if name == crate::tools::OFFICE_PICTURE {
         return office_picture(backend, args);
     }
+    if name == crate::tools::REMEMBER || name == crate::tools::FORGET || name == crate::tools::RECALL {
+        return memory_tool(backend, name, args);
+    }
     maluos_slides_mcp::call_tool(backend, name, args)
 }
 
@@ -247,6 +250,55 @@ fn office_picture(backend: &mut dyn Backend, args: &Value) -> ToolResult {
 #[cfg(not(all(feature = "native", unix)))]
 fn office_picture(_backend: &mut dyn Backend, _args: &Value) -> ToolResult {
     ToolResult::error("office_picture: the office is reachable only in the native Linux build")
+}
+
+/// `remember`, `forget` and `recall` (step 4.6): the deck's memory tag read and written through
+/// `document.tags`.
+fn memory_tool(backend: &mut dyn Backend, name: &str, args: &Value) -> ToolResult {
+    use crate::memory::{DeckMemory, read, today, write};
+    let mut memory = match read(backend) {
+        Ok(m) => m,
+        Err(e) => return ToolResult::error(format!("{name}: {e}")),
+    };
+    let listing = |m: &DeckMemory| json!({"count": m.notes.len(), "notes": m.notes.iter().enumerate().map(|(i, n)| json!({"index": i, "text": n.text, "when": n.when})).collect::<Vec<_>>()});
+    match name {
+        "remember" => {
+            let Some(text) = args.get("text").and_then(Value::as_str) else { return ToolResult::error("remember: `text` is required") };
+            let before = memory.notes.len();
+            let index = match memory.remember(text, &today()) {
+                Ok(i) => i,
+                Err(e) => return ToolResult::error(e),
+            };
+            let added = memory.notes.len() > before;
+            if added && let Err(e) = write(backend, &memory) {
+                return ToolResult::error(format!("remember: {e}"));
+            }
+            let mut v = listing(&memory);
+            v["remembered"] = json!({"index": index, "text": memory.notes[index].text, "added": added, "note": if added { "stored in the presentation" } else { "was already remembered; nothing changed" }});
+            ToolResult::json(&v)
+        }
+        "forget" => {
+            let forgot = if args.get("all").and_then(Value::as_bool).unwrap_or(false) {
+                let n = memory.notes.len();
+                memory.notes.clear();
+                json!(n)
+            } else if let Some(i) = args.get("index").and_then(Value::as_u64) {
+                match memory.forget(i as usize) {
+                    Some(n) => json!(n.text),
+                    None => return ToolResult::error(format!("forget: no note {i} (there are {})", memory.notes.len())),
+                }
+            } else {
+                return ToolResult::error("forget: give `index` or `all: true`");
+            };
+            if let Err(e) = write(backend, &memory) {
+                return ToolResult::error(format!("forget: {e}"));
+            }
+            let mut v = listing(&memory);
+            v["forgot"] = forgot;
+            ToolResult::json(&v)
+        }
+        _ => ToolResult::json(&listing(&memory)),
+    }
 }
 
 fn check_commands(catalog: &Catalog, name: &str, input: &Value) -> Result<(), String> {

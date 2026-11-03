@@ -58,7 +58,7 @@ fn table_mirrors_the_mcp_server() {
     let all = ToolTable::all();
     let mcp = maluos_slides_mcp::tool_definitions();
     assert_eq!(all.defs().len(), mcp.len() + ToolTable::extra_definitions().len());
-    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("office_picture"), "the fork's tools come last");
+    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("recall"), "the fork's tools come last");
     assert!(all.get("build_deck").is_some());
     for (t, m) in all.defs().iter().zip(&mcp) {
         assert_eq!(t.name, m["name"]);
@@ -1492,4 +1492,109 @@ fn a_picture_request_is_one_turn_and_one_undo() {
     assert_eq!(host.session.active().unwrap().history.undo.len(), before + 1, "one undo entry for the turn");
     assert!(mock.requests()[0].system.as_deref().unwrap().contains("office_picture"));
     assert!(mock.requests()[0].system.as_deref().unwrap().contains("never the web"));
+}
+
+// ---------- memory in the deck (step 4.6) ----------
+
+use crate::memory::{DeckMemory, TAG};
+
+fn memory_of(h: &Headless) -> DeckMemory {
+    DeckMemory::from_tags(&h.session.active().unwrap().doc.tags)
+}
+
+#[test]
+fn remember_forget_and_recall_go_through_document_tags() {
+    let mut h = Headless::with_document();
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::from_session(&h.session);
+    assert!(table.is_read_only("recall") && !table.is_read_only("remember") && !table.is_read_only("forget"));
+    let undo_before = h.session.active().unwrap().history.undo.len();
+
+    let out = run_tool(&mut h, &table, &catalog, "r", "remember", &json!({"text": "The audience is the executive board."}));
+    assert!(!out.is_error, "{}", out.text);
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["remembered"]["index"], 0);
+    assert_eq!(v["remembered"]["added"], true);
+    assert_eq!(v["count"], 1);
+    let out = run_tool(&mut h, &table, &catalog, "r1", "remember", &json!({"text": "the audience is the executive board."}));
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["remembered"]["added"], false, "a duplicate changes nothing");
+    assert_eq!(h.session.active().unwrap().history.undo.len(), undo_before + 1);
+    let out = run_tool(&mut h, &table, &catalog, "r2", "remember", &json!({"text": "Keep it under ten minutes."}));
+    assert!(!out.is_error);
+    let m = memory_of(&h);
+    assert_eq!(
+        m.notes.iter().map(|n| n.text.as_str()).collect::<Vec<_>>(),
+        vec!["The audience is the executive board.", "Keep it under ten minutes."]
+    );
+    assert_eq!(m.notes[0].when.len(), 10);
+    assert_eq!(h.session.active().unwrap().history.undo.len(), undo_before + 2, "each note is one undoable change");
+    assert!(h.session.active().unwrap().is_dirty());
+
+    let out = run_tool(&mut h, &table, &catalog, "c", "recall", &json!({}));
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["notes"][1]["text"], "Keep it under ten minutes.");
+
+    // The outline shows them, numbered for forget.
+    let ctx = Context::build(&h.session, &Budget::default());
+    assert!(ctx.text.contains("Remembered about this deck"), "{}", ctx.text);
+    assert!(ctx.text.contains("- [1] Keep it under ten minutes. ("), "{}", ctx.text);
+
+    let out = run_tool(&mut h, &table, &catalog, "f", "forget", &json!({"index": 0}));
+    assert!(!out.is_error, "{}", out.text);
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["forgot"], "The audience is the executive board.");
+    assert_eq!(memory_of(&h).notes.len(), 1);
+    let out = run_tool(&mut h, &table, &catalog, "f2", "forget", &json!({"index": 7}));
+    assert!(out.is_error && out.text.contains("no note 7"));
+    let out = run_tool(&mut h, &table, &catalog, "f3", "forget", &json!({"all": true}));
+    assert!(!out.is_error);
+    assert!(memory_of(&h).is_empty());
+    assert!(h.session.active().unwrap().doc.tags.iter().all(|(n, _)| n != TAG), "an empty memory removes the tag");
+    let out = run_tool(&mut h, &table, &catalog, "r3", "remember", &json!({"text": "  "}));
+    assert!(out.is_error && out.text.contains("empty"));
+    assert!(!Context::build(&h.session, &Budget::default()).text.contains("Remembered about this deck"));
+
+    // The policy shows both as a change through document.tags.
+    let plan = Policy::new(Mode::Confirm).classify(&table, &catalog, "r", "remember", &json!({"text": "x"}));
+    assert_eq!((plan.class, plan.commands[0].0.as_str()), (Class::Change, "document.tags"));
+}
+
+#[test]
+fn memory_survives_a_save_as_pptx_and_as_deckcraft() {
+    for format in ["pptx", "deckcraft"] {
+        let mut h = Headless::with_document();
+        let table = ToolTable::for_backend(false);
+        let catalog = Catalog::from_session(&h.session);
+        run_tool(&mut h, &table, &catalog, "r", "remember", &json!({"text": "Tone: plain, no jargon."}));
+        let saved = run(&mut h.session, "file.saveBytes", json!({"format": format}));
+        let data = saved["data"].as_str().unwrap().to_string();
+        let mut again = Headless::new();
+        run(&mut again.session, "file.openBytes", json!({"name": format!("deck.{format}"), "data": data}));
+        let m = memory_of(&again);
+        assert_eq!(m.notes.len(), 1, "{format}: the memory tag came back");
+        assert_eq!(m.notes[0].text, "Tone: plain, no jargon.");
+        assert!(Context::build(&again.session, &Budget::default()).text.contains("Tone: plain, no jargon."), "{format}");
+    }
+}
+
+#[test]
+fn a_remembered_note_is_in_the_next_turn_and_the_turn_is_one_undo() {
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("r", "remember", json!({"text": "This deck is for the executive board; keep it to ten minutes."}))]));
+    mock.push(answer("Noted: for the board, ten minutes."));
+    mock.push(answer("Yes: the board, ten minutes."));
+    let mut host = Headless::with_document();
+    let before = host.session.active().unwrap().history.undo.len();
+    let mut a = assistant(&mock);
+    let report = a.ask(&mut host, "remember that this is for the executive board and must fit ten minutes", &mut ApproveAll, &mut no_events());
+    assert!(report.error.is_none(), "{report:?}");
+    assert_eq!(report.commands, vec!["document.tags", "document.tags"], "the read and the write are both journaled");
+    assert_eq!(host.session.active().unwrap().history.undo.len(), before + 1, "but only the write is an undo step");
+    assert!(mock.requests()[0].system.as_deref().unwrap().contains("call remember with one sentence"));
+    assert!(!mock.requests()[0].system.as_deref().unwrap().contains("Remembered about this deck (kept in the file"), "nothing remembered yet");
+    let _ = a.ask(&mut host, "what do you remember?", &mut ApproveAll, &mut no_events());
+    let system = mock.requests().last().unwrap().system.clone().unwrap();
+    assert!(system.contains("Remembered about this deck (kept in the file"), "{system}");
+    assert!(system.contains("[0] This deck is for the executive board; keep it to ten minutes. ("), "{system}");
 }

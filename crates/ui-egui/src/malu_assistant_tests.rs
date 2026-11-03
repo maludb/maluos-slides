@@ -299,3 +299,24 @@ fn presenter_view_shows_timing_and_a_cue_line() {
     }
     h.state_mut().run("show.end", json!({})).unwrap();
 }
+
+/// MaluOS step 4.6: the pane lists what is remembered about the deck and Forget drops a note
+/// through `document.tags`.
+#[test]
+fn the_pane_lists_remembered_notes_and_forgets_one() {
+    let mock = Arc::new(MockClient::new());
+    let mut h = harness(mock, maluos_slides_assist::Mode::Autopilot);
+    let mut memory = maluos_slides_assist::memory::DeckMemory::default();
+    memory.remember("For the executive board.", "2026-11-03").unwrap();
+    memory.remember("Ten minutes at most.", "2026-11-03").unwrap();
+    h.state_mut().run("document.tags", memory.tag_params()).unwrap();
+    h.run_steps(2);
+    h.get_by_label("Remembered (2)").click();
+    h.run_steps(2);
+    assert!(h.query_by_label_contains("Ten minutes at most.").is_some());
+    h.get_all_by_label("Forget").next().unwrap().click();
+    h.run_steps(2);
+    let m = maluos_slides_assist::memory::DeckMemory::from_tags(&h.state().session.active().unwrap().doc.tags);
+    assert_eq!(m.notes.iter().map(|n| n.text.as_str()).collect::<Vec<_>>(), vec!["Ten minutes at most."]);
+    assert!(h.query_by_label("Remembered (1)").is_some());
+}

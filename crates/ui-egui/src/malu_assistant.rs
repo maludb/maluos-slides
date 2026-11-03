@@ -636,6 +636,7 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
     if let Some(p) = &app.malu.problem {
         ui.label(RichText::new(p).small().color(crate::icons::RED));
     }
+    memory_section(app, ui, &t);
     ui.add_space(6.0);
 
     // The conversation fills what the input box leaves.
@@ -650,6 +651,38 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
     ui.add_space(6.0);
     quick_actions(app, ui, &ctx, &t);
     input_row(app, ui, &ctx, &t);
+}
+
+/// What the assistant remembers about this deck (step 4.6), read from the deck's memory tag;
+/// Forget runs `document.tags` through the engine like the `forget` tool does.
+fn memory_section(app: &mut SlideApp, ui: &mut Ui, t: &Tokens) {
+    let Some(doc) = app.session.active() else { return };
+    let mut memory = maluos_slides_assist::memory::DeckMemory::from_tags(&doc.doc.tags);
+    if memory.is_empty() {
+        return;
+    }
+    let mut forget = None;
+    egui::CollapsingHeader::new(RichText::new(format!("Remembered ({})", memory.notes.len())).small().color(t.text_dim)).id_salt("malu_memory").show(
+        ui,
+        |ui| {
+            for (i, n) in memory.notes.iter().enumerate() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(RichText::new(&n.text).small());
+                    if !n.when.is_empty() {
+                        ui.label(RichText::new(&n.when).small().color(t.text_dim));
+                    }
+                    if ui.add(egui::Button::new(RichText::new("Forget").small())).on_hover_text("Drop this note from the file").clicked() {
+                        forget = Some(i);
+                    }
+                });
+            }
+        },
+    );
+    if let Some(i) = forget
+        && memory.forget(i).is_some()
+    {
+        let _ = app.run("document.tags", memory.tag_params());
+    }
 }
 
 /// The usual slide requests as one click each (step 4.2): they fill the box and send.

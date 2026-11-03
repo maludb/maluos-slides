@@ -22,6 +22,8 @@
 //!   presenter view shows; the `deck_timing` tool.
 //! - [`office`] (step 4.5): the office this desk is enrolled with, its agents and the
 //!   `office_picture` tool: a picture from the office's image agent, nothing from the web.
+//! - [`memory`] (step 4.6): what the assistant remembers about a deck, stored in the deck as one
+//!   add-in tag through `document.tags`; the `remember`, `forget` and `recall` tools.
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -35,6 +37,7 @@ pub mod catalog;
 pub mod context;
 pub mod exec;
 pub mod mcp_ext;
+pub mod memory;
 #[cfg(all(feature = "native", unix))]
 pub mod office;
 pub mod outline;

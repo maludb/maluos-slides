@@ -135,6 +135,11 @@ impl Writer {
             if d.sections.is_empty() { String::new() } else { format!(", {} sections", d.sections.len()) }
         );
         self.selection(st);
+        let memory = crate::memory::DeckMemory::from_tags(&d.tags);
+        if !memory.is_empty() {
+            let _ = writeln!(self.out, "Remembered about this deck (kept in the file; remember adds, forget drops by index):");
+            self.out.push_str(&memory.lines());
+        }
         let _ = writeln!(self.out);
 
         // The current slide first and whole, so it is never the one that gets cut.

@@ -919,5 +919,48 @@
       "type": "object"
     },
     "name": "office_picture"
+  },
+  {
+    "description": "Keep one short note about this presentation for later sessions: the audience, the tone, the time limit, what must not change, a decision. It is stored inside the presentation file (nowhere else) and shown to you under 'Remembered about this deck' next time. Never store secrets or anything not about this deck.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "One sentence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "name": "remember"
+  },
+  {
+    "description": "Drop a remembered note by its index (as listed under 'Remembered about this deck'), or all of them.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "type": "boolean"
+        },
+        "index": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "name": "forget"
+  },
+  {
+    "description": "The notes remembered about this presentation, with their indexes and dates.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "recall"
   }
 ]
