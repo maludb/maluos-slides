@@ -1,23 +1,26 @@
 # MaluOS Slides — instructions for agents (read first)
 
-MaluOS Slides is the MaluOS presentation app, a fork of DeckCraft (`upstream` remote). Everything
-below the rule is DeckCraft's own guidance, mechanically renamed, and still applies where it is
-not about macOS, Windows or the ArtCraft suite. MaluOS Slides-specific rules:
+MaluOS Slides is the MaluOS presentation app. It began as a fork of DeckCraft and stands on its
+own since 2026-11-03 (owner decision D12: no upstream remote, no merges, no pull requests to
+storytold/deckcraft; DeckCraft stays credited as the licences require). Everything below the
+rule is DeckCraft's own guidance, mechanically renamed, and still applies where it is not about
+macOS, Windows or the ArtCraft suite. MaluOS Slides-specific rules:
 
 - **The plan is `docs/maluos-slides/plan.md`; progress is `docs/maluos-slides/status.md`;
   design decisions shared with Malu123 and MaluDocs are `docs/maluos-slides/harness-design.md`
   (owner, 2026-11-03: add a row there for every new decision).** Start
   there, not in `plan/` (upstream's local-only folder, which this fork does not have) and not in
   `../../craftrules` (not checked out here).
-- **Keep upstream mergeable.** Do not edit `crates/*` except for bug fixes you would send
-  upstream. Fork code goes in new crates (`crates/maluos-slides-assist`, the shared `maluos-llm`)
-  and fenced hooks in `crates/ui-egui` and `apps/`. Every `deckcraft` name is `maluos-slides` here
-  (crates, binaries, env vars `MALUOS_SLIDES_*`, app id `org.maluos.slides`); the native format
-  keeps its `.deckcraft` extension. The mapping is `scripts/rename-upstream.sh`, the procedure
-  `docs/maluos-slides/rename.md`. Upstream changes arrive through the `upstream-renamed` vendor
-  branch, never by hand-editing names.
+- **The code is ours to change** (D12), but keep the layering: MaluOS features live in their
+  own crates (`crates/maluos-slides-assist`, `maluos-slides-api`, the shared `maluos-llm`) and in
+  fenced hooks (`// MaluOS:`) inside the inherited crates; edit the inherited crates directly
+  when a feature needs it, with tests, instead of working around them. Every `deckcraft` name is
+  `maluos-slides` here (crates, binaries, env vars `MALUOS_SLIDES_*`, app id `org.maluos.slides`);
+  the native format keeps its `.deckcraft` extension (D3). `scripts/rename-upstream.*` and the
+  sync procedure in `docs/maluos-slides/rename.md` are history: there is no upstream remote and
+  no vendor branch any more.
 - **Linux and MaluOS only** (owner decision D1). No macOS, Windows or FreeBSD packaging, CI or
-  docs in this tree; platform `cfg` branches inside upstream crates stay as upstream has them.
+  docs in this tree; platform `cfg` branches inside the inherited crates stay as they are.
 - **The assistant acts only through engine commands** (`Session::execute`), one undoable history
   group per turn. It never touches the model directly.
 - **Keys live in the MaluOS vault** (`/run/maluos/vault.sock`) or an env var; never in settings

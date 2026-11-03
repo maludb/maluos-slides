@@ -175,11 +175,15 @@ upstream issue, PR, release and file links (`storytold/deckcraft#123`, `/issues/
 | 4.5 | Pictures from the office's image agent when one is configured (MaluOS Phase 13 delegation envelope); nothing fetched from the public web by default. Done when: the desk's enrolment and token are read as the platform defines them (file + vault or env, never a settings file); an image agent is chosen by capability over the office's agents directory and asked through the task protocol; an `office_picture` tool in the shared table inserts the artifact with `insert.picture` on the slide asked for; artifact URLs outside the office are refused; the model is told to look nowhere else; tests against a mock office, a mock vault socket and the mock model; a live run on the desk (screenshot). **Done 2026-11-03**; the envelope is adopted when the platform ships it (ask 7) |
 | 4.6 | Memory across sessions: per-deck notes stored in the `.deckcraft` package (`presentation.json` extension field) or a PPTX custom XML part, nothing outside the file. Done when: the notes live in one presentation add-in tag that both formats already round-trip (no format change); an upstream-shaped `document.tags` engine command is the only write path; `remember` / `forget` / `recall` tools in the shared table; the context shows the notes in every later session; the pane lists them with Forget; tests for the tag round trip through PPTX and `.deckcraft`, the tools, the next turn's prompt, the pane; a live run. **Done 2026-11-03** |
 
-### Phase 5: parity through upstream
+### Phase 5: independent evolution (was: parity through upstream)
 
-Track upstream's beta gates (real-deck PPTX corpus, round-trip losses, EMF/SVG, printing,
-localization) by merging upstream weekly; contribute our fixes upstream. Our MaluOS-only trim
-(2.3) must never touch upstream crates, so these merges stay cheap.
+One sync was done (2026-11-03, upstream `aa13eeb4`, measured in rename.md). Then the owner
+decided (D12) to cut the link: no upstream remote, no vendor branch, no merges, no pull
+requests to storytold/deckcraft. The inherited roadmap (ROADMAP.md, `docs/target-app-parity.md`,
+`docs/gaps.md`) is ours to pursue or prune; parity work is planned here as steps like any other.
+Remaining dependencies on storytold's other repositories (craft-fonts, craft-libs, their egui
+fork, pinned by revision in Cargo.lock) keep building as pinned; vendoring them is a later
+decision if they move or vanish.
 
 ## Repository conventions
 
@@ -208,8 +212,9 @@ proceeds with unless the owner says otherwise.
 | D4 | Web build: keep `cargo xtask wasm` green, do not ship a web app until Malu123's web package (its step 1.6) exists; then reuse that packaging | recommended | `packaging/web` stays, `release.yml` skips it for now |
 | D5 | Fonts: keep craft-fonts embedded for Phase 2 (binaries +41 MB) so decks render the same everywhere; reconsider when `maluos-desktop` ships the Office-metric fonts | recommended | step 2.8 |
 | D6 | One shared `maluos-llm` crate for Malu123 and Slides, in its own repo (`maludb/maluos-llm`), consumed as a git dependency | recommended | Malu123's planned `malu123-llm` becomes it; avoids two LLM clients |
-| D7 | Upstream sync weekly through the vendor branch | recommended | step 2.9 measures the real cost |
+| D7 | Upstream sync weekly through the vendor branch | recommended; **retired by D12** | step 2.9 measured the one sync that was done |
 | D8 | Where the MaluOS deb lives: vendored prebuilt deb in the maluos repo (like maludb-core) rather than a `packages/` source build | recommended | step 2.6; a Rust build inside `build-packages.sh` would need the toolchain and ~6 min per release |
 | D9 | **MaluOS Slides is an AI harness for real presentations**: decks are built from native shapes, text, tables and charts and saved as editable `.pptx`, never as one rendered image per slide; the tool is the centre and every function is callable from both an API and MCP | **owner, 2026-11-02** | Phase 3 keeps the command catalog as the single source of truth for MCP and the assistant (step 3.3); add a network API over the same table (HTTP/JSON, the control channel's methods) as a Phase 3 step; the Phase 4 features produce native slide content, not pictures |
 | D10 | **LLM providers: Anthropic and OpenAI first, then Ollama** (local models through its OpenAI-compatible endpoint); the MaluOS gateway and local agents stay on the `LlmClient` trait as further backends | **owner, 2026-11-02** | step 3.1 implements the Anthropic Messages API and the OpenAI-compatible backend first (the latter also covers Ollama and the gateway when it speaks that protocol); keys from the vault or `MALUOS_SLIDES_<PROVIDER>_API_KEY` |
 | D11 | **The assistant lives in a sidebar pane** like the Selection Pane, with a model picker and a mode selector; the selection is the target of an edit | **owner, 2026-11-02** | step 3.6 builds it as `view.pane {pane: "assistant"}`; the pane reads engine state and acts only through commands (thin UI) |
+| D12 | **No link back to storytold/deckcraft**: no pull requests upstream, no upstream remote, no vendor branch, no further merges; MaluOS Slides evolves on its own. DeckCraft stays credited (licences, NOTICE, About, README) | **owner, 2026-11-03** | Phase 5 rewritten; the "keep upstream mergeable" rule replaced by "keep the layering" (CLAUDE.md, harness-design H1); the two patches prepared for upstream discarded |

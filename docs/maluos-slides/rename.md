@@ -53,7 +53,10 @@ still migrates from.
 - `upstream-renamed`: `upstream/main` plus the script plus one commit that ran it. Nothing else.
 - `main`: branches from `upstream-renamed` and carries all MaluOS Slides work.
 
-## Syncing upstream
+## Syncing upstream (retired 2026-11-03, owner decision D12)
+
+> Kept as history. There is no `upstream` remote and no `upstream-renamed` branch any more; the
+> script still documents the name mapping.
 
 ```sh
 git fetch upstream

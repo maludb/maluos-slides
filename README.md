@@ -24,8 +24,8 @@
 MaluOS Slides is a fork of [DeckCraft](https://github.com/storytold/deckcraft), the open-source,
 clean-room presentation app by the ArtCraft team. It keeps DeckCraft's engine, renderer, PPTX
 support and agent surface, and adds the MaluOS fit: a MaluOS package, the MaluOS desktop, and, step
-by step, an LLM assistant that works through the MaluOS gateway. Upstream is tracked as the
-`upstream` remote and merged regularly; the plan is in
+by step, an LLM assistant that works through the MaluOS gateway. Since 2026-11-03 it is
+developed independently (no upstream remote or merges); the plan is in
 [`docs/maluos-slides/plan.md`](docs/maluos-slides/plan.md) and progress in
 [`docs/maluos-slides/status.md`](docs/maluos-slides/status.md).
 
@@ -139,9 +139,9 @@ the MCP server in [`docs/mcp.md`](docs/mcp.md).
 ## Roadmap
 
 MaluOS Slides work is planned in [`docs/maluos-slides/plan.md`](docs/maluos-slides/plan.md).
-Feature parity with PowerPoint is upstream's work, tracked in [ROADMAP.md](ROADMAP.md),
-[`docs/target-app-parity.md`](docs/target-app-parity.md) and [`docs/gaps.md`](docs/gaps.md); we
-merge it rather than redo it, and send fixes upstream.
+Feature parity with PowerPoint is tracked in [ROADMAP.md](ROADMAP.md),
+[`docs/target-app-parity.md`](docs/target-app-parity.md) and [`docs/gaps.md`](docs/gaps.md),
+inherited from DeckCraft at the point the fork became independent (2026-11-03).
 
 ## License and credits
 
