@@ -853,7 +853,8 @@ fn a_second_window_keeps_the_canvas_owner_and_closing_the_last_document_tears_it
     h.state_mut().run("view.newWindow", json!({"on": false})).unwrap();
     h.run_steps(1);
 
-    h.state_mut().run("file.close", json!({})).unwrap();
+    // `discard`: the edited presentation would otherwise get the Save prompt instead of closing.
+    h.state_mut().run("file.close", json!({"discard": true})).unwrap();
     h.run_steps(1);
     assert!(h.state().session.active().is_none(), "the last presentation closed");
     assert_eq!(h.state().ime_viewport, None, "its viewport's IME state is released");
@@ -1037,7 +1038,8 @@ fn closing_the_last_document_clears_a_pending_preedit_terminal() {
     clear_pending_preedit(&mut h);
     assert!(h.state().ime_terminal_pending.is_some());
 
-    h.state_mut().run("file.close", json!({})).unwrap();
+    // `discard`: the edited presentation would otherwise get the Save prompt instead of closing.
+    h.state_mut().run("file.close", json!({"discard": true})).unwrap();
     assert!(h.state().session.active().is_none(), "the last presentation closed");
     // An interruption observed after the document disappeared has no destination at all. It must
     // stay distinct from "not interrupted yet", which would compare against the retired origin
@@ -1928,7 +1930,8 @@ fn close_new_then_edit_before_a_pass_keeps_the_old_terminal_fence_until_exact_re
     // Replace the active document and enter its first editor without an intervening pass
     // observing `None`. Blindly clearing on the uid change would let the old platform suffix
     // land in the new document, so the old terminal must stay bound to its old owner.
-    h.state_mut().run("file.close", json!({})).unwrap();
+    // `discard`: the edited presentation would otherwise get the Save prompt instead of closing.
+    h.state_mut().run("file.close", json!({"discard": true})).unwrap();
     h.state_mut().run("file.new", json!({})).unwrap();
     let new_uid = h.state().session.active().unwrap().uid;
     assert_ne!(old_uid, new_uid);
