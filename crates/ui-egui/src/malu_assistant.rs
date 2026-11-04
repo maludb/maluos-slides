@@ -786,7 +786,11 @@ fn index_in_background(app: &mut SlideApp) {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn index_in_background(_app: &mut SlideApp) {}
+fn index_in_background(app: &mut SlideApp) {
+    // No files on the web: nothing to index.
+    app.malu.indexed = true;
+    let _ = app.malu.indexed;
+}
 
 /// What the assistant remembers about this deck (step 4.6), read from the deck's memory tag;
 /// Forget runs `document.tags` through the engine like the `forget` tool does.
