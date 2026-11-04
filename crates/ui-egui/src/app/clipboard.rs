@@ -40,9 +40,9 @@ impl SlideApp {
         let html = self.services.clipboard_html.as_mut().and_then(|f| f()).filter(|h| !h.is_empty());
         let img = if text.is_empty() && !image_already_pasted { self.services.clipboard_image.as_mut().and_then(|f| f()) } else { None };
         let r = match img {
-            Some(png) => self
-                .session
-                .execute("insert.picture", &json!({"name": "Pasted image.png", "data": maluos_slides_engine::cmd::base64_encode(&png)})),
+            Some(png) => {
+                self.session.execute("insert.picture", &json!({"name": "Pasted image.png", "data": maluos_slides_engine::cmd::base64_encode(&png)}))
+            }
             None => {
                 let mut params = json!({"text": text});
                 if let Some(h) = html {
