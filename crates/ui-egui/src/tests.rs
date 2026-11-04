@@ -2406,3 +2406,155 @@ fn comments_pane_keeps_its_width_and_resizes() {
     let wide = drag(&mut h, -150.0);
     assert!(wide > narrow + 140.0, "dragging left widens the pane: {narrow} -> {wide}");
 }
+
+/// `file.close` on an edited presentation asks first, whichever way it arrives (#60): run
+/// directly (the palette, the assistant), through the control channel, or as Ctrl+W. Nothing is
+/// closed until Don't Save or a successful Save; `{"discard": true}` closes without asking.
+#[test]
+fn file_close_asks_before_discarding_an_edited_presentation() {
+    let mut app = SlideApp::new(Session::with_new(), Services::default());
+    app.session.execute("shape.insert", &json!({"preset": "rect", "rect": [80.0, 80.0, 100.0, 60.0]})).unwrap();
+    assert!(app.session.active().unwrap().is_dirty());
+
+    let v = app.run("file.close", json!({})).unwrap();
+    assert_eq!(v["prompted"], true);
+    assert_eq!(app.dialog.as_ref().map(|d| d.id.as_str()), Some("close"), "the prompt is up");
+    assert!(app.session.active().is_some(), "still open");
+    app.dialog = None;
+
+    let ctx = egui::Context::default();
+    let (req, _rx) = control::ControlRequest::new("engine.execute", json!({"command": "file.close", "params": {}}));
+    let control::Outcome::Done(answer) = control::handle(&mut app, &ctx, &req) else { panic!() };
+    assert_eq!(answer["ok"], true, "{answer}");
+    assert_eq!(answer["result"]["prompted"], true, "{answer}");
+    assert_eq!(app.dialog.as_ref().map(|d| d.id.as_str()), Some("close"), "the control channel gets the prompt too");
+    assert!(app.session.active().is_some(), "still open");
+    app.dialog = None;
+
+    app.run("file.close", json!({"discard": true})).unwrap();
+    assert!(app.dialog.is_none());
+    assert!(app.session.active().is_none(), "discard closes without asking");
+
+    // A presentation without changes closes at once.
+    let mut app = SlideApp::new(Session::with_new(), Services::default());
+    app.run("file.close", json!({})).unwrap();
+    assert!(app.dialog.is_none());
+    assert!(app.session.active().is_none());
+}
+
+/// The close prompt in the window: Ctrl+W on an edited presentation shows it; Cancel keeps the
+/// presentation, Save writes its file and closes, Don't Save closes without writing.
+#[test]
+fn ctrl_w_prompts_and_save_cancel_dont_save_do_what_they_say() {
+    let dir = std::env::temp_dir().join(format!("maluos-slides-close-prompt-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("edited.deckcraft");
+    let path_str = path.to_string_lossy().to_string();
+
+    let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_ui_state(
+        |ui, app: &mut SlideApp| {
+            app.logic(ui.ctx());
+            app.ui(ui);
+        },
+        SlideApp::new(Session::with_new(), Services::default()),
+    );
+    harness.run_steps(2);
+    // Give the presentation a file, then edit it.
+    harness.state_mut().session.execute("file.save", &json!({"path": path_str})).unwrap();
+    let saved_len = std::fs::metadata(&path).unwrap().len();
+    harness.state_mut().session.execute("shape.insert", &json!({"preset": "rect", "rect": [80.0, 80.0, 100.0, 60.0]})).unwrap();
+    harness.state_mut().session.execute("edit.select", &json!({"ids": []})).unwrap();
+    assert!(harness.state().session.active().unwrap().is_dirty());
+    harness.run_steps(1);
+
+    let click = |h: &mut egui_kittest::Harness<'_, SlideApp>, label: &str| {
+        h.query_all_by_role_and_label(egui::accesskit::Role::Button, label)
+            .next()
+            .unwrap_or_else(|| panic!("no {label} button in the close prompt"))
+            .click_accesskit();
+        h.run_steps(2);
+    };
+
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::W);
+    harness.run_steps(2);
+    assert_eq!(harness.state().dialog.as_ref().map(|d| d.id.as_str()), Some("close"), "Ctrl+W asks");
+    click(&mut harness, "Cancel");
+    assert!(harness.state().dialog.is_none());
+    assert!(harness.state().session.active().is_some(), "Cancel keeps the presentation");
+    assert!(harness.state().session.active().unwrap().is_dirty(), "and its changes");
+
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::W);
+    harness.run_steps(2);
+    assert!(harness.state().dialog.is_some());
+    click(&mut harness, "Save");
+    assert!(harness.state().dialog.is_none());
+    assert!(harness.state().session.active().is_none(), "Save closes once the file is written");
+    assert!(std::fs::metadata(&path).unwrap().len() > saved_len, "the edit reached the file");
+
+    // Don't Save: a new, edited presentation is closed and nothing is written.
+    harness.state_mut().session.execute("file.new", &json!({})).unwrap();
+    harness.state_mut().session.execute("shape.insert", &json!({"preset": "rect", "rect": [80.0, 80.0, 100.0, 60.0]})).unwrap();
+    harness.state_mut().session.execute("edit.select", &json!({"ids": []})).unwrap();
+    harness.run_steps(2);
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::W);
+    harness.run_steps(2);
+    assert_eq!(harness.state().dialog.as_ref().map(|d| d.id.as_str()), Some("close"));
+    click(&mut harness, "Don't Save");
+    assert!(harness.state().dialog.is_none());
+    assert!(harness.state().session.active().is_none(), "Don't Save closes");
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1, "nothing else was written");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The ribbon's Paste (and `edit.paste {}` from the control channel) takes the system clipboard
+/// like Ctrl+V: a screenshot becomes a picture, text is pasted as text, and our own marker means
+/// the objects the session copied.
+#[test]
+fn ribbon_paste_reads_the_system_clipboard_like_ctrl_v() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    let session = Session::with_new();
+    let png = {
+        let d = session.active().unwrap();
+        maluos_slides_engine::cmd::file::render_png(&d.doc, 0, 0.1, false).0
+    };
+    let text: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+    let t = Rc::clone(&text);
+    let t2 = Rc::clone(&text);
+    // A clipboard holds one thing at a time: the picture until text (or our marker) replaces it.
+    let services = Services {
+        clipboard_text: Some(Box::new(move || t.borrow().clone())),
+        clipboard_image: Some(Box::new(move || t2.borrow().is_none().then(|| png.clone()))),
+        ..Default::default()
+    };
+    let mut app = SlideApp::new(session, services);
+    let count = |app: &SlideApp, pictures: bool| {
+        let d = app.session.active().unwrap();
+        d.doc.slides[0].shapes.iter().filter(|s| matches!(s.kind, maluos_slides_model::ShapeKind::Picture { .. }) == pictures).count()
+    };
+    let shapes = count(&app, false);
+
+    // Only a picture on the clipboard: it is inserted.
+    app.run("edit.paste", json!({})).unwrap();
+    assert_eq!(count(&app, true), 1, "a screenshot pastes as a picture");
+
+    // Text on the clipboard wins over the picture, as with Ctrl+V.
+    *text.borrow_mut() = Some("hello".into());
+    app.run("edit.paste", json!({})).unwrap();
+    assert_eq!(count(&app, true), 1, "no second picture");
+
+    // Our own marker: the objects the session copied.
+    let id = app.session.execute("shape.insert", &json!({"preset": "rect", "rect": [80.0, 80.0, 100.0, 60.0]})).unwrap()["id"].clone();
+    app.session.execute("edit.select", &json!({"ids": [id]})).unwrap();
+    app.run("edit.copy", json!({})).unwrap();
+    *text.borrow_mut() = Some(crate::app::clipboard::OBJECTS_MARKER.into());
+    let before = count(&app, false);
+    app.run("edit.paste", json!({})).unwrap();
+    assert_eq!(count(&app, false), before + 1, "the copied shape is pasted");
+    assert_eq!(count(&app, true), 1);
+    assert!(count(&app, false) > shapes);
+
+    // Explicit content goes to the engine untouched.
+    app.run("edit.paste", json!({"text": "typed"})).unwrap();
+    assert_eq!(count(&app, true), 1);
+}

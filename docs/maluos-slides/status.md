@@ -171,6 +171,12 @@ duplicated roadmap header folded) and eight steps were picked into Phase 6 of th
 no data loss, SVG pictures, printing, presenter view on the second display, vector PDF, media
 options, font faces, a real-deck corpus.
 
+## Phase 6: parity for MaluOS
+
+| Step | State | Notes |
+|---|---|---|
+| 6.1 no data loss | in progress (the Close prompt done 2026-11-04) | `file.close` on an edited presentation asks first (Save, Don't Save, Cancel) whichever way it arrives: Ctrl+W, the File tab, the palette, the assistant or the control channel (#60); the check sits in `SlideApp::run`, so every route gets it; `{"discard": true}` closes without asking (the dialog's Don't Save sends it, and so can automation that means it). Tests: `file_close_asks_before_discarding_an_edited_presentation` (direct, through the control channel, discard) and `ctrl_w_prompts_and_save_cancel_dont_save_do_what_they_say` (the window: Cancel keeps the deck, Save writes the file and closes, Don't Save closes without writing). Still open in this step: the soak budgets and the paste re-check on Wayland and X11 |
+
 ## Phase 4: slides-specific depth
 
 | Step | State | Notes |

@@ -165,14 +165,11 @@ impl SlideApp {
     }
 
     /// File › Close and Ctrl+W: closes the active presentation, asking first when it has unsaved
-    /// changes (Save, Don't Save, Cancel), as PowerPoint does.
+    /// changes (Save, Don't Save, Cancel), as PowerPoint does. The asking lives in
+    /// [`SlideApp::run`], so every route to `file.close` gets it.
     pub fn close_presentation(&mut self) {
-        match self.session.active() {
-            None => {}
-            Some(d) if d.is_dirty() => self.dialog = Some(dialogs::Dialog::new("close")),
-            Some(_) => {
-                let _ = self.run("file.close", json!({}));
-            }
+        if self.session.active().is_some() {
+            let _ = self.run("file.close", json!({}));
         }
     }
 

@@ -57,7 +57,7 @@ pub fn specs() -> Vec<CommandSpec> {
             has_doc,
             color_at
         ),
-        cmd!(noundo "file.close", "Close", ["File"], Some("Cmd+W"), "{}", has_doc, close),
+        cmd!(noundo "file.close", "Close", ["File"], Some("Cmd+W"), "{discard?: bool (the app asks to save an edited presentation unless true)}", has_doc, close),
         cmd!(
             "file.properties",
             "Properties",

@@ -20,7 +20,22 @@ impl SlideApp {
     /// Run a command by id (UI commands here, everything else in the engine). Errors show in the
     /// status bar and are returned.
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
-        let r = if UI_COMMANDS.iter().any(|c| c.0 == id) {
+        // Closing an edited presentation asks first (Save, Don't Save, Cancel), whichever way
+        // `file.close` arrives: Ctrl+W, the menus, the palette, the assistant or the control
+        // channel (#60). `{"discard": true}` closes without asking; the dialog's Don't Save sends
+        // it, and so can automation that means it.
+        if id == "file.close"
+            && !params.get("discard").and_then(Value::as_bool).unwrap_or(false)
+            && self.session.active().is_some_and(|d| d.is_dirty())
+        {
+            self.dialog = Some(dialogs::Dialog::new("close"));
+            return Ok(json!({"prompted": true}));
+        }
+        // Paste without explicit content takes what the system clipboard holds, as Ctrl+V does:
+        // a screenshot becomes a picture, text from another app keeps its formatting (#53).
+        let r = if id == "edit.paste" && params.as_object().is_none_or(|o| o.is_empty()) {
+            self.paste_from_system()
+        } else if UI_COMMANDS.iter().any(|c| c.0 == id) {
             self.run_ui(id, &params)
         } else {
             self.session.execute(id, &params).map_err(|e| e.to_string())
