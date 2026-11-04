@@ -48,6 +48,14 @@ impl SlideApp {
                     self.pending_copy = Some(t.to_string());
                 }
             }
+            // A presentation opened or saved by path from anywhere (the palette, the control
+            // channel, the assistant) leads the recent list like one opened or saved from the
+            // File tab (`file.save` without a path keeps the file it has, already listed).
+            Ok(_) if matches!(id, "file.open" | "file.save" | "file.saveAs") => {
+                if let Some(path) = params.get("path").and_then(Value::as_str) {
+                    self.note_recent(path);
+                }
+            }
             Ok(_) => {}
             Err(e) => self.set_status(e.clone()),
         }

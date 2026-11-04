@@ -192,6 +192,48 @@ levels kept), notes through `slide.notes`, a chart from a table through `inspect
 `arrange.distribute`, `shape.move` / `shape.resize` and `format.autofit`, checked with
 `render_slide`. The pane offers them as one-click quick actions above the box ("This slide:").
 
+## The start screen is the chat (step 4.7)
+
+With nothing open the Backstage Home page (the start screen) draws the chat under the mark,
+above New, Templates and Recent: `malu_assistant::home` reuses the pane's state, transcript,
+settings row and input box, so a conversation begun there continues in the pane once a deck is
+open. Four chips start the usual requests ("Make a deck about…", "Open my latest deck", "Find
+decks about…", "What decks do I have?"). `assist.ask {text, send}` and `assist.plan` work on
+the start screen as in the pane; the scripted send and verdict are handled in `poll`, which the
+frame loop runs whether or not a pane is drawn.
+
+What changes with nothing open:
+
+- The system text says so under `# No presentation is open (the start screen)` and lists the
+  recent presentations by name and path (`Host::recent_presentations`, the app's recent list),
+  so "open my latest deck" is one `open_presentation` call without a search.
+- `build_deck` starts a new presentation when none is open (`created: true` in its result) and
+  adds to the open one otherwise; the instructions tell the model to build a described deck in
+  one call and to pick a theme that fits.
+- The policy (`Policy::classify_in` with `has_doc`): `file.new`, `file.open` and the other
+  `OPENING_COMMANDS`, the tools on them and `build_deck {replace}` are plain changes when
+  nothing is open (there is nothing to lose) and destructive as before once a deck is open.
+  Confirm mode still shows them as a plan.
+- When the turn opens or makes a presentation, the app's Backstage sync closes the start
+  screen (the documents changed) and the pane opens with the transcript
+  (`follow_into_editor`), so the rest of the turn stays in view beside the deck.
+
+`library.rs` finds decks by content. `Library::discover(recent)` takes its roots from
+`MALUOS_SLIDES_LIBRARY` (folders separated by `:`), else the XDG documents folder and
+`~/Desktop`, plus the folders of the recent files; `refresh(budget)` walks them (five levels,
+hidden folders and symlinks skipped, at most 2000 files, `.pptx`/`.ppsx`/`.potx`/`.deckcraft`),
+reads each new or changed file with the engine's `read_presentation_file` and keeps its title,
+slide titles and text (body, table cells, notes; 32 KiB) in `$XDG_CACHE_HOME/maluos-slides/
+library.json`, keyed on path, mtime and size; unreadable files are remembered as errors so
+they are not parsed again until they change. `search(query, limit)` wants every word in the
+name, title, slide titles or text (case-insensitive), scores name and title hits five times a
+text hit, and returns a snippet: the text line with the first match. The tool
+`find_presentations {query?, limit?}` (read-only, in the shared table, so the HTTP API and MCP
+have it too) gets the recent list from the backend (`app.recent`, answered by the app host and
+the control channel; a headless backend has none), refreshes with a four-second budget and
+reports `pending` files for the next call; the start screen refreshes the whole index once
+per run on a background thread. `Library::set_override` is the test seam (H29).
+
 ## The presenter assistant (step 4.4)
 
 `timing.rs` estimates how long a deck takes: for each slide the words on it (text, tables,

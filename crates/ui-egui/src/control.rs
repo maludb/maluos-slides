@@ -14,6 +14,7 @@
 //! - `ui.resize {width, height}`, `ui.focus`
 //! - `show.start {from?}`, `show.key {key}`, `show.end`
 //! - `app.open {path}` / `app.save {path?}` / `app.export {path, …}` / `app.quit`
+//! - `app.recent` → `{recent}`: the recent presentations, newest first (MaluOS)
 
 use std::sync::mpsc::Sender;
 
@@ -110,6 +111,8 @@ pub fn inspect(app: &SlideApp, ctx: &egui::Context) -> Value {
         "documents": app.session.documents().iter().map(|d| json!({"title": d.title(), "dirty": d.is_dirty(), "path": d.path})).collect::<Vec<_>>(),
         "status": app.status.as_ref().map(|s| s.0.clone()),
         "perf": {"frameMs": app.perf.frame_ms, "renderMs": app.perf.render_ms, "fps": app.perf.fps},
+        // MaluOS: the assistant's state, so a script can wait for a plan or the end of a turn.
+        "assistant": crate::malu_assistant::inspect(&app.malu),
     })
 }
 
@@ -363,6 +366,8 @@ pub fn handle(app: &mut SlideApp, ctx: &egui::Context, req: &ControlRequest) -> 
             wrap(app.open_path(path).map(|_| Value::Null))
         }
         "app.save" => wrap(app.run("file.save", p.clone())),
+        // MaluOS: the recent list, for the assistant's find_presentations on a remote app.
+        "app.recent" => ok(json!({"recent": app.ui.recent})),
         "app.export" => wrap(app.run("file.export", p.clone())),
         "app.quit" => {
             // Automation quits without asking (`{"save": true}` saves first).

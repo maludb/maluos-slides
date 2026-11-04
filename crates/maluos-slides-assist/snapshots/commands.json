@@ -321,10 +321,15 @@
     "id": "file.close",
     "journal": true,
     "label": "Close",
-    "params": "{}",
+    "params": "{discard?: bool (the app asks to save an edited presentation unless true)}",
     "schema": {
       "additionalProperties": false,
-      "properties": {},
+      "properties": {
+        "discard": {
+          "description": "bool (the app asks to save an edited presentation unless true)",
+          "type": "boolean"
+        }
+      },
       "type": "object"
     },
     "undoable": false

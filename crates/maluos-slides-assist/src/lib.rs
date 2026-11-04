@@ -24,6 +24,8 @@
 //!   `office_picture` tool: a picture from the office's image agent, nothing from the web.
 //! - [`memory`] (step 4.6): what the assistant remembers about a deck, stored in the deck as one
 //!   add-in tag through `document.tags`; the `remember`, `forget` and `recall` tools.
+//! - [`library`] (step 4.7): the user's presentations on disk, indexed by name and content, and
+//!   the `find_presentations` tool, so the start screen's chat can open and find decks.
 //! - [`run_tool`]: one tool call executed through an MCP [`Backend`] (the headless session or a
 //!   running app), the result shaped as the tool-result block the next request carries.
 //!
@@ -36,6 +38,7 @@ pub mod agent;
 pub mod catalog;
 pub mod context;
 pub mod exec;
+pub mod library;
 pub mod mcp_ext;
 pub mod memory;
 #[cfg(all(feature = "native", unix))]

@@ -18,6 +18,8 @@ pub const OFFICE_PICTURE: &str = "office_picture";
 pub const REMEMBER: &str = "remember";
 pub const FORGET: &str = "forget";
 pub const RECALL: &str = "recall";
+/// The fork's tool: the user's presentations on disk, by name and content (step 4.7).
+pub const FIND_PRESENTATIONS: &str = "find_presentations";
 
 /// The fork's tools, in the MCP definition shape, appended to upstream's table everywhere the
 /// table is served (the assistant, the HTTP API, the MCP server through `mcp_ext`).
@@ -93,12 +95,32 @@ pub fn extra_definitions() -> Vec<Value> {
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
             "annotations": {"title": "Recall", "readOnlyHint": true, "openWorldHint": false}
         }),
+        serde_json::json!({
+            "name": FIND_PRESENTATIONS,
+            "title": "Find presentations",
+            "description": "The user's presentations on disk (the recent ones and the library folders: Documents and Desktop, or MALUOS_SLIDES_LIBRARY), searched by file name, title, slide titles and text including notes. Without a query it lists the recent ones first, newest first. Each result has the path open_presentation takes, the title, the slide count, the date and a matching line. Use it to open a deck by what it is about; when several match, show them and ask which.",
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "query": {"type": "string", "description": "Words that must all occur (case does not matter); empty lists everything"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Most results (default 10)"}
+                }
+            },
+            "annotations": {"title": "Find presentations", "readOnlyHint": true, "openWorldHint": false}
+        }),
     ]
 }
 
 /// Whether `name` is one of the fork's tools.
 pub fn is_extra(name: &str) -> bool {
-    name == BUILD_DECK || name == DECK_TIMING || name == OFFICE_PICTURE || name == REMEMBER || name == FORGET || name == RECALL
+    name == BUILD_DECK
+        || name == DECK_TIMING
+        || name == OFFICE_PICTURE
+        || name == REMEMBER
+        || name == FORGET
+        || name == RECALL
+        || name == FIND_PRESENTATIONS
 }
 
 /// The tools a model may call. Built from [`maluos_slides_mcp::tool_definitions`], so the MCP

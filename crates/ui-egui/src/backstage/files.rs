@@ -213,6 +213,11 @@ pub(super) fn home(app: &mut SlideApp, ui: &mut Ui, bs: &mut Backstage, out: &mu
         ui.label(RichText::new("MaluOS Slides").font(theme::bold(24.0)).color(t.text));
     });
     ui.add_space(18.0);
+    // MaluOS: the chat is where a presentation starts (step 4.7): make one, open one, find one.
+    if app.session.active().is_none() {
+        crate::malu_assistant::home(app, ui);
+        ui.add_space(22.0);
+    }
     ui.horizontal(|ui| {
         ui.label(RichText::new("New").font(theme::bold(16.0)).color(t.text));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

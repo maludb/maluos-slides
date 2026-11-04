@@ -15,8 +15,11 @@ maluos-slides-cli ask "REQUEST" [--in FILE | --sample] [--out FILE]
                       [--json] [--quiet] [--max-rounds N] [--stdin]
 ```
 
-Opens FILE (`.deckcraft` or `.pptx`), the sample deck, or a new presentation; runs one turn of
-the same assistant the app's pane uses (`maluos-slides-assist`); saves to `--out`. The answer
+Opens FILE (`.deckcraft` or `.pptx`), the sample deck, or nothing (then the turn starts on the
+start screen's footing: "make a deck about…" builds one, step 4.7); runs one turn of the same
+assistant the app's pane uses (`maluos-slides-assist`); saves to `--out`. `find_presentations`
+searches the library folders headless too (`MALUOS_SLIDES_LIBRARY`, else Documents and Desktop);
+only the app contributes a recent list. The answer
 streams to stdout, tool calls and plans to stderr, so `ask … > answer.txt` keeps the answer and
 the terminal shows the work.
 

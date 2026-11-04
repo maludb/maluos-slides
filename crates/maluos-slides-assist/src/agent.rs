@@ -9,6 +9,7 @@
 //! The conversation (`messages`) persists across turns; the deck outline does not pile up in it
 //! because it lives in the system text, rebuilt each turn.
 
+use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -28,6 +29,11 @@ use crate::tools::ToolTable;
 pub trait Host: Backend {
     fn session(&self) -> &Session;
     fn session_mut(&mut self) -> &mut Session;
+    /// Recently opened presentations, newest first, as paths: shown to the model when nothing is
+    /// open so it can open one by name. A headless host has none.
+    fn recent_presentations(&self) -> Vec<String> {
+        vec![]
+    }
 }
 
 impl Host for Headless {
@@ -259,6 +265,12 @@ Slide help, the usual requests:
 - A picture: office_picture {prompt, slide?} asks the office's image agent for one and inserts it on the slide (the current one unless told); write the prompt as one or two sentences naming the subject, the style and the mood so it fits the slide and the deck's theme, and render_slide afterwards to check the placement. It works only when this desk is enrolled with an office that publishes an image agent: when the tool says there is none, tell the user so and look for pictures nowhere else (never the web, never a placeholder shape pretending to be one).
 - Memory: when the user states something lasting about this deck (who it is for, the tone, a time limit, what must not change, a decision), call remember with one sentence; it is kept in the presentation file and shown to you under 'Remembered about this deck' in every later session, so act on those notes without being told again, and call forget with the index when the user withdraws one. Never remember secrets, keys or anything that is not about this deck.
 - Fix a layout: the outline gives each shape's box [x, y, w, h] on a 960×540 slide; align edges and spacing with shape.move / shape.resize through run_command (list_commands with the filter align shows arrange.align and arrange.distribute), use format.autofit {mode: shrink} for text that overflows, and render_slide to confirm.
+
+The start screen (no presentation open):
+- To make a deck, call build_deck once with the whole outline (it starts a new presentation when none is open; pick a theme that fits the subject, Harbor or Slate for business, Meadow or Coral Reef for lighter subjects, Nocturne or Ember for a dark room) and then say in one line what it covers. Ask one question first only when the request gives no subject at all.
+- To open a deck, use the recent list below when the user names one of them (open_presentation with its path); otherwise find_presentations {query} with the words the user gave (it searches names, titles and text, notes included). One match: open it. Several: list them with their dates in a line each and ask which. None: say so; never guess a path.
+- \"My latest deck\" or \"the one I worked on\" is the first recent presentation.
+- A question about what decks exist or what a deck says is answered from find_presentations without opening anything.
 - Make the smallest change that does what was asked; keep the deck's theme, layouts and style unless asked otherwise.
 - Answer briefly: what changed, on which slides. Do not describe tool mechanics. If something cannot be done, say so.";
 
@@ -321,8 +333,23 @@ impl Assistant {
             s.push_str("\n\n# Command catalog (run_command ids with their params)\n");
             s.push_str(&catalog.prompt_text("", self.limits.catalog_bytes));
         }
-        s.push_str("\n\n# The open presentation (as it is now, your edits so far included)\n");
-        s.push_str(&self.cache.get(host.session(), &self.budget).text);
+        if host.session().active().is_some() {
+            s.push_str("\n\n# The open presentation (as it is now, your edits so far included)\n");
+            s.push_str(&self.cache.get(host.session(), &self.budget).text);
+        } else {
+            s.push_str("\n\n# No presentation is open (the start screen)\n");
+            s.push_str(&self.cache.get(host.session(), &self.budget).text);
+            let recent = host.recent_presentations();
+            if recent.is_empty() {
+                s.push_str("The recent list is empty; find_presentations searches the library folders.\n");
+            } else {
+                s.push_str("Recent presentations, newest first (open_presentation takes the path):\n");
+                for (i, p) in recent.iter().take(12).enumerate() {
+                    let name = std::path::Path::new(p).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                    let _ = writeln!(s, "{}. {name} — {p}", i + 1);
+                }
+            }
+        }
         s
     }
 
@@ -422,11 +449,13 @@ impl Assistant {
             }
             _ => {}
         }
-        // Classify every call first, so the user sees one plan per round.
+        // Classify every call first, so the user sees one plan per round. With nothing open,
+        // starting or opening a presentation destroys nothing.
+        let has_doc = host.session().active().is_some();
         let planned: Vec<(PlannedCall, Decision)> = uses
             .iter()
             .map(|(id, name, input)| {
-                let call = self.policy.classify(&turn.table, &turn.catalog, id, name, input);
+                let call = self.policy.classify_in(&turn.table, &turn.catalog, id, name, input, has_doc);
                 let decision = self.policy.decide(call.class);
                 (call, decision)
             })

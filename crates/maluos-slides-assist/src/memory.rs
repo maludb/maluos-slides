@@ -108,6 +108,11 @@ fn cut(s: &str, max: usize) -> String {
 /// Today as `YYYY-MM-DD` (UTC), without a calendar crate.
 pub fn today() -> String {
     let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    date_of(secs)
+}
+
+/// `YYYY-MM-DD` of a time in seconds since the epoch (UTC).
+pub fn date_of(secs: u64) -> String {
     let days = (secs / 86_400) as i64;
     // Howard Hinnant's civil-from-days.
     let z = days + 719_468;

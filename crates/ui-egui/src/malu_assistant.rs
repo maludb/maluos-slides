@@ -5,6 +5,11 @@
 //! back through a channel; every change to the deck happens on the UI thread through
 //! `SlideApp::run`, so it is an ordinary command with the app's own undo, status and repaint.
 //! A plan the mode wants approved is shown in the pane with Approve and Decline buttons.
+//!
+//! With nothing open the same conversation is drawn on the start screen (step 4.7, [`home`]):
+//! the user describes a deck, asks for one by name or by what it says, and the turn runs on the
+//! same state; when it opens or creates a presentation the start screen gives way to the editor
+//! and the pane opens with the transcript, so the answer lands where the deck is.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -95,6 +100,11 @@ pub struct State {
     config_dirty: bool,
     /// Why the last send could not start (no key, no model).
     pub problem: Option<String>,
+    /// The running turn began on the start screen: when it opens or makes a presentation, the
+    /// pane opens so the rest of the turn stays in view.
+    started_without_doc: bool,
+    /// The library index was refreshed in the background once this run (the start screen).
+    indexed: bool,
 }
 
 impl Default for State {
@@ -118,6 +128,8 @@ impl Default for State {
             config_loaded: true,
             config_dirty: false,
             problem: None,
+            started_without_doc: false,
+            indexed: false,
         }
     }
 }
@@ -151,7 +163,8 @@ impl State {
         })
     }
 
-    fn set_mode(&mut self, mode: Mode) {
+    /// Changes the mode for the next turn (the settings row, a test).
+    pub fn set_mode(&mut self, mode: Mode) {
         if self.mode != mode {
             self.mode = mode;
             if let Some(a) = &mut self.assistant {
@@ -200,6 +213,23 @@ impl State {
         }
         self.assistant.as_mut().ok_or_else(|| "no assistant".to_string())
     }
+}
+
+/// The pane's state for `ui.inspect`: whether a turn runs, the plan waiting (its description),
+/// the transcript length and the last answer, so a script can wait for the right moment.
+pub fn inspect(state: &State) -> Value {
+    json!({
+        "busy": state.busy(),
+        "waitingForModel": state.waiting_for_model(),
+        "plan": state.pending_plan.as_ref().map(Plan::describe),
+        "entries": state.transcript.len(),
+        "lastAnswer": state.last_report().map(|r| r.answer.clone()),
+        "lastCalls": state.last_report().map(|r| r.tool_calls.iter().map(|c| c.name.clone()).collect::<Vec<_>>()),
+        "problem": state.problem,
+        "provider": state.provider.as_str(),
+        "model": state.model,
+        "mode": state.mode.as_str(),
+    })
 }
 
 // ---------- config ----------
@@ -261,6 +291,7 @@ impl Backend for AppHost<'_> {
             }
             "engine.commands" => Ok(serde_json::to_value(self.app.session.commands()).unwrap_or_default()),
             "document.inspect" => self.app.run("document.inspect", json!({})),
+            "app.recent" => Ok(json!({"recent": self.app.ui.recent})),
             "ui.render" | "app.renderSlide" => {
                 let d = self.app.session.active().ok_or("no presentation open")?;
                 let i = params.get("slide").and_then(Value::as_u64).map(|v| v as usize).unwrap_or(d.selection.slide);
@@ -343,6 +374,9 @@ impl Host for AppHost<'_> {
     fn session_mut(&mut self) -> &mut maluos_slides_engine::Session {
         &mut self.app.session
     }
+    fn recent_presentations(&self) -> Vec<String> {
+        self.app.ui.recent.clone()
+    }
 }
 
 // ---------- driving a turn ----------
@@ -353,15 +387,12 @@ pub fn send(app: &mut SlideApp, ctx: &egui::Context) {
     if text.is_empty() || app.malu.busy() {
         return;
     }
-    if app.session.active().is_none() {
-        app.malu.problem = Some("Open or create a presentation first.".into());
-        return;
-    }
     if let Err(e) = app.malu.assistant() {
         app.malu.problem = Some(e);
         return;
     }
     app.malu.problem = None;
+    app.malu.started_without_doc = app.session.active().is_none();
     app.malu.input.clear();
     app.malu.transcript.push(Entry::User(text.clone()));
     app.malu.transcript.push(Entry::Assistant { text: String::new(), thinking: String::new(), calls: vec![], report: None });
@@ -378,6 +409,16 @@ pub fn send(app: &mut SlideApp, ctx: &egui::Context) {
     app.malu.turn = Some(turn);
     apply_events(app, events);
     handle_step(app, ctx, step);
+    follow_into_editor(app);
+}
+
+/// A turn that began on the start screen opened or made a presentation: the start screen is
+/// gone (the app closes it when the documents change), so the pane opens with the transcript.
+fn follow_into_editor(app: &mut SlideApp) {
+    if app.malu.started_without_doc && app.session.active().is_some() {
+        app.malu.started_without_doc = false;
+        app.ui.pane = Some(PANE.into());
+    }
 }
 
 /// Stops the running turn: the model call is abandoned, a waiting plan is cancelled.
@@ -413,13 +454,27 @@ pub fn answer_plan(app: &mut SlideApp, ctx: &egui::Context, verdict: Verdict) {
     app.malu.turn = Some(turn);
     apply_events(app, events);
     handle_step(app, ctx, step);
+    follow_into_editor(app);
 }
 
 /// Called every frame: takes what the worker streamed and advances the turn when the model
-/// answered.
+/// answered; runs what a script asked for (`assist.ask {send}`, `assist.plan`), whether the
+/// pane, the start screen or neither is drawn.
 pub fn poll(app: &mut SlideApp, ctx: &egui::Context) {
+    if !app.malu.config_loaded {
+        load_config(&mut app.malu);
+    }
     if app.malu.config_dirty {
         save_config(&mut app.malu);
+    }
+    if app.malu.send_requested {
+        app.malu.send_requested = false;
+        send(app, ctx);
+    }
+    if let Some(v) = app.malu.verdict_requested.take()
+        && app.malu.pending_plan.is_some()
+    {
+        answer_plan(app, ctx, v);
     }
     let Some(worker) = app.malu.worker.as_ref() else { return };
     if worker.generation != app.malu.generation {
@@ -460,6 +515,7 @@ pub fn poll(app: &mut SlideApp, ctx: &egui::Context) {
     app.malu.turn = Some(turn);
     apply_events(app, events);
     handle_step(app, ctx, step);
+    follow_into_editor(app);
 }
 
 fn handle_step(app: &mut SlideApp, ctx: &egui::Context, step: Step) {
@@ -613,21 +669,9 @@ fn finish_entry(app: &mut SlideApp, report: TurnReport) {
 // ---------- the pane ----------
 
 pub fn show(app: &mut SlideApp, ui: &mut Ui) {
-    if !app.malu.config_loaded {
-        load_config(&mut app.malu);
-    }
     let ctx = ui.ctx().clone();
     let t = Tokens::get(&ctx);
     poll(app, &ctx);
-    if app.malu.send_requested {
-        app.malu.send_requested = false;
-        send(app, &ctx);
-    }
-    if let Some(v) = app.malu.verdict_requested.take()
-        && app.malu.pending_plan.is_some()
-    {
-        answer_plan(app, &ctx, v);
-    }
 
     settings_row(app, ui, &t);
     ui.add_space(4.0);
@@ -650,8 +694,99 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
     );
     ui.add_space(6.0);
     quick_actions(app, ui, &ctx, &t);
-    input_row(app, ui, &ctx, &t);
+    input_row(app, ui, &ctx, &t, "malu_input", "Ask Malu… (Enter sends, Shift+Enter for a new line)");
 }
+
+/// The start screen's requests as one click each (step 4.7): a fixed sentence is sent at once,
+/// an open-ended one fills the box for the user to finish.
+pub const START_ACTIONS: &[(&str, &str, bool)] = &[
+    ("Make a deck about…", "Make a short deck about ", false),
+    ("Open my latest deck", "Open the presentation I worked on most recently.", true),
+    ("Find decks about…", "Find my decks about ", false),
+    ("What decks do I have?", "List my presentations, newest first, with what each is about.", true),
+];
+
+/// The chat on the start screen (step 4.7): the same conversation as the pane, drawn where the
+/// user begins. Describe a deck and Malu builds it; name one and Malu opens it; say what it is
+/// about and Malu finds it among the recent and library decks.
+pub fn home(app: &mut SlideApp, ui: &mut Ui) {
+    let ctx = ui.ctx().clone();
+    let t = Tokens::get(&ctx);
+    poll(app, &ctx);
+    index_in_background(app);
+    ui.horizontal(|ui| {
+        let (r, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+        crate::icons::paint(ui.painter(), r, crate::icons::Icon::AskMalu, t.accent, false);
+        ui.label(RichText::new("Ask Malu").font(theme::bold(16.0)).color(t.text));
+    });
+    ui.add_space(4.0);
+    ui.horizontal_wrapped(|ui| {
+        settings_row(app, ui, &t);
+        let (ok, status) = app.malu.provider_status();
+        ui.label(RichText::new(format!("{} · {}", app.malu.provider.label(), status)).small().color(if ok { t.text_dim } else { crate::icons::RED }));
+    });
+    if let Some(p) = &app.malu.problem {
+        ui.label(RichText::new(p).small().color(crate::icons::RED));
+    }
+    ui.add_space(6.0);
+    let frame = egui::Frame::NONE
+        .fill(t.field_bg)
+        .stroke(egui::Stroke::new(1.0, t.border))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(egui::Margin::same(10));
+    frame.show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        input_row(app, ui, &ctx, &t, "malu_home_input", "Describe the deck you want, name one to open, or say what it is about… (Enter sends)");
+        if !app.malu.busy() {
+            ui.add_space(4.0);
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new("Try:").small().color(t.text_dim));
+                for (label, text, send_now) in START_ACTIONS {
+                    if ui.add(egui::Button::new(RichText::new(*label).small())).on_hover_text(*text).clicked() {
+                        app.malu.input = (*text).to_string();
+                        if *send_now {
+                            app.malu.send_requested = true;
+                        } else {
+                            app.malu.focus_input = true;
+                        }
+                        ctx.request_repaint();
+                    }
+                }
+            });
+        }
+    });
+    if !app.malu.transcript.is_empty() || app.malu.pending_plan.is_some() {
+        ui.add_space(8.0);
+        egui::ScrollArea::vertical().id_salt("malu_home_transcript").max_height(360.0).auto_shrink([false, true]).stick_to_bottom(true).show(
+            ui,
+            |ui| {
+                transcript(app, ui, &ctx, &t);
+            },
+        );
+    }
+}
+
+/// Brings the library index up to date once per run, on a thread, so the first "find my deck
+/// about…" answers from the cache. Nothing is read outside the library folders and the recent
+/// files; the index lives in the user's cache folder.
+#[cfg(not(target_arch = "wasm32"))]
+fn index_in_background(app: &mut SlideApp) {
+    if app.malu.indexed || app.malu.custom_client.is_some() {
+        return;
+    }
+    app.malu.indexed = true;
+    let recent = app.ui.recent.clone();
+    let _ = std::thread::Builder::new()
+        .name("malu-library".into())
+        .spawn(move || {
+            let r = maluos_slides_assist::library::Library::discover(&recent).refresh(std::time::Duration::from_secs(120));
+            log::info!("library index: {} files, {} parsed, {} pending", r.files, r.parsed, r.pending);
+        })
+        .map(|_| ());
+}
+
+#[cfg(target_arch = "wasm32")]
+fn index_in_background(_app: &mut SlideApp) {}
 
 /// What the assistant remembers about this deck (step 4.6), read from the deck's memory tag;
 /// Forget runs `document.tags` through the engine like the `forget` tool does.
@@ -768,6 +903,9 @@ fn settings_row(app: &mut SlideApp, ui: &mut Ui, _t: &Tokens) {
 
 fn transcript(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) {
     if app.malu.transcript.is_empty() {
+        if app.session.active().is_none() {
+            return;
+        }
         ui.label(
             RichText::new("Ask for a change to the open presentation, or a question about it. The selection is the target when you say \"this\".")
                 .color(t.text_dim),
@@ -892,8 +1030,8 @@ fn transcript(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) 
     }
 }
 
-fn input_row(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) {
-    let id = egui::Id::unique("malu_input");
+fn input_row(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens, id_salt: &str, hint: &str) {
+    let id = egui::Id::unique(id_salt);
     let busy = app.malu.busy();
     // Enter sends; Shift+Enter breaks the line. The key is taken before the box sees it.
     let had_focus = ctx.memory(|m| m.has_focus(id));
@@ -901,18 +1039,13 @@ fn input_row(app: &mut SlideApp, ui: &mut Ui, ctx: &egui::Context, t: &Tokens) {
     if had_focus && !busy && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)) {
         send_now = true;
     }
-    let edit = egui::TextEdit::multiline(&mut app.malu.input)
-        .id(id)
-        .hint_text("Ask Malu… (Enter sends, Shift+Enter for a new line)")
-        .desired_rows(3)
-        .desired_width(f32::INFINITY)
-        .frame(
-            egui::Frame::NONE
-                .fill(t.field_bg)
-                .stroke(egui::Stroke::new(1.0, if had_focus { t.accent } else { t.border }))
-                .corner_radius(CornerRadius::same(6))
-                .inner_margin(egui::Margin::same(6)),
-        );
+    let edit = egui::TextEdit::multiline(&mut app.malu.input).id(id).hint_text(hint).desired_rows(3).desired_width(f32::INFINITY).frame(
+        egui::Frame::NONE
+            .fill(t.field_bg)
+            .stroke(egui::Stroke::new(1.0, if had_focus { t.accent } else { t.border }))
+            .corner_radius(CornerRadius::same(6))
+            .inner_margin(egui::Margin::same(6)),
+    );
     let r = ui.add_enabled(!busy || app.malu.pending_plan.is_some(), edit);
     if app.malu.focus_input {
         r.request_focus();

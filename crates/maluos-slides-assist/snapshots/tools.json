@@ -979,5 +979,25 @@
       "type": "object"
     },
     "name": "recall"
+  },
+  {
+    "description": "The user's presentations on disk (the recent ones and the library folders: Documents and Desktop, or MALUOS_SLIDES_LIBRARY), searched by file name, title, slide titles and text including notes. Without a query it lists the recent ones first, newest first. Each result has the path open_presentation takes, the title, the slide count, the date and a matching line. Use it to open a deck by what it is about; when several match, show them and ask which.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "Most results (default 10)",
+          "maximum": 50,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "query": {
+          "description": "Words that must all occur (case does not matter); empty lists everything",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "find_presentations"
   }
 ]

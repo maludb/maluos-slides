@@ -122,7 +122,55 @@ pub fn call_tool(backend: &mut dyn Backend, name: &str, args: &Value) -> ToolRes
     if name == crate::tools::REMEMBER || name == crate::tools::FORGET || name == crate::tools::RECALL {
         return memory_tool(backend, name, args);
     }
+    if name == crate::tools::FIND_PRESENTATIONS {
+        return find_presentations(backend, args);
+    }
     maluos_slides_mcp::call_tool(backend, name, args)
+}
+
+/// Most time one `find_presentations` call spends parsing decks that are not in the cache yet;
+/// the rest are reported as `pending` and parsed by the next call (the app also indexes in the
+/// background when the start screen shows).
+pub const FIND_BUDGET: std::time::Duration = std::time::Duration::from_secs(4);
+
+/// The user's presentations by name and content (step 4.7): the recent list from the backend
+/// (`app.recent`, answered by the app; a headless backend has none) and the library folders.
+fn find_presentations(backend: &mut dyn Backend, args: &Value) -> ToolResult {
+    let allowed = ["query", "limit"];
+    if let Some(o) = args.as_object()
+        && let Some(k) = o.keys().find(|k| !allowed.contains(&k.as_str()))
+    {
+        return ToolResult::error(format!("find_presentations: unknown argument {k:?} (expected: {})", allowed.join(", ")));
+    }
+    let query = args.get("query").and_then(Value::as_str).unwrap_or("").trim();
+    let limit = args.get("limit").and_then(Value::as_u64).map(|n| n.clamp(1, 50) as usize).unwrap_or(10);
+    let recent: Vec<String> = backend
+        .call("app.recent", json!({}))
+        .ok()
+        .and_then(|v| v.get("recent").cloned())
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default();
+    let mut lib = crate::library::Library::discover(&recent);
+    let refresh = lib.refresh(FIND_BUDGET);
+    let hits = lib.search(query, limit);
+    let decks: Vec<Value> = hits.iter().map(crate::library::hit_json).collect();
+    let mut v = json!({
+        "query": query, "count": decks.len(), "decks": decks,
+        "folders": lib.roots.iter().map(|r| r.to_string_lossy().to_string()).collect::<Vec<_>>(),
+        "indexed": refresh.cached + refresh.parsed, "files": refresh.files,
+    });
+    if refresh.pending > 0 {
+        v["pending"] = json!(refresh.pending);
+        v["note"] = json!(format!("{} files are not indexed yet; call again for them", refresh.pending));
+    }
+    if decks.is_empty() {
+        v["note"] = json!(if query.is_empty() {
+            "no presentations found in the recent list or the library folders".to_string()
+        } else {
+            format!("no presentation matches {query:?}; try fewer or different words, or no query to list them all")
+        });
+    }
+    ToolResult::json(&v)
 }
 
 /// The timing of the backend's presentation, read through `document.inspect` and `slide.inspect`
@@ -191,10 +239,14 @@ fn build_deck(backend: &mut dyn Backend, args: &Value) -> ToolResult {
     let theme = args.get("theme").and_then(Value::as_str);
     let replace = args.get("replace").and_then(Value::as_bool).unwrap_or(false);
     let after = args.get("after").and_then(Value::as_u64).map(|v| v as usize);
-    match crate::outline::apply(backend, &outline, theme, replace, after) {
-        Ok(a) => ToolResult::json(
-            &json!({"slides": a.slides, "count": a.slides.len(), "sections": a.sections, "tables": a.tables, "notes": a.notes, "replaced": replace}),
-        ),
+    // Nothing open (the start screen, a fresh headless session): the deck is a new presentation,
+    // and there is nothing to replace.
+    let created = backend.call("document.inspect", json!({})).is_err();
+    match crate::outline::apply(backend, &outline, theme, replace || created, after) {
+        Ok(a) => ToolResult::json(&json!({
+            "slides": a.slides, "count": a.slides.len(), "sections": a.sections, "tables": a.tables, "notes": a.notes,
+            "replaced": replace && !created, "created": created,
+        })),
         Err(e) => ToolResult::error(format!("build_deck: {e}")),
     }
 }

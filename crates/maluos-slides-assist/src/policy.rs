@@ -73,6 +73,10 @@ pub const DESTRUCTIVE_COMMANDS: &[&str] = &[
 /// Tools that run a destructive command.
 pub const DESTRUCTIVE_TOOLS: &[&str] = &["new_presentation", "open_presentation"];
 
+/// Commands that only replace the open presentation: with nothing open (the start screen) they
+/// destroy nothing and are ordinary changes.
+pub const OPENING_COMMANDS: &[&str] = &["file.new", "file.open", "file.openBytes", "file.adopt", "file.recovery.open"];
+
 /// What a tool call does, in the policy's eyes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Class {
@@ -215,13 +219,21 @@ impl Policy {
             .collect()
     }
 
-    /// What one call does and the commands behind it.
+    /// What one call does and the commands behind it, with a presentation open.
     pub fn classify(&self, table: &ToolTable, catalog: &Catalog, tool_use_id: &str, name: &str, input: &Value) -> PlannedCall {
+        self.classify_in(table, catalog, tool_use_id, name, input, true)
+    }
+
+    /// What one call does and the commands behind it. With no presentation open (`has_doc`
+    /// false) starting or opening one destroys nothing: `file.new`, `file.open`, the tools on
+    /// them and `build_deck` with `replace` are plain changes then.
+    pub fn classify_in(&self, table: &ToolTable, catalog: &Catalog, tool_use_id: &str, name: &str, input: &Value, has_doc: bool) -> PlannedCall {
         let mut commands = Vec::new();
         let mut class = if table.is_read_only(name) { Class::ReadOnly } else { Class::Change };
+        let opening = |id: &str| !has_doc && OPENING_COMMANDS.contains(&id);
         let mut note = |id: &str, params: Value, class: &mut Class| {
             let (label, query) = catalog.get(id).map(|e| (e.label.to_string(), e.is_query())).unwrap_or_else(|| (String::new(), false));
-            let c = if self.is_destructive_command(id) {
+            let c = if self.is_destructive_command(id) && !opening(id) {
                 Class::Destructive
             } else if query {
                 Class::ReadOnly
@@ -245,8 +257,9 @@ impl Policy {
                 }
             }
             _ => {
-                if self.destructive_tools.iter().any(|t| t == name)
-                    || (name == crate::tools::BUILD_DECK && input.get("replace").and_then(Value::as_bool).unwrap_or(false))
+                if has_doc
+                    && (self.destructive_tools.iter().any(|t| t == name)
+                        || (name == crate::tools::BUILD_DECK && input.get("replace").and_then(Value::as_bool).unwrap_or(false)))
                 {
                     class = Class::Destructive;
                 }

@@ -58,7 +58,7 @@ fn table_mirrors_the_mcp_server() {
     let all = ToolTable::all();
     let mcp = maluos_slides_mcp::tool_definitions();
     assert_eq!(all.defs().len(), mcp.len() + ToolTable::extra_definitions().len());
-    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("recall"), "the fork's tools come last");
+    assert_eq!(all.defs().last().map(|t| t.name.as_str()), Some("find_presentations"), "the fork's tools come last");
     assert!(all.get("build_deck").is_some());
     for (t, m) in all.defs().iter().zip(&mcp) {
         assert_eq!(t.name, m["name"]);
@@ -682,6 +682,10 @@ fn destructive_lists_name_real_commands_and_tools() {
     let t = ToolTable::all();
     for name in crate::policy::DESTRUCTIVE_TOOLS {
         assert!(t.get(name).is_some(), "{name} is not a tool");
+    }
+    for id in crate::policy::OPENING_COMMANDS {
+        assert!(c.get(id).is_some(), "{id} is not a command");
+        assert!(crate::policy::DESTRUCTIVE_COMMANDS.contains(id), "{id} opens a presentation, so it is destructive when one is open");
     }
     for name in t.names() {
         if let Some(id) = crate::policy::tool_command(name) {
@@ -1597,4 +1601,306 @@ fn a_remembered_note_is_in_the_next_turn_and_the_turn_is_one_undo() {
     let system = mock.requests().last().unwrap().system.clone().unwrap();
     assert!(system.contains("Remembered about this deck (kept in the file"), "{system}");
     assert!(system.contains("[0] This deck is for the executive board; keep it to ten minutes. ("), "{system}");
+}
+
+// ---------- the library and the start screen (step 4.7) ----------
+
+/// A deck with one title slide, a body line and notes, saved at `path` (the format follows
+/// the extension).
+fn save_deck(path: &std::path::Path, title: &str, body: &str, notes: &str) {
+    let mut s = Session::with_new();
+    run(&mut s, "slide.new", json!({"layout": "titleAndContent", "title": title, "body": body}));
+    run(&mut s, "slide.delete", json!({"index": 0}));
+    run(&mut s, "slide.notes", json!({"text": notes}));
+    run(&mut s, "file.save", json!({"path": path.to_string_lossy()}));
+}
+
+fn scratch(name: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("maluos-slides-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+#[test]
+fn library_indexes_and_searches_decks() {
+    use crate::library::Library;
+    let dir = scratch("library");
+    std::fs::create_dir_all(dir.join("sub")).unwrap();
+    std::fs::create_dir_all(dir.join(".hidden")).unwrap();
+    save_deck(&dir.join("revenue.pptx"), "Quarterly revenue", "Sales grew 12% in Europe", "The budget was approved in March.");
+    save_deck(&dir.join("sub").join("onboarding.deckcraft"), "Onboarding new hires", "Laptop, badge, accounts", "");
+    save_deck(&dir.join(".hidden").join("secret.pptx"), "Hidden deck", "", "");
+    std::fs::write(dir.join("notes.txt"), "revenue budget").unwrap();
+    let cache = dir.join("cache").join("library.json");
+
+    let mut lib = Library::with_roots(vec![dir.clone(), dir.join("sub"), dir.join("missing")], Some(cache.clone()));
+    assert_eq!(lib.roots.len(), 2, "duplicates and missing folders are dropped: {:?}", lib.roots);
+    let r = lib.refresh(Duration::from_secs(60));
+    assert_eq!((r.files, r.parsed, r.cached, r.pending), (2, 2, 0, 0), "{r:?}");
+    assert!(cache.is_file(), "the cache was written");
+    let decks = lib.decks();
+    assert_eq!(decks.len(), 2);
+    let revenue = decks.iter().find(|d| d.name == "revenue.pptx").unwrap();
+    assert_eq!(revenue.title, "Quarterly revenue");
+    assert_eq!(revenue.slides, 1);
+    assert_eq!(revenue.titles, vec!["Quarterly revenue"]);
+    assert!(revenue.text.contains("slide 1: Quarterly revenue") && revenue.text.contains("Sales grew 12%"), "{}", revenue.text);
+    assert!(revenue.text.contains("notes: The budget was approved in March."), "{}", revenue.text);
+
+    // By title, by body text, by notes, by file name; every word must match.
+    let hit = |q: &str| lib.search(q, 10).into_iter().map(|h| (h.deck.name.clone(), h.snippet)).collect::<Vec<_>>();
+    assert_eq!(hit("revenue")[0].0, "revenue.pptx");
+    assert_eq!(hit("revenue")[0].1, "slide 1: Quarterly revenue");
+    assert_eq!(hit("Europe"), vec![("revenue.pptx".to_string(), "Sales grew 12% in Europe".to_string())]);
+    assert_eq!(hit("budget approved")[0].1, "notes: The budget was approved in March.");
+    assert_eq!(hit("onboarding badge").len(), 1);
+    assert_eq!(hit("onboarding badge")[0].0, "onboarding.deckcraft");
+    assert!(hit("onboarding revenue").is_empty(), "words from different decks match nothing");
+    assert!(hit("nothing-like-this").is_empty());
+    assert!(hit("secret").is_empty(), "hidden folders are not walked");
+    // No query: the recent deck first, then the rest.
+    lib.recent = vec![dir.join("sub").join("onboarding.deckcraft").to_string_lossy().to_string()];
+    let all = lib.search("", 10);
+    assert_eq!(all.len(), 2);
+    assert_eq!(all[0].deck.name, "onboarding.deckcraft");
+    assert_eq!(all[0].recent, Some(0));
+    assert_eq!(lib.search("", 1).len(), 1, "the limit holds");
+    let j = crate::library::hit_json(&all[0]);
+    assert_eq!(j["recent"], 1);
+    assert_eq!(j["slides"], 1);
+    assert!(j["modified"].as_str().unwrap().starts_with("20"), "{j}");
+
+    // A second refresh parses nothing; a fresh library reads the cache.
+    let r = lib.refresh(Duration::from_secs(60));
+    assert_eq!((r.parsed, r.cached), (0, 2), "{r:?}");
+    let mut again = Library::with_roots(vec![dir.clone()], Some(cache.clone()));
+    let r = again.refresh(Duration::from_secs(60));
+    assert_eq!((r.parsed, r.cached), (0, 2), "{r:?}");
+    // A changed file is parsed again; a removed one is dropped; a zero budget leaves new files pending.
+    save_deck(&dir.join("revenue.pptx"), "Annual revenue", "Sales grew 12% in Europe and Asia", "");
+    std::fs::remove_file(dir.join("sub").join("onboarding.deckcraft")).unwrap();
+    let r = again.refresh(Duration::from_secs(60));
+    assert_eq!((r.files, r.parsed, r.cached), (1, 1, 0), "{r:?}");
+    assert_eq!(again.decks()[0].title, "Annual revenue");
+    assert!(again.search("onboarding", 5).is_empty());
+    save_deck(&dir.join("late.pptx"), "Late", "", "");
+    let mut slow = Library::with_roots(vec![dir.clone()], Some(cache.clone()));
+    let r = slow.refresh(Duration::ZERO);
+    assert_eq!((r.files, r.cached, r.pending), (2, 1, 1), "{r:?}");
+    // An unreadable file is remembered as an error and not listed.
+    std::fs::write(dir.join("broken.pptx"), b"not a presentation").unwrap();
+    let r = again.refresh(Duration::from_secs(60));
+    assert_eq!(r.parsed, 2, "{r:?}");
+    assert!(again.decks().iter().all(|d| d.name != "broken.pptx"));
+    let r = again.refresh(Duration::from_secs(60));
+    assert_eq!(r.parsed, 0, "the error is cached: {r:?}");
+    assert_eq!(crate::library::tokens(" The, Budget!  approved "), vec!["the", "budget", "approved"]);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A headless backend that also has a recent list, as the app does.
+struct WithRecent {
+    inner: Headless,
+    recent: Vec<String>,
+}
+
+impl Backend for WithRecent {
+    fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
+        if method == "app.recent" {
+            return Ok(json!({"recent": self.recent}));
+        }
+        self.inner.call(method, params)
+    }
+    fn has_ui(&self) -> bool {
+        false
+    }
+    fn describe(&self) -> String {
+        "a test host with a recent list".into()
+    }
+}
+
+impl crate::Host for WithRecent {
+    fn session(&self) -> &Session {
+        &self.inner.session
+    }
+    fn session_mut(&mut self) -> &mut Session {
+        &mut self.inner.session
+    }
+    fn recent_presentations(&self) -> Vec<String> {
+        self.recent.clone()
+    }
+}
+
+static LIBRARY_LOCK: Mutex<()> = Mutex::new(());
+
+#[test]
+fn find_presentations_is_a_tool_everywhere() {
+    use crate::library::Library;
+    let _guard = LIBRARY_LOCK.lock().unwrap();
+    let dir = scratch("find");
+    let elsewhere = scratch("find-elsewhere");
+    save_deck(&dir.join("revenue.pptx"), "Quarterly revenue", "Sales grew", "");
+    save_deck(&elsewhere.join("recent.pptx"), "A recent deck", "Opened last week", "");
+    Library::set_override(Some((vec![dir.clone()], None)));
+    let recent = elsewhere.join("recent.pptx").to_string_lossy().to_string();
+    let mut h = WithRecent { inner: Headless::new(), recent: vec![recent.clone()] };
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::from_session(&h.inner.session);
+    assert!(table.is_read_only("find_presentations"));
+    assert_eq!(Policy::new(Mode::AnswerOnly).classify(&table, &catalog, "x", "find_presentations", &json!({})).class, Class::ReadOnly);
+
+    // No query: the recent deck (outside the roots) first, then the library.
+    let out = run_tool(&mut h, &table, &catalog, "t1", "find_presentations", &json!({}));
+    assert!(!out.is_error, "{}", out.text);
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["count"], 2, "{v}");
+    assert_eq!(v["decks"][0]["name"], "recent.pptx");
+    assert_eq!(v["decks"][0]["recent"], 1);
+    assert_eq!(v["decks"][0]["path"], recent);
+    assert_eq!(v["decks"][1]["title"], "Quarterly revenue");
+    assert_eq!(v["folders"][0].as_str(), dir.canonicalize().unwrap().to_str());
+    // A query by content, with the matching line.
+    let out = run_tool(&mut h, &table, &catalog, "t2", "find_presentations", &json!({"query": "sales grew", "limit": 1}));
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["count"], 1, "{v}");
+    assert_eq!(v["decks"][0]["snippet"], "Sales grew");
+    let out = run_tool(&mut h, &table, &catalog, "t3", "find_presentations", &json!({"query": "zebra"}));
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["count"], 0);
+    assert!(v["note"].as_str().unwrap().contains("zebra"), "{v}");
+    let out = run_tool(&mut h, &table, &catalog, "t4", "find_presentations", &json!({"querry": "x"}));
+    assert!(out.is_error && out.text.contains("unknown argument"), "{}", out.text);
+    // A plain headless backend has no recent list: the library alone.
+    let mut plain = Headless::new();
+    let out = run_tool(&mut plain, &table, &catalog, "t5", "find_presentations", &json!({}));
+    let v: Value = serde_json::from_str(&out.text).unwrap();
+    assert_eq!(v["count"], 1, "{v}");
+    // Through the MCP wrapper and the shared call_tool, like every extra tool.
+    let mut s = crate::mcp_ext::Server::new(Box::new(Headless::new()));
+    let list = s.handle(json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})).unwrap();
+    let names: Vec<&str> = list["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
+    assert!(names.contains(&"find_presentations"));
+    let call = s
+        .handle(
+            json!({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "find_presentations", "arguments": {"query": "revenue"}}}),
+        )
+        .unwrap();
+    assert_eq!(call["result"]["isError"], false, "{call}");
+    assert!(call["result"]["content"][0]["text"].as_str().unwrap().contains("revenue.pptx"));
+    Library::set_override(None);
+    let _ = std::fs::remove_dir_all(&dir);
+    let _ = std::fs::remove_dir_all(&elsewhere);
+}
+
+#[test]
+fn without_a_presentation_starting_or_opening_one_is_not_destructive() {
+    let table = ToolTable::for_backend(false);
+    let catalog = Catalog::new();
+    let p = Policy::new(Mode::Autopilot);
+    for (name, input) in [
+        ("new_presentation", json!({})),
+        ("open_presentation", json!({"path": "/x.pptx"})),
+        ("build_deck", json!({"markdown": "## A", "replace": true})),
+        ("run_command", json!({"command": "file.new", "params": {}})),
+        ("run_command", json!({"command": "file.open", "params": {"path": "/x.pptx"}})),
+        ("batch", json!({"commands": [{"command": "file.new", "params": {}}]})),
+    ] {
+        assert_eq!(p.classify_in(&table, &catalog, "x", name, &input, false).class, Class::Change, "{name} with nothing open");
+        assert_eq!(p.classify_in(&table, &catalog, "x", name, &input, true).class, Class::Destructive, "{name} with a deck open");
+        assert_eq!(p.classify(&table, &catalog, "x", name, &input).class, Class::Destructive, "{name}: classify means a deck is open");
+    }
+    // Deleting is destructive either way.
+    let del = json!({"command": "slide.delete", "params": {"index": 0}});
+    assert_eq!(p.classify_in(&table, &catalog, "x", "run_command", &del, false).class, Class::Destructive);
+}
+
+#[test]
+fn a_deck_from_the_start_screen_in_one_turn() {
+    // Confirm mode, nothing open: build_deck is a change the user approves, not a destructive one.
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use(
+        "b1",
+        "build_deck",
+        json!({"title": "MaluOS for new users", "subtitle": "A desk that fits", "theme": "Harbor",
+               "slides": [{"title": "What MaluOS is", "body": "A Linux desktop\nOffice apps built in"}, {"title": "Thank you"}]}),
+    )]));
+    mock.push(answer("Made a three-slide deck about MaluOS for new users."));
+    let mut host = Headless::new();
+    assert!(host.session.active().is_none());
+    let mut a = Assistant::new(mock.clone(), "mock-model").with_limits(quick_limits()).with_mode(Mode::Confirm);
+    let text = a.system_text(&host);
+    assert!(text.contains("# No presentation is open (the start screen)"), "{text}");
+    assert!(text.contains("The recent list is empty"), "{text}");
+    let plans = Arc::new(Mutex::new(Vec::new()));
+    let seen = plans.clone();
+    let report = a.ask(
+        &mut host,
+        "make a short deck about MaluOS for new users",
+        &mut |plan: &crate::Plan| {
+            seen.lock().unwrap().push(plan.clone());
+            crate::Verdict::Approve
+        },
+        &mut no_events(),
+    );
+    assert!(report.error.is_none() && report.stopped.is_none(), "{report:?}");
+    assert_eq!(report.plans, 1);
+    let plans = plans.lock().unwrap();
+    assert!(!plans[0].destructive(), "nothing to lose: {}", plans[0].describe());
+    assert_eq!(report.answer, "Made a three-slide deck about MaluOS for new users.");
+    let doc = host.session.active().unwrap();
+    assert_eq!(doc.doc.slides.len(), 3);
+    assert_eq!(doc.doc.slides[0].title(), "MaluOS for new users");
+    assert_eq!(report.touched_slides, vec![0, 1, 2], "every slide of the new deck counts as changed");
+    assert_eq!(report.commands.first().map(String::as_str), Some("file.new"));
+    assert!(report.tool_calls[0].summary.contains("\"created\":true"), "{}", report.tool_calls[0].summary);
+    // With a deck open, the next build_deck adds to it; replace would be destructive.
+    assert!(a.system_text(&host).contains("# The open presentation"));
+    mock.push(calls(vec![tool_use("b2", "build_deck", json!({"slides": [{"title": "Appendix"}]}))]));
+    mock.push(answer("Added an appendix slide."));
+    let report = a.ask(&mut host, "add an appendix", &mut ApproveAll, &mut no_events());
+    assert_eq!(host.session.active().unwrap().doc.slides.len(), 4, "{report:?}");
+    assert!(report.tool_calls[0].summary.contains("\"created\":false"), "{}", report.tool_calls[0].summary);
+}
+
+#[test]
+fn the_start_screen_finds_and_opens_a_deck_by_content() {
+    use crate::library::Library;
+    let _guard = LIBRARY_LOCK.lock().unwrap();
+    let dir = scratch("open-by-content");
+    save_deck(&dir.join("hires.pptx"), "Onboarding new hires", "Laptop, badge, accounts", "");
+    save_deck(&dir.join("q3.pptx"), "Q3 results", "Revenue up", "");
+    Library::set_override(Some((vec![dir.clone()], None)));
+    let hires = dir.join("hires.pptx").to_string_lossy().to_string();
+    let q3 = dir.join("q3.pptx").to_string_lossy().to_string();
+    let mock = Arc::new(MockClient::new());
+    mock.push(calls(vec![tool_use("f1", "find_presentations", json!({"query": "onboarding"}))]));
+    mock.push(calls(vec![tool_use("o1", "open_presentation", json!({"path": hires.clone()}))]));
+    mock.push(answer("Opened Onboarding new hires."));
+    let mut host = WithRecent { inner: Headless::new(), recent: vec![q3.clone()] };
+    let mut a = assistant(&mock);
+    let text = a.system_text(&host);
+    assert!(text.contains("Recent presentations, newest first") && text.contains(&format!("1. q3.pptx — {q3}")), "{text}");
+    let report = a.ask(&mut host, "open the deck about onboarding", &mut ApproveAll, &mut no_events());
+    assert!(report.error.is_none() && report.stopped.is_none(), "{report:?}");
+    assert_eq!(report.plans, 0, "autopilot with nothing open: opening asks nothing");
+    assert_eq!(report.tool_calls.len(), 2);
+    assert!(
+        report.tool_calls[0].summary.contains("hires.pptx") && !report.tool_calls[0].summary.contains("q3.pptx"),
+        "{}",
+        report.tool_calls[0].summary
+    );
+    assert_eq!(host.inner.session.active().unwrap().path.as_deref(), Some(hires.as_str()));
+    assert_eq!(report.commands, vec!["file.open"]);
+    // The last round's request carried the tool result the model acted on.
+    let last = mock.requests().last().cloned().unwrap();
+    let results: Vec<String> = last
+        .messages
+        .iter()
+        .flat_map(|m| m.content.iter())
+        .filter_map(|b| if let ContentBlock::ToolResult { content, .. } = b { Some(content.clone()) } else { None })
+        .collect();
+    assert!(results.iter().any(|r| r.contains("Onboarding new hires")), "{results:?}");
+    Library::set_override(None);
+    let _ = std::fs::remove_dir_all(&dir);
 }
