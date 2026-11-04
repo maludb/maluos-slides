@@ -24,38 +24,19 @@ revision history.
 | # | Gap | Category | Beta | Hours | Doc |
 |---|---|---|:-:|---|---|
 | 1 | PPTX corpus is only decks we author (no PowerPoint reference renders) | File format | B | 20–35 | [file-format-parity.md](file-format-parity.md) |
-| 2 | Data loss on a common path: Close discards an edited presentation (#60); soak budgets | Stability | B | 3–6 | this file |
-| 3 | PPTX round trip drops media playback options (#74) | File format | B | 2–4 | [file-format-parity.md](file-format-parity.md) |
-| 4 | SVG pictures don't render (EMF/WMF do) | File format | B | 4–8 | [file-format-parity.md](file-format-parity.md) |
-| 5 | No localization: English only | Localization | B (infra + 5 languages) | 55–90 | [localization-parity.md](localization-parity.md) |
-| 6 | No printing | Feature | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
-| 7 | Fonts: only Regular, Bold and Italic faces (#69) | Feature | B | 3–5 | [ui-parity.md](ui-parity.md) |
-| 8 | Image paste on Linux (Wayland and X11) not re-checked since #53 closed | Feature | B | 1–2 | [ui-parity.md](ui-parity.md) |
-| 9 | Presenter view isn't placed on the second display | Hardware | B | 3–5 | [slideshow-parity.md](slideshow-parity.md) |
-| 10 | Animation Pane: 64 of ~190 effects, effect options (timeline and Play From done) | Feature | B (pane) | 7–13 | [animation-parity.md](animation-parity.md) |
-| 11 | Charts: data grid editing, elements, `chartex` types | Feature | B (data, elements) | 12–20 | [parity-checklist.md](parity-checklist.md) |
-| 12 | Format Shape pane thinner than PowerPoint's | UI/UX | B | 6–10 | [ui-parity.md](ui-parity.md) |
-| 13 | PDF export rasterizes slide artwork | File format | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
-| 14 | Slides rasterize on the CPU; no performance baseline | Performance / hardware | | 15–30 | [hardware-parity.md](hardware-parity.md) |
+| 2 | PPTX round trip drops media playback options (#74) | File format | B | 2–4 | [file-format-parity.md](file-format-parity.md) |
+| 3 | SVG pictures don't render (EMF/WMF do) | File format | B | 4–8 | [file-format-parity.md](file-format-parity.md) |
+| 4 | No localization: English only | Localization | B (infra + 5 languages) | 55–90 | [localization-parity.md](localization-parity.md) |
+| 5 | No printing | Feature | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
+| 6 | Fonts: only Regular, Bold and Italic faces (#69) | Feature | B | 3–5 | [ui-parity.md](ui-parity.md) |
+| 7 | Presenter view isn't placed on the second display | Hardware | B | 3–5 | [slideshow-parity.md](slideshow-parity.md) |
+| 8 | Animation Pane: 64 of ~190 effects, effect options (timeline and Play From done) | Feature | B (pane) | 7–13 | [animation-parity.md](animation-parity.md) |
+| 9 | Charts: data grid editing, elements, `chartex` types | Feature | B (data, elements) | 12–20 | [parity-checklist.md](parity-checklist.md) |
+| 10 | Format Shape pane thinner than PowerPoint's | UI/UX | B | 6–10 | [ui-parity.md](ui-parity.md) |
+| 11 | PDF export rasterizes slide artwork | File format | B | 5–8 | [file-format-parity.md](file-format-parity.md) |
+| 12 | Slides rasterize on the CPU; no performance baseline | Performance / hardware | | 15–30 | [hardware-parity.md](hardware-parity.md) |
 
 ## Stability
-
-### Close discards an edited presentation without asking (#60)
-- **Evidence:** issue #60 is open; quitting prompts, `file.close` doesn't. PR #75 was closed without merging.
-- **Impact:** silent data loss on a common path. The worst kind of bug for a presentation app.
-- **Estimate:** 0.5–1 h (a new prompt and its tests, since #75 was not merged). **Beta blocker.**
-
-### Soak testing has no memory or timing budgets
-- **Evidence:** `crates/engine/src/soak_tests.rs` runs seeded random command sequences over a
-  ~100-slide deck (validity, selection, undo/redo exactness, bounded undo, save/reopen in both
-  formats every 100 steps); `MALUOS_SLIDES_SOAK_STEPS` runs it long. It found a chart `clamp` panic
-  that blanked whole slides. `crates/ui-egui/src/ui_soak_tests.rs` drives the whole window with
-  seeded random clicks, drags, keys (plain, Ctrl, Shift), typing and scrolling over the sample
-  deck, checking document validity, bounded undo/journal/thumbnail/texture caches, zero caught
-  command and render panics (`Session::panics_caught`, `maluos_slides_render::panics_caught`) and a
-  mean frame under 250 ms; 4 × 3000-action runs are clean.
-- **Impact:** long-session crash rate is sampled in CI; RSS is not measured directly.
-- **Estimate:** 1–2 h (RSS sampling per platform).
 
 ### A control-server timing test may fail under load
 - **Evidence:** `silent_refused_peers_do_not_delay_the_next_refusal` in
@@ -156,11 +137,6 @@ Detail in [file-format-parity.md](file-format-parity.md).
 - **Evidence:** #69; the font database maps a family to four faces.
 - **Impact:** Light, Medium and Semibold headings (common in modern templates) render wrong.
 - **Estimate:** 3–5 h. **Beta blocker.**
-
-### Image paste on Linux not re-checked (after #53)
-- **Evidence:** #53 is closed (PR #88 pastes an image-only clipboard as a picture). Linux was not re-checked after #53 closed; a Wayland session (GNOME 50 on MaluOS) and an X11 session each need a pass with a screenshot in the clipboard.
-- **Impact:** copy-paste of screenshots is a core workflow.
-- **Estimate:** 1–2 h. **Beta blocker.**
 
 ### Charts: data grid, elements and the newer chart types
 - **Evidence:** checklist rows "Edit chart data" (P0, partial), "Chart elements" (partial), "Other
@@ -362,6 +338,7 @@ Detail in [localization-parity.md](localization-parity.md).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-04 | minor | Step 6.1 of the MaluOS plan: the Close prompt (#60), the soak memory and timing budgets and the Linux image paste re-check are done, so their entries and top-list rows 2 and 8 are gone (12 rows); the ribbon's Paste now reads the system clipboard like Ctrl+V |
 | 2026-11-03 | minor | MaluOS Slides scope (D1): the Windows and macOS entries removed (GPU start-up crashes, Windows paste, macOS menu bar and chrome); the Linux paste re-check kept; top list is 14 rows; Phase 6 of the MaluOS plan picks from here |
 | 2026-11-02 | trivial | Run alternate-language metadata now survives native and PPTX saves; UI and proofing gaps remain; scores unchanged |
 | 2026-11-02 | trivial | PPTX reflection geometry is retained through native and PPTX resaves; no rendering parity claim |

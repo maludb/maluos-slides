@@ -14,6 +14,7 @@ repository = "https://github.com/maludb/maluos-slides"
 # internal
 maluos-slides-geom = { path = "crates/geom" }
 maluos-slides-color = { path = "crates/color" }
+maluos-slides-testkit = { path = "crates/testkit" }
 maluos-slides-metafile = { path = "crates/metafile" }
 maluos-slides-model = { path = "crates/model" }
 maluos-slides-fonts = { path = "crates/fonts" }

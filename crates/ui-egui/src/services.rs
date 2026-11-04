@@ -50,6 +50,9 @@ pub struct Services {
     /// Hand bytes to the user as a named file (browser download).
     pub download: Option<DownloadFn>,
     pub inbox: Option<Inbox>,
+    /// Plain text on the system clipboard, when the host can read it: what the ribbon's Paste
+    /// pastes (Ctrl+V gets it from egui's paste event instead).
+    pub clipboard_text: Option<Box<dyn FnMut() -> Option<String>>>,
     /// Image on the system clipboard (PNG bytes), when the host can read one.
     pub clipboard_image: Option<Box<dyn FnMut() -> Option<Vec<u8>>>>,
     /// HTML on the system clipboard (Pages, Keynote, and other apps that write `public.html`).

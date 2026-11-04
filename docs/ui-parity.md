@@ -106,7 +106,7 @@ menu colours taken from the theme tokens (menu `chrome`, page `card`).
 | Rulers with indent markers and tab stops | yes | yes: indent markers and tab stops drag on the ruler (a click adds a tab, the corner selector picks its kind); Tabs dialog from Home › Paragraph and the Paragraph dialog |
 | Drag and drop of files and between thumbnails | yes | yes; several selected slides move together as one run, in one undo step, in the thumbnail pane and the Slide Sorter |
 | Slide Sorter sections: a bar per section, add, rename in place, collapse, drag the whole section (its slides move with it) | yes | yes |
-| Image paste from the clipboard | yes | macOS pastes a picture when the paste carries no text (TIFF), and rich text copies and pastes as HTML (bold, italic, underline). Windows image paste stays open (#1414) |
+| Image paste from the clipboard | yes | A picture pastes when the clipboard carries no text; rich text copies and pastes as HTML (bold, italic, underline). The ribbon's Paste reads the same system clipboard as Ctrl+V. Re-checked 2026-11-04 on MaluOS (GNOME 50) in a Wayland and an X11 session: both read through X11/XWayland (`docs/maluos-slides/status.md`, step 6.1) |
 | Font menu: every installed family with its faces | yes | families yes; only Regular/Bold/Italic faces (#69) |
 
 ## Keyboard shortcuts
@@ -186,6 +186,7 @@ consistency is open (#73, #56).
 | 2026-10-16 | minor | Export › Change File Type › PNG and the Export… dialog offer a transparent background (#784) |
 | 2026-10-15 | minor | Edit Points: the right-click menu has Straight/Curved Segment on a segment and Open/Close Path on a point |
 | 2026-10-14 | minor | Gray list markers on empty paragraphs while editing; caret keeps the list indent before typing |
+| 2026-11-04 | minor | Image paste re-checked on Linux (Wayland and X11); the ribbon's Paste takes the system clipboard like Ctrl+V |
 | 2026-10-14 | minor | Community PR wave folded: one row each for Format Shape, Dialogs (41, listed from `dialogs.rs`), Animation Pane (timeline is in), window, Quick Access Toolbar, Format Background, rulers, image paste, context menus, exact size and edit points; estimates re-totalled (~26–46 h) |
 | 2026-10-13 | trivial | Eyedropper in the colour menus (#367) |
 | 2026-10-12 | minor | Title bar: an Export button next to Save opens the Export dialog, a quick-access shortcut beside File › Export |

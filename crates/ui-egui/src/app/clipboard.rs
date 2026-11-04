@@ -29,4 +29,36 @@ impl SlideApp {
         }
         ctx.copy_text(system_clipboard_text(&text));
     }
+
+    /// Paste what the system clipboard holds, as Ctrl+V does: `text` is its plain text (our own
+    /// [`OBJECTS_MARKER`] means "what the session copied"); a picture (a screenshot, Keynote's
+    /// TIFF) lands when there is no text; text keeps its HTML (bold, italic, underline) when the
+    /// host can read it. `image_already_pasted` is set when egui delivered the picture itself
+    /// (`PasteImage`), so it is never inserted twice.
+    pub(crate) fn paste_system(&mut self, text: String, image_already_pasted: bool) -> Result<Value, String> {
+        let text = if text == OBJECTS_MARKER { String::new() } else { text };
+        let html = self.services.clipboard_html.as_mut().and_then(|f| f()).filter(|h| !h.is_empty());
+        let img = if text.is_empty() && !image_already_pasted { self.services.clipboard_image.as_mut().and_then(|f| f()) } else { None };
+        let r = match img {
+            Some(png) => self
+                .session
+                .execute("insert.picture", &json!({"name": "Pasted image.png", "data": maluos_slides_engine::cmd::base64_encode(&png)})),
+            None => {
+                let mut params = json!({"text": text});
+                if let Some(h) = html {
+                    params["html"] = Value::String(h);
+                }
+                self.session.execute("edit.paste", &params)
+            }
+        };
+        r.map_err(|e| e.to_string())
+    }
+
+    /// The ribbon's Paste, Edit › Paste, the context menu and `edit.paste {}` from the control
+    /// channel or the assistant: the same paste as Ctrl+V, from the system clipboard when the
+    /// host can read it. Without a clipboard reader (tests, the web), the session's own clipboard.
+    pub(crate) fn paste_from_system(&mut self) -> Result<Value, String> {
+        let text = self.services.clipboard_text.as_mut().and_then(|f| f()).unwrap_or_default();
+        self.paste_system(text, false)
+    }
 }

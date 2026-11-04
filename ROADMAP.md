@@ -30,7 +30,7 @@ picked for MaluOS are Phase 6 of [docs/maluos-slides/plan.md](docs/maluos-slides
 |---|---:|---|---|
 | Full target (ready for real work) | ~55% | 340–600 (~60% parallelizes: ~120–210 h wall clock with 3–4 agents) | Feature depth across all 20 areas, legacy `.ppt`/`.odp` and video export, localization in 11+ languages, GPU raster and hardware decode, AI features |
 | Mainstream practitioner | ~53% | 150–250 (~50% parallelizes: ~70–120 h with 3 agents) | `.pptx` exchange (real-deck corpus, round-trip losses, EMF/SVG, embedded fonts) 45–75 h; depth in charts, animations, pictures, text, presenting, print/vector PDF 70–110 h; interaction (menu bar, Format Shape pane, font faces, dialogs) 25–40 h; stability 10–20 h |
-| Essentials user | ~62% | 50–90 (~40% parallelizes: ~30–55 h with 2–3 agents) | Opening received decks (corpus subset, EMF, SVG icons) 25–45 h; Close prompt 2–4 h; font faces, Tab, paste, print, show navigation 12–20 h; start screen, menu bar, palette 6–10 h |
+| Essentials user | ~62% | 50–90 (~40% parallelizes: ~30–55 h with 2–3 agents) | Opening received decks (corpus subset, EMF, SVG icons) 25–45 h; font faces, Tab, print, show navigation 10–16 h; start screen, menu bar, palette 6–10 h |
 
 Calibration is the same as for the full number (see [docs/target-app-parity.md](docs/target-app-parity.md#calibration-how-the-hours-were-derived)): a fix is 0.5–1 h, a checklist row to PowerPoint depth 2–4 h, a subsystem 6–35 h. The sets are nested, so essentials ≤ mainstream ≤ full. The full number is an additive weighted sum over the dimension table; only mainstream and essentials use multiplicative discounts.
 
@@ -111,16 +111,14 @@ ships 26.
 
 Ranked; detail and the full beta plan in [docs/roadmap.md](docs/roadmap.md).
 
-1. **No data loss:** Close's save prompt (#60), image paste re-checked on Wayland and X11, editor
-   soak tests. 5–10 h.
-2. **PPTX on real decks:** the owned corpus now round-trips comments, links and actions, custom
+1. **PPTX on real decks:** the owned corpus now round-trips comments, links and actions, custom
    shows, rotated groups, inherited placeholders, text effects and body layout, theme effects,
    fills, bevels, connectors, tables, charts, animations, media, sections, masters, 3-D models
    and animation bounce end. Still open: a corpus of real decks, #70, #74, EMF+ records,
    MicroType Express font subsets and SVG. 36–64 h.
-3. **Localization:** catalog, system language (#15), zh-Hans, es, fr, de, ja with IME. 27–46 h.
-4. **Output:** vector PDF, printing. 10–16 h.
-5. **Depth that users hit:** font weights (#69), chart data and elements, Animation Pane timeline,
+2. **Localization:** catalog, system language (#15), zh-Hans, es, fr, de, ja with IME. 27–46 h.
+3. **Output:** vector PDF, printing. 10–16 h.
+4. **Depth that users hit:** font weights (#69), chart data and elements, Animation Pane timeline,
    presenter view on the right display, Format Shape pane. 30–51 h.
 
 ## Agents: CLI and MCP
@@ -140,6 +138,7 @@ app's JSON control channel (`maluos-slides --control PORT`).
 | 2026-11-02 | Reused slides scale their geometry and content dimensions to the destination slide, including kept source masters and layouts; the reuse picker still lacks thumbnails |
 | 2026-11-02 | File › About replaces the unused Account page, with version, project links, contributor/model credits and appearance preferences |
 | 2026-11-02 | PPTX reflection effects keep their authored start position, affine scale/skew, direction and fade, alignment, and rotation flag through native and PPTX saves |
+| 2026-11-04 | Close asks to save an edited presentation whichever way it is closed (#60); the ribbon's Paste takes the system clipboard like Ctrl+V, so a screenshot pastes from the button too; the editor and window soak tests carry memory and timing budgets |
 | 2026-11-03 | Reuse Slides brings along referenced custom table styles, including grouped tables, and remaps conflicting style ids without changing destination tables |
 | 2026-11-02 | Tiled picture fills in groups: a tile (`a:blipFill` with `a:tile`) keeps its size, offset and anchor in slide points whatever the group's child-coordinate scale, uniform or stretched unevenly, nested or flipped (also a group's own tile fill passed to its members, and a picture shape's own tile, with its shadow and reflection), and tiles with `rotWithShape="0"` keep their size in points at any zoom, as PowerPoint draws them (measured on its own PNG export of a synthetic probe deck: every grouped case within ~3/255 of the ungrouped control's own difference from PowerPoint, which is ~13/255 from resampling). Before, a group whose child space was ~1800 times smaller than its box showed one flat texel of the texture (a Venn diagram with paper-textured circles and a hatched intersection) |
 | 2026-10-31 | No Fill shape interiors allow selection and editing of underlying objects, even when a quick style remains; hit-testing uses the renderer’s fill resolution. Outlines, rotation, text targets and actual fills keep their hit behaviour (#1621) |
@@ -313,6 +312,7 @@ app's JSON control channel (`maluos-slides --control PORT`).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-04 | minor | "No data loss" done (MaluOS plan step 6.1): removed from the upcoming list; the Essentials row loses the Close prompt and paste hours |
 | 2026-11-03 | minor | The fork's own roadmap (D12): Windows, macOS and BSD items removed from the aim, the upcoming list and the audience hours; the duplicated header lines from the upstream merge folded; Phase 6 of the MaluOS plan picks the steps |
 | 2026-11-02 | trivial | Progress log: run alternate-language metadata round-trips through native and PPTX formats; product parity scores unchanged |
 | 2026-11-03 | trivial | Reuse Slides brings referenced custom table styles along; scores unchanged |

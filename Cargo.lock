@@ -2637,6 +2637,7 @@ dependencies = [
  "maluos-slides-pdf",
  "maluos-slides-pptx",
  "maluos-slides-render",
+ "maluos-slides-testkit",
  "maluos-slides-text",
  "serde",
  "serde_json",
@@ -2818,6 +2819,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "maluos-slides-testkit"
+version = "0.15.0"
+
+[[package]]
 name = "maluos-slides-text"
 version = "0.15.0"
 dependencies = [
@@ -2850,6 +2855,7 @@ dependencies = [
  "maluos-slides-media",
  "maluos-slides-model",
  "maluos-slides-render",
+ "maluos-slides-testkit",
  "maluos-slides-text",
  "serde",
  "serde_json",

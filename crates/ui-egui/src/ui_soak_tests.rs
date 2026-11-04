@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use egui::{Event, Key, Modifiers, MouseWheelSource, MouseWheelUnit, Pos2, vec2};
 use egui_kittest::Harness;
 use maluos_slides_engine::Session;
+use maluos_slides_testkit::{ThreadHeap, mib, rss_bytes};
 
 use crate::{Services, SlideApp};
 
@@ -22,6 +23,9 @@ const MAX_THUMBS: usize = 600;
 const MAX_JOURNAL: usize = 10_000;
 /// Mean wall time per frame, generous for slow CI machines (the test profile is optimized).
 const MAX_MEAN_FRAME: Duration = Duration::from_millis(250);
+/// Heap the window may keep beyond where the soak started: this thread's bytes, counted by the
+/// test allocator. The caches above are bounded, so growth past this over a long run is a leak.
+const MAX_HEAP_GROWTH: usize = 256 << 20;
 
 struct Rng(u64);
 
@@ -164,6 +168,9 @@ fn soak(seed: u64, steps: usize) {
     let mut h = harness();
     let mut r = Rng(seed | 1);
     let mut log = VecDeque::new();
+    let heap0 = ThreadHeap::live();
+    ThreadHeap::reset_peak();
+    let rss0 = rss_bytes().unwrap_or(0);
     let t0 = Instant::now();
     let mut frames = 0usize;
     for step in 0..steps {
@@ -187,8 +194,18 @@ fn soak(seed: u64, steps: usize) {
     // Random input must reach the editor, not bounce off one modal.
     assert!(edits * 20 >= steps, "only {edits} commands ran in {steps} actions; seed {seed}");
     let mean = t0.elapsed() / frames.max(1) as u32;
-    eprintln!("ui soak seed {seed}: {steps} actions, {edits} commands, ~{frames} frames, mean frame {mean:?}");
+    let heap = ThreadHeap::live();
+    let growth = heap.saturating_sub(heap0);
+    eprintln!(
+        "ui soak seed {seed}: {steps} actions, {edits} commands, ~{frames} frames, mean frame {mean:?}; heap {} → {} (peak {}), rss {} → {}",
+        mib(heap0),
+        mib(heap),
+        mib(ThreadHeap::peak()),
+        mib(usize::try_from(rss0).unwrap_or(0)),
+        mib(usize::try_from(rss_bytes().unwrap_or(0)).unwrap_or(0))
+    );
     assert!(mean <= MAX_MEAN_FRAME, "mean frame {mean:?} over {MAX_MEAN_FRAME:?}; seed {seed}");
+    assert!(growth <= MAX_HEAP_GROWTH, "heap grew by {} over {steps} actions (budget {}); seed {seed}", mib(growth), mib(MAX_HEAP_GROWTH));
 }
 
 fn env(name: &str, default: u64) -> u64 {

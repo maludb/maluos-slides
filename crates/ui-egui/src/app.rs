@@ -12,7 +12,7 @@ use super::{
     eyedropper, json, media, menus, notes, panes, preview, qat, ribbon, selpane, show, sorter, status, textures, theme, thumbs, toast, uifonts,
 };
 
-mod clipboard;
+pub(crate) mod clipboard;
 mod commands;
 mod control;
 pub(crate) mod files;

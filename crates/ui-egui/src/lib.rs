@@ -489,6 +489,10 @@ mod split_button_tests;
 mod texture_limit_tests;
 #[cfg(test)]
 mod ui_soak_tests;
+/// The UI soak test's memory budget counts this thread's heap (`ui_soak_tests`).
+#[cfg(test)]
+#[global_allocator]
+static TEST_HEAP: maluos_slides_testkit::ThreadHeap = maluos_slides_testkit::ThreadHeap;
 // MaluOS: the assistant pane's tests.
 #[cfg(test)]
 mod malu_assistant_tests;

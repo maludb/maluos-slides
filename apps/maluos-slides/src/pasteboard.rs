@@ -4,6 +4,13 @@
 //! words. A shape with no text is copied as an image by the UI; this module only reads a picture
 //! back (Keynote's TIFF) as PNG bytes.
 
+/// Plain text currently on the pasteboard, when there is some.
+pub fn text() -> Option<String> {
+    let mut cb = arboard::Clipboard::new().ok()?;
+    let text = cb.get_text().ok()?;
+    if text.is_empty() { None } else { Some(text) }
+}
+
 /// HTML currently on the pasteboard, when there is some.
 pub fn html() -> Option<String> {
     let mut cb = arboard::Clipboard::new().ok()?;

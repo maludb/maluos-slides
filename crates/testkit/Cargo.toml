@@ -1,0 +1,25 @@
+[package]
+name = "maluos-slides-testkit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Test support for MaluOS Slides: a per-thread heap meter and the resident size, for the soak tests' budgets (dev-dependency only)"
+
+# Not `workspace = true`: the workspace forbids `unsafe_code`, and a global allocator cannot be
+# written without `unsafe impl GlobalAlloc`. Everything else is the workspace's lint set, with
+# the one scoped `allow` on that impl.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+cognitive_complexity = "deny"
+too_many_arguments = "deny"
+wildcard_imports = "deny"
+dbg_macro = "warn"
+todo = "warn"
+type_complexity = "allow"
+self_named_constructors = "allow"
+large_enum_variant = "allow"
+result_large_err = "allow"
+
+[dependencies]

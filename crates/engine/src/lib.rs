@@ -874,6 +874,10 @@ pub(crate) fn push_undo(st: &mut DocState, e: HistoryEntry) {
 
 #[cfg(test)]
 mod soak_tests;
+/// The soak test's memory budget counts this thread's heap (`soak_tests`).
+#[cfg(test)]
+#[global_allocator]
+static TEST_HEAP: maluos_slides_testkit::ThreadHeap = maluos_slides_testkit::ThreadHeap;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

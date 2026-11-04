@@ -6,10 +6,19 @@
 //! `MALUOS_SLIDES_SOAK_STEPS=50000 cargo test -p maluos-slides-engine soak -- --ignored` runs a long soak.
 
 use std::collections::VecDeque;
+use std::time::{Duration, Instant};
 
+use maluos_slides_testkit::{ThreadHeap, mib, rss_bytes};
 use serde_json::{Value, json};
 
 use crate::{EngineError, Session, command_specs, sample};
+
+/// Heap the soak may keep beyond where it started: its own thread's bytes, counted by the test
+/// allocator, so the other tests in the process do not show. The undo history is capped in
+/// bytes and the journal is bounded, so growth past this over a long run is a leak.
+const MAX_HEAP_GROWTH: usize = 192 << 20;
+/// Mean wall time per step (a command plus every invariant check), generous for slow CI machines.
+const MAX_MEAN_STEP: Duration = Duration::from_millis(40);
 
 /// Commands that touch the file system, other windows or real time; the soak drives the rest.
 fn skipped(id: &str) -> bool {
@@ -91,6 +100,10 @@ fn soak(seed: u64, steps: usize) {
     let mut r = Rng(seed | 1);
     let mut log: VecDeque<String> = VecDeque::new();
     let mut edits = 0usize;
+    let heap0 = ThreadHeap::live();
+    ThreadHeap::reset_peak();
+    let rss0 = rss_bytes().unwrap_or(0);
+    let t0 = Instant::now();
     for step in 0..steps {
         let id = *r.pick(&ids).unwrap();
         let p = params(&mut r, &s);
@@ -140,7 +153,21 @@ fn soak(seed: u64, steps: usize) {
     }
     // The soak must really edit, not just bounce off disabled commands.
     assert!(edits * 10 >= steps, "only {edits} of {steps} steps changed the document; seed {seed}");
-    eprintln!("soak seed {seed}: {edits} of {steps} steps edited");
+    // Budgets: memory kept beyond the start, and time per step.
+    let mean = t0.elapsed() / u32::try_from(steps.max(1)).unwrap_or(u32::MAX);
+    let heap = ThreadHeap::live();
+    let growth = heap.saturating_sub(heap0);
+    let rss = rss_bytes().unwrap_or(0);
+    eprintln!(
+        "soak seed {seed}: {edits} of {steps} steps edited; heap {} → {} (peak {}), rss {} → {}, mean step {mean:?}",
+        mib(heap0),
+        mib(heap),
+        mib(ThreadHeap::peak()),
+        mib(usize::try_from(rss0).unwrap_or(0)),
+        mib(usize::try_from(rss).unwrap_or(0))
+    );
+    assert!(growth <= MAX_HEAP_GROWTH, "heap grew by {} over {steps} steps (budget {}); seed {seed}", mib(growth), mib(MAX_HEAP_GROWTH));
+    assert!(mean <= MAX_MEAN_STEP, "mean step {mean:?} over {MAX_MEAN_STEP:?}; seed {seed}");
 }
 
 fn steps(default: usize) -> usize {
