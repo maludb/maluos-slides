@@ -937,7 +937,9 @@ fn missing_recent_is_marked_and_its_error_shows() {
     harness.run_steps(2);
     // The row is labelled with the file's name. Clicking it raises the open error, and the
     // drawn message is a second node that mentions the name (the OS text after it varies).
-    harness.get_by_label("missing.deckcraft").click();
+    // An accessibility click: the Malu chat above (MaluOS, step 4.7) puts the row below the
+    // 800-point window, where a pointer click would need the page scrolled first.
+    harness.get_by_label("missing.deckcraft").click_accesskit();
     harness.run_steps(2);
     // The file is read in the background (#350): wait for that read to finish.
     for _ in 0..500 {
@@ -963,7 +965,7 @@ fn recent_entry_can_be_removed() {
     // The remove button must sit inside the visible part of the row even when the page's
     // content is wider than the window.
     assert!(removes[1].rect().right() < 1200.0, "reachable in the 1200-wide window: {:?}", removes[1].rect());
-    removes[1].click();
+    removes[1].click_accesskit();
     harness.run_steps(1);
     assert_eq!(harness.state().ui.recent, vec!["/maluos-slides-tests/172/a.deckcraft"]);
 }
